@@ -1,0 +1,84 @@
+# ====================================================================
+# PaisaPal KMP + Rust — Production Git Ignore Rules
+# ====================================================================
+
+# --------------------------------------------------------------------
+# 1. Gradle & Build Caches
+# --------------------------------------------------------------------
+.gradle/
+build/
+**/build/
+!src/**/build/
+
+# --------------------------------------------------------------------
+# 2. Kotlin Multiplatform & Compiler
+# --------------------------------------------------------------------
+.kotlin/
+**/.konan/
+kotlin-js-store/
+
+# --------------------------------------------------------------------
+# 3. Android & Local Environment
+# --------------------------------------------------------------------
+local.properties
+captures/
+.externalNativeBuild/
+.cxx/
+*.apk
+*.aab
+*.ap_
+output-metadata.json
+
+# --------------------------------------------------------------------
+# 4. Android Studio & IntelliJ IDEA
+# --------------------------------------------------------------------
+*.iml
+*.ipr
+*.iws
+.idea/
+!.idea/vcs.xml
+!.idea/runConfigurations/
+
+# --------------------------------------------------------------------
+# 5. Rust Core Library (core-rust/)
+# --------------------------------------------------------------------
+**/target/
+core-rust/target/
+**/*.rs.bk
+*.pdb
+
+# --------------------------------------------------------------------
+# 6. iOS / macOS / Xcode
+# --------------------------------------------------------------------
+xcuserdata/
+DerivedData/
+*.xcscmblueprint
+*.xcodeproj/*
+!*.xcodeproj/project.pbxproj
+!*.xcodeproj/xcshareddata/
+!*.xcodeproj/project.xcworkspace/
+!*.xcworkspace/contents.xcworkspacedata
+**/xcshareddata/WorkspaceSettings.xcsettings
+
+# --------------------------------------------------------------------
+# 7. Operating System Artifacts
+# --------------------------------------------------------------------
+.DS_Store
+Thumbs.db
+desktop.ini
+$RECYCLE.BIN/
+ehthumbs.db
+
+# --------------------------------------------------------------------
+# 8. Large Machine Learning Model Binaries
+# --------------------------------------------------------------------
+models/*.onnx
+models/*.bin
+models/*.pt
+!models/README.md
+
+# --------------------------------------------------------------------
+# 9. Node / Dependencies
+# --------------------------------------------------------------------
+node_modules/
+npm-debug.log

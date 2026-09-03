@@ -1,0 +1,45 @@
+[package]
+name = "paisapal-core"
+version = "1.0.0"
+edition = "2021"
+authors = ["PaisaPal Engineering"]
+description = "High-performance Rust core library for PaisaPal KMP: parser, cryptography, and on-device ML classification"
+
+[lib]
+name = "paisapal_core"
+crate-type = ["staticlib", "cdylib"]
+
+[dependencies]
+# FFI Bindings
+uniffi = { version = "0.28", features = ["cli", "bindgen-tests"] }
+
+# Text Parsing & Heuristics
+regex = "1.10"
+nom = "7.1"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+
+# Machine Learning Inference (ONNX Runtime Mobile)
+ort = { version = "2.0.0-rc.2", default-features = false, features = ["ndarray"] }
+ndarray = "0.15"
+
+# Cryptography & Key Management
+aes-gcm = "0.10"
+argon2 = "0.5"
+ed25519-dalek = "2.1"
+zeroize = { version = "1.7", features = ["derive"] }
+rand = "0.8"
+
+# Error Handling & Utilities
+thiserror = "1.0"
+log = "0.4"
+
+[build-dependencies]
+uniffi = { version = "0.28", features = ["build"] }
+
+[profile.release]
+opt-level = "z"           # Optimize aggressively for binary size
+lto = true                # Link-Time Optimization across crates
+codegen-units = 1         # Single codegen unit for maximum compiler optimization
+strip = true              # Strip all symbol tables and debuginfo
+panic = "abort"           # Eliminate unwinding landing pads for smaller binary footprint

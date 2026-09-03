@@ -1,0 +1,96 @@
+namespace paisapal {};
+
+enum TransactionType {
+    "Debit",
+    "Credit"
+};
+
+enum Category {
+    "Food",
+    "Transport",
+    "Shopping",
+    "Bills",
+    "Entertainment",
+    "Health",
+    "Education",
+    "Housing",
+    "Insurance",
+    "Investments",
+    "Salary",
+    "Refund",
+    "Gift",
+    "Unknown"
+};
+
+dictionary ParsedTransaction {
+    double amount;
+    TransactionType transaction_type;
+    Category category;
+    string merchant;
+    string? account_id;
+    string source_app;
+    string raw_text;
+    float confidence;
+    i64 timestamp;
+};
+
+dictionary RawNotification {
+    string package_name;
+    string title;
+    string text;
+    i64 timestamp;
+};
+
+[Error]
+enum CoreError {
+    "ModelLoadError",
+    "InferenceError",
+    "DecryptionFailed",
+    "EncryptionFailed",
+    "InvalidKey",
+    "ParseError",
+    "TokenizerError"
+};
+
+interface NotificationParser {
+    constructor();
+    ParsedTransaction? parse(RawNotification notification);
+};
+
+dictionary CategoryScore {
+    Category category;
+    float score;
+};
+
+dictionary ClassificationResult {
+    Category category;
+    float confidence;
+    sequence<CategoryScore> all_scores;
+};
+
+interface TransactionClassifier {
+    [Throws=CoreError]
+    constructor(string model_path);
+    [Throws=CoreError]
+    ClassificationResult classify(string text);
+};
+
+dictionary EncryptedData {
+    sequence<u8> ciphertext;
+    sequence<u8> nonce;
+};
+
+interface CryptoManager {
+    constructor();
+    sequence<u8> generate_key();
+    [Throws=CoreError]
+    EncryptedData encrypt(sequence<u8> plaintext, sequence<u8> key);
+    [Throws=CoreError]
+    sequence<u8> decrypt(EncryptedData data, sequence<u8> key);
+    sequence<u8> derive_key(string passphrase, sequence<u8> salt);
+};
+
+interface SecurityValidator {
+    constructor();
+    boolean is_device_compromised();
+};
