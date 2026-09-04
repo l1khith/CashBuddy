@@ -37,10 +37,15 @@ import org.koin.core.module.dsl.factoryOf
 import org.koin.core.module.dsl.singleOf
 import org.koin.core.module.dsl.viewModel
 import org.koin.core.module.dsl.viewModelOf
+import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.Dispatchers
 import org.koin.dsl.bind
 import org.koin.dsl.module
 
 val appModule = module {
+    // Coroutine Dispatcher for Repositories
+    single<CoroutineDispatcher> { Dispatchers.Default }
+
     // Repositories
     singleOf(::TransactionRepositoryImpl) bind TransactionRepository::class
     singleOf(::AccountRepositoryImpl) bind AccountRepository::class
