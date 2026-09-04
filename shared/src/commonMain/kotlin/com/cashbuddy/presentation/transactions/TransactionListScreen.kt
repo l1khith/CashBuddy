@@ -6,10 +6,8 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -52,36 +50,36 @@ fun TransactionListScreen(
                 CircularProgressIndicator(color = TrustBluePrimary)
             }
         } else {
-            LazyColumn(
+            Column(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(innerPadding),
-                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
-                verticalArrangement = Arrangement.spacedBy(14.dp)
+                    .padding(innerPadding)
             ) {
-                item {
+                // Pinned Header, Search & Filters Section (Never scrolls away, never re-measures in LazyColumn)
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 12.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
                     Text(
                         text = "Transactions",
                         style = MaterialTheme.typography.headlineMedium,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onBackground
                     )
-                }
 
-                // Search Bar
-                item {
+                    // Search Bar
                     OutlinedTextField(
                         value = state.searchQuery,
                         onValueChange = { viewModel.onSearchQueryChanged(it) },
                         modifier = Modifier.fillMaxWidth(),
-                        placeholder = { Text("Search by merchant or text...") },
+                        placeholder = { Text("Search merchant, note, or raw text...") },
                         singleLine = true,
                         shape = RoundedCornerShape(12.dp)
                     )
-                }
 
-                // Type Filter Chips (All, Debits, Credits)
-                item {
+                    // Type Filter Chips (All, Debits, Credits)
                     Row(
                         modifier = Modifier.horizontalScroll(rememberScrollState()),
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -89,7 +87,7 @@ fun TransactionListScreen(
                         FilterChip(
                             selected = state.selectedType == null,
                             onClick = { viewModel.onTypeSelected(null) },
-                            label = { Text("All Types") }
+                            label = { Text("All (${state.totalCount})") }
                         )
                         FilterChip(
                             selected = state.selectedType == TransactionType.DEBIT,
@@ -104,9 +102,14 @@ fun TransactionListScreen(
                     }
                 }
 
-                // Transactions List
+                // High-performance LazyColumn for Transactions
                 if (state.filteredTransactions.isEmpty()) {
-                    item {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(24.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
                         EmptyStateView(
                             icon = "🔍",
                             title = "No matching transactions",
@@ -114,13 +117,23 @@ fun TransactionListScreen(
                         )
                     }
                 } else {
-                    items(state.filteredTransactions, key = { it.id }) { tx ->
-                        val catName = state.categories.find { it.id == tx.categoryId }?.name ?: "General"
-                        TransactionItemCard(
-                            transaction = tx,
-                            categoryName = catName,
-                            onClick = { onNavigateToDetail(tx.id) }
-                        )
+                    LazyColumn(
+                        modifier = Modifier.fillMaxSize(),
+                        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
+                        verticalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        items(
+                            items = state.filteredTransactions,
+                            key = { it.id },
+                            contentType = { it.type }
+                        ) { tx ->
+                            // Use pre-joined categoryName from SQL to avoid O(N*M) list searches during scroll
+                            TransactionItemCard(
+                                transaction = tx,
+                                categoryName = tx.categoryName ?: "General",
+                                onClick = { onNavigateToDetail(tx.id) }
+                            )
+                        }
                     }
                 }
             }
