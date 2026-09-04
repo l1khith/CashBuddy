@@ -1,0 +1,49 @@
+import kotlin.Boolean;
+
+CREATE TABLE budgets (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    category_id INTEGER,
+    amount REAL NOT NULL,
+    period TEXT NOT NULL DEFAULT 'MONTHLY' CHECK(period IN ('DAILY', 'WEEKLY', 'MONTHLY', 'YEARLY')),
+    start_date INTEGER NOT NULL,
+    end_date INTEGER,
+    is_active INTEGER AS Boolean NOT NULL DEFAULT 1,
+    alert_threshold REAL NOT NULL DEFAULT 80.0,
+    created_at INTEGER NOT NULL,
+    FOREIGN KEY (category_id) REFERENCES categories(id)
+);
+
+getActive:
+SELECT b.*, c.name AS category_name, c.color AS category_color,
+       COALESCE(SUM(t.amount), 0.0) AS spent_amount
+FROM budgets b
+LEFT JOIN categories c ON b.category_id = c.id
+LEFT JOIN transactions t ON b.category_id = t.category_id 
+    AND t.type = 'DEBIT' 
+    AND t.status = 'CONFIRMED'
+    AND t.timestamp BETWEEN b.start_date AND COALESCE(b.end_date, ?)
+WHERE b.is_active = 1
+GROUP BY b.id;
+
+getAll:
+SELECT b.*, c.name AS category_name, c.color AS category_color
+FROM budgets b
+LEFT JOIN categories c ON b.category_id = c.id
+ORDER BY b.created_at DESC;
+
+getById:
+SELECT b.*, c.name AS category_name, c.color AS category_color
+FROM budgets b
+LEFT JOIN categories c ON b.category_id = c.id
+WHERE b.id = ?;
+
+insert:
+INSERT INTO budgets (category_id, amount, period, start_date, end_date, is_active, alert_threshold, created_at)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?);
+
+update:
+UPDATE budgets SET category_id = ?, amount = ?, period = ?, start_date = ?, end_date = ?, is_active = ?, alert_threshold = ?
+WHERE id = ?;
+
+deleteById:
+DELETE FROM budgets WHERE id = ?;

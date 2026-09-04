@@ -81,7 +81,7 @@ impl NotificationParser {
         }
     }
 
-    pub fn parse(&self, notification: &RawNotification) -> Option<ParsedTransaction> {
+    pub fn parse(&self, notification: RawNotification) -> Option<ParsedTransaction> {
         // Layer 1: Source Validation
         if !self.allowed_packages.contains(notification.package_name.as_str()) {
             return None;
@@ -99,16 +99,16 @@ impl NotificationParser {
         let merchant = extract_merchant(&notification.text, &notification.package_name);
         let account_id = extract_account(&notification.text);
 
-        // Layer 4: Categorization Heuristics
+        // Layer 4: Categorization
         let category = self.categorize(&merchant, &text_lower);
 
         // Layer 5: Confidence & Velocity Validation
         let velocity_ok = self.fraud_detector.check_velocity(&notification.package_name, notification.timestamp);
-        let has_merchant = merchant != "Unknown Merchant";
+        let has_merchant = merchant != "Unknown";
         let has_account = account_id.is_some();
 
         let mut confidence = self.calculate_confidence(
-            true,
+            amount > 0.0,
             true,
             has_merchant,
             has_account,
@@ -126,8 +126,8 @@ impl NotificationParser {
             category,
             merchant,
             account_id,
-            source_app: notification.package_name.clone(),
-            raw_text: notification.text.clone(),
+            source_app: notification.package_name,
+            raw_text: notification.text,
             confidence,
             timestamp: notification.timestamp,
         })
@@ -231,7 +231,7 @@ mod tests {
             timestamp: 1_700_000_000_000,
         };
 
-        let parsed = parser.parse(&raw);
+        let parsed = parser.parse(raw);
         assert!(parsed.is_some());
         let tx = parsed.unwrap();
         assert_eq!(tx.amount, 450.0);
@@ -249,6 +249,6 @@ mod tests {
             text: "Your OTP for NetBanking is 492019. Do not share with anyone.".to_string(),
             timestamp: 1_700_000_000_000,
         };
-        assert!(parser.parse(&raw).is_none());
+        assert!(parser.parse(raw).is_none());
     }
 }

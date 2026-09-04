@@ -90,4 +90,4 @@ pub struct EncryptedData {
     pub nonce: Vec<u8>,
 }
 
-uniffi::include_scaffolding!("paisapal");
+uniffi::include_scaffolding!("cashbuddy");

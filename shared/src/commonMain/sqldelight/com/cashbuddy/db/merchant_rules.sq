@@ -1,0 +1,36 @@
+import kotlin.Boolean;
+
+CREATE TABLE merchant_rules (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    pattern TEXT NOT NULL,
+    category_id INTEGER NOT NULL,
+    is_regex INTEGER AS Boolean NOT NULL DEFAULT 0,
+    priority INTEGER NOT NULL DEFAULT 0,
+    match_count INTEGER NOT NULL DEFAULT 0,
+    created_at INTEGER NOT NULL,
+    FOREIGN KEY (category_id) REFERENCES categories(id)
+);
+
+CREATE INDEX idx_merchant_rules_pattern ON merchant_rules(pattern);
+
+getAll:
+SELECT mr.*, c.name AS category_name, c.color AS category_color
+FROM merchant_rules mr
+JOIN categories c ON mr.category_id = c.id
+ORDER BY mr.priority DESC, mr.match_count DESC;
+
+findMatch:
+SELECT mr.*, c.name AS category_name, c.color AS category_color
+FROM merchant_rules mr
+JOIN categories c ON mr.category_id = c.id
+WHERE (? LIKE '%' || mr.pattern || '%' OR mr.pattern LIKE '%' || ? || '%')
+AND mr.is_regex = 0
+ORDER BY priority DESC, match_count DESC
+LIMIT 1;
+
+incrementMatchCount:
+UPDATE merchant_rules SET match_count = match_count + 1 WHERE id = ?;
+
+insert:
+INSERT INTO merchant_rules (pattern, category_id, is_regex, priority, match_count, created_at)
+VALUES (?, ?, ?, ?, 0, ?);

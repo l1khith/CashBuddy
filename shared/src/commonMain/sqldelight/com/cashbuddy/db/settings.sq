@@ -1,0 +1,17 @@
+CREATE TABLE settings (
+    key TEXT PRIMARY KEY,
+    value TEXT NOT NULL,
+    updated_at INTEGER NOT NULL
+);
+
+get:
+SELECT * FROM settings WHERE key = ?;
+
+getAll:
+SELECT * FROM settings;
+
+set:
+INSERT OR REPLACE INTO settings (key, value, updated_at) VALUES (?, ?, ?);
+
+deleteByKey:
+DELETE FROM settings WHERE key = ?;

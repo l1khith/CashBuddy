@@ -7,10 +7,10 @@ fn get_merchant_patterns() -> &'static [Regex] {
     MERCHANT_PATTERNS
         .get_or_init(|| {
             vec![
-                Regex::new(r"(?i)(?:paid|sent)\s+.*?to\s+([A-Za-z0-9\s&._'-]{2,30})").ok(),
-                Regex::new(r"(?i)(?:spent|paid|purchase)\s+.*?at\s+([A-Za-z0-9\s&._'-]{2,30})").ok(),
-                Regex::new(r"(?i)(?:towards|for|vpa)\s+([A-Za-z0-9\s&._'-]{2,30})").ok(),
-                Regex::new(r"(?i)(?:to|from)\s+([A-Za-z0-9\s&._'-]{2,30})(?:\s+(?:via|using|ref|on|a/c|$))").ok(),
+                Regex::new(r"(?i)(?:paid|sent)\s+.*?to\s+([A-Za-z0-9&._'-]+(?:\s+[A-Za-z0-9&._'-]+)?)(?:\s+(?:via|using|ref|on|a/c|\.|$))").ok(),
+                Regex::new(r"(?i)(?:spent|paid|purchase)\s+.*?at\s+([A-Za-z0-9&._'-]+(?:\s+[A-Za-z0-9&._'-]+)?)(?:\s+(?:for|via|using|ref|on|a/c|\.|$))").ok(),
+                Regex::new(r"(?i)(?:to|from)\s+([A-Za-z0-9&._'-]+(?:\s+[A-Za-z0-9&._'-]+)?)(?:\s+(?:via|using|ref|on|a/c|\.|$))").ok(),
+                Regex::new(r"(?i)(?:towards|for|vpa)\s+([A-Za-z0-9&._'-]+)").ok(),
             ]
             .into_iter()
             .flatten()

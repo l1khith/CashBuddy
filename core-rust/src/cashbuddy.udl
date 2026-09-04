@@ -1,4 +1,4 @@
-namespace paisapal {};
+namespace cashbuddy {};
 
 enum TransactionType {
     "Debit",

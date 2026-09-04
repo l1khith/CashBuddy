@@ -1,12 +1,12 @@
 [package]
-name = "paisapal-core"
+name = "cashbuddy-core"
 version = "1.0.0"
 edition = "2021"
-authors = ["PaisaPal Engineering"]
-description = "High-performance Rust core library for PaisaPal KMP: parser, cryptography, and on-device ML classification"
+authors = ["CashBuddy Engineering"]
+description = "High-performance Rust core library for CashBuddy KMP: parser, cryptography, and on-device ML classification"
 
 [lib]
-name = "paisapal_core"
+name = "cashbuddy_core"
 crate-type = ["staticlib", "cdylib"]
 
 [dependencies]
@@ -21,7 +21,7 @@ serde_json = "1.0"
 
 # Machine Learning Inference (ONNX Runtime Mobile)
 ort = { version = "2.0.0-rc.2", default-features = false, features = ["ndarray"] }
-ndarray = "0.15"
+ndarray = { version = "0.17", features = ["std"] }
 
 # Cryptography & Key Management
 aes-gcm = "0.10"

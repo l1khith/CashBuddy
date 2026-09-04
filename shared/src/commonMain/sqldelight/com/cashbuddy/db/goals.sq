@@ -1,0 +1,36 @@
+CREATE TABLE goals (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL,
+    target_amount REAL NOT NULL,
+    current_amount REAL NOT NULL DEFAULT 0.0,
+    deadline INTEGER,
+    category_id INTEGER,
+    icon TEXT NOT NULL DEFAULT 'flag',
+    color TEXT NOT NULL DEFAULT '#2ECC71',
+    status TEXT NOT NULL DEFAULT 'ACTIVE' CHECK(status IN ('ACTIVE', 'COMPLETED', 'CANCELLED')),
+    created_at INTEGER NOT NULL,
+    updated_at INTEGER NOT NULL,
+    FOREIGN KEY (category_id) REFERENCES categories(id)
+);
+
+getAll:
+SELECT * FROM goals ORDER BY created_at DESC;
+
+getById:
+SELECT * FROM goals WHERE id = ?;
+
+getActive:
+SELECT * FROM goals WHERE status = 'ACTIVE' ORDER BY deadline ASC;
+
+insert:
+INSERT INTO goals (name, target_amount, current_amount, deadline, category_id, icon, color, status, created_at, updated_at)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+
+updateProgress:
+UPDATE goals SET current_amount = ?, updated_at = ? WHERE id = ?;
+
+updateStatus:
+UPDATE goals SET status = ?, updated_at = ? WHERE id = ?;
+
+deleteById:
+DELETE FROM goals WHERE id = ?;

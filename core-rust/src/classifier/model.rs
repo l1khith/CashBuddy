@@ -4,6 +4,7 @@ use crate::{Category, CategoryScore, ClassificationResult, CoreError};
 use std::path::Path;
 
 pub struct TransactionClassifier {
+    #[allow(dead_code)]
     model_path: String,
     tokenizer: WordPieceTokenizer,
     label_map: Vec<String>,
@@ -27,13 +28,13 @@ impl TransactionClassifier {
         })
     }
 
-    pub fn classify(&self, text: &str) -> Result<ClassificationResult, CoreError> {
+    pub fn classify(&self, text: String) -> Result<ClassificationResult, CoreError> {
         if text.trim().is_empty() {
             return Err(CoreError::InferenceError);
         }
 
         // Tokenize text into fixed sequence length
-        let _tokens = self.tokenizer.encode(text, 128)?;
+        let _tokens = self.tokenizer.encode(&text, 128)?;
 
         // Fallback heuristic scoring if model file is not yet deployed on device
         let text_lower = text.to_lowercase();
@@ -89,7 +90,7 @@ mod tests {
     #[test]
     fn test_classifier_fallback() {
         let classifier = TransactionClassifier::new("dummy.onnx".to_string()).unwrap();
-        let res = classifier.classify("swiggy food delivery").unwrap();
+        let res = classifier.classify("swiggy food delivery".to_string()).unwrap();
         assert_eq!(res.category, Category::Food);
         assert!(res.confidence > 0.80);
     }

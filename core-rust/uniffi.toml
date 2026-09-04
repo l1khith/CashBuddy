@@ -1,3 +1,3 @@
 [bindings.kotlin]
-package_name = "com.paisapal.core"
-cdylib_name = "paisapal_core"
+package_name = "com.cashbuddy.core"
+cdylib_name = "cashbuddy_core"

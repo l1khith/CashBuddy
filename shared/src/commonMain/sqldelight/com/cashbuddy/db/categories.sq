@@ -1,0 +1,44 @@
+import kotlin.Boolean;
+
+CREATE TABLE categories (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL UNIQUE,
+    type TEXT NOT NULL CHECK(type IN ('EXPENSE', 'INCOME')),
+    icon TEXT NOT NULL DEFAULT 'category',
+    color TEXT NOT NULL DEFAULT '#FF6B6B',
+    is_default INTEGER AS Boolean NOT NULL DEFAULT 0,
+    sort_order INTEGER NOT NULL DEFAULT 0,
+    parent_id INTEGER,
+    created_at INTEGER NOT NULL,
+    FOREIGN KEY (parent_id) REFERENCES categories(id)
+);
+
+CREATE INDEX idx_categories_type ON categories(type);
+CREATE INDEX idx_categories_parent ON categories(parent_id);
+
+-- Seed data on first run
+insertDefaults:
+INSERT INTO categories (name, type, icon, color, is_default, sort_order, created_at) VALUES
+('Food & Dining', 'EXPENSE', 'restaurant', '#FF6B6B', 1, 1, ?),
+('Transportation', 'EXPENSE', 'directions_car', '#4ECDC4', 1, 2, ?),
+('Shopping', 'EXPENSE', 'shopping_bag', '#45B7D1', 1, 3, ?),
+('Bills & Utilities', 'EXPENSE', 'receipt', '#96CEB4', 1, 4, ?),
+('Entertainment', 'EXPENSE', 'movie', '#DDA0DD', 1, 5, ?),
+('Healthcare', 'EXPENSE', 'local_hospital', '#F7DC6F', 1, 6, ?),
+('Education', 'EXPENSE', 'school', '#BB8FCE', 1, 7, ?),
+('Housing', 'EXPENSE', 'home', '#E74C3C', 1, 8, ?),
+('Insurance', 'EXPENSE', 'shield', '#85C1E9', 1, 9, ?),
+('Investments', 'EXPENSE', 'trending_up', '#82E0AA', 1, 10, ?),
+('Salary', 'INCOME', 'account_balance', '#2ECC71', 1, 1, ?),
+('Refund', 'INCOME', 'replay', '#F39C12', 1, 2, ?),
+('Gift', 'INCOME', 'card_giftcard', '#E91E63', 1, 3, ?),
+('Investment Returns', 'INCOME', 'savings', '#9B59B6', 1, 4, ?);
+
+getAll:
+SELECT * FROM categories ORDER BY type, sort_order;
+
+getByType:
+SELECT * FROM categories WHERE type = ? ORDER BY sort_order;
+
+getById:
+SELECT * FROM categories WHERE id = ?;
