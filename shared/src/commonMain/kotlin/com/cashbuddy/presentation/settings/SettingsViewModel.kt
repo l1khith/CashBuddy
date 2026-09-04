@@ -6,6 +6,8 @@ import com.cashbuddy.domain.repository.AccountRepository
 import com.cashbuddy.domain.repository.SettingsRepository
 import com.cashbuddy.domain.repository.TransactionRepository
 import com.cashbuddy.domain.usecase.ExportDataUseCase
+import com.cashbuddy.platform.FileExporter
+import com.cashbuddy.platform.currentTimeMillis
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -29,7 +31,8 @@ class SettingsViewModel(
     private val settingsRepository: SettingsRepository,
     private val transactionRepository: TransactionRepository,
     private val accountRepository: AccountRepository,
-    private val exportDataUseCase: ExportDataUseCase
+    private val exportDataUseCase: ExportDataUseCase,
+    private val fileExporter: FileExporter? = null
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(SettingsUiState())
@@ -84,11 +87,24 @@ class SettingsViewModel(
         }
     }
 
-    fun exportCsvData(onCsvReady: (String) -> Unit) {
+    fun exportCsvData(onCsvReady: (String) -> Unit = {}) {
         viewModelScope.launch {
             val csv = exportDataUseCase.exportCsv()
             onCsvReady(csv)
-            _messageEffect.emit("Data exported successfully")
+            if (fileExporter != null) {
+                val fileName = "cashbuddy_ledger_${currentTimeMillis()}.csv"
+                val result = fileExporter.exportCsvFile(fileName, csv)
+                result.fold(
+                    onSuccess = { path ->
+                        _messageEffect.emit(path)
+                    },
+                    onFailure = { err ->
+                        _messageEffect.emit("Export failed: ${err.message}")
+                    }
+                )
+            } else {
+                _messageEffect.emit("Data exported successfully")
+            }
         }
     }
 

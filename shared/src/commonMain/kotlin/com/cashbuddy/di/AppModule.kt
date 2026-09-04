@@ -71,6 +71,6 @@ val appModule = module {
     viewModelOf(::AccountsViewModel)
     viewModelOf(::BudgetViewModel)
     viewModelOf(::GoalsViewModel)
-    viewModelOf(::SettingsViewModel)
+    viewModel { SettingsViewModel(get(), get(), get(), get(), getOrNull()) }
     viewModelOf(::AddTransactionViewModel)
 }

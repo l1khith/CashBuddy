@@ -1,21 +1,19 @@
-# Add project specific ProGuard rules here.
-# You can control the set of applied configuration files using the
-# proguardFiles setting in build.gradle.
-#
-# For more details, see
-#   http://developer.android.com/guide/developing/tools/proguard.html
+# CashBuddy R8 & ProGuard Optimization Rules
 
-# If your project uses WebView with JS, uncomment the following
-# and specify the fully qualified class name to the JavaScript interface
-# class:
-#-keepclassmembers class fqcn.of.javascript.interface.for.webview {
-#   public *;
-#}
+# SQLCipher
+-keep class net.zetetic.** { *; }
+-dontwarn net.zetetic.**
 
-# Uncomment this to preserve the line number information for
-# debugging stack traces.
-#-keepattributes SourceFile,LineNumberTable
+# UniFFI & JNA Native Interop
+-keep class com.sun.jna.** { *; }
+-keep class * implements com.sun.jna.** { *; }
+-keep class com.cashbuddy.core.** { *; }
+-dontwarn com.sun.jna.**
 
-# If you keep the line number information, uncomment this to
-# hide the original source file name.
-#-renamesourcefileattribute SourceFile
+# SQLDelight
+-keep class app.cash.sqldelight.** { *; }
+-keep class com.cashbuddy.db.** { *; }
+
+# Serialization & Annotations
+-keepattributes *Annotation*,InnerClasses,Signature
+-dontnote kotlinx.serialization.**

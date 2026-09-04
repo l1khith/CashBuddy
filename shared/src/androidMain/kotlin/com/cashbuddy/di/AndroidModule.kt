@@ -12,6 +12,8 @@ import org.koin.dsl.module
 
 val androidModule = module {
     // Database Driver & Encrypted Database Instance
+    single { com.cashbuddy.security.AndroidKeystoreManager(get()) }
+    single<com.cashbuddy.platform.FileExporter> { com.cashbuddy.platform.AndroidFileExporter(get()) }
     single { DatabaseDriverFactory(get()) }
     single<SqlDriver> { get<DatabaseDriverFactory>().createDriver() }
     single<AppDatabase> { createDatabase(get<SqlDriver>()) }
