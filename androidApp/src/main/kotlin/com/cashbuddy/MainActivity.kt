@@ -31,6 +31,7 @@ import androidx.lifecycle.lifecycleScope
 import com.cashbuddy.domain.repository.SettingsRepository
 import com.cashbuddy.presentation.CashBuddyApp
 import com.cashbuddy.presentation.theme.CashBuddyTheme
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.launch
 import org.koin.android.ext.android.inject
@@ -39,8 +40,9 @@ class MainActivity : FragmentActivity() {
 
     private val settingsRepository: SettingsRepository by inject()
 
-    private var isAuthenticated by mutableStateOf(false)
-    private var isBiometricRequired by mutableStateOf(false)
+    private enum class AuthState { LOADING, AUTHENTICATED, LOCKED }
+    private var authState by mutableStateOf(AuthState.LOADING)
+    private var isBiometricRequired = false
     private var lastBackgroundTimestamp: Long = 0L
 
     companion object {
@@ -61,9 +63,23 @@ class MainActivity : FragmentActivity() {
             val biometricEnabled = settingsRepository.getBiometricEnabled().firstOrNull() ?: false
             if (biometricEnabled) {
                 isBiometricRequired = true
+                authState = AuthState.LOCKED
                 promptBiometricUnlock()
             } else {
-                isAuthenticated = true
+                authState = AuthState.AUTHENTICATED
+            }
+        }
+
+        // Asynchronously extract and verify ONNX ML model assets in the background
+        lifecycleScope.launch(Dispatchers.IO) {
+            try {
+                val modelManager: com.cashbuddy.data.classifier.ModelManager by inject()
+                val modelFile = modelManager.ensureModelExtracted()
+                if (modelFile != null && modelFile.exists()) {
+                    android.util.Log.i("MainActivity", "ONNX ML model ready at: ${modelFile.absolutePath}")
+                }
+            } catch (e: Throwable) {
+                android.util.Log.w("MainActivity", "Background model extraction skipped or failed: ${e.message}")
             }
         }
 
@@ -71,36 +87,46 @@ class MainActivity : FragmentActivity() {
 
         setContent {
             CashBuddyTheme {
-                if (isAuthenticated) {
-                    CashBuddyApp(initialRoute = initialRoute)
-                } else {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .background(MaterialTheme.colorScheme.background),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Column(
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalArrangement = Arrangement.Center,
-                            modifier = Modifier.padding(24.dp)
+                when (authState) {
+                    AuthState.LOADING -> {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .background(MaterialTheme.colorScheme.background)
+                        )
+                    }
+                    AuthState.AUTHENTICATED -> {
+                        CashBuddyApp(initialRoute = initialRoute)
+                    }
+                    AuthState.LOCKED -> {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .background(MaterialTheme.colorScheme.background),
+                            contentAlignment = Alignment.Center
                         ) {
-                            Text(text = "🔒", fontSize = 56.sp)
-                            Spacer(modifier = Modifier.height(16.dp))
-                            Text(
-                                text = "CashBuddy is Locked",
-                                style = MaterialTheme.typography.headlineMedium,
-                                fontWeight = FontWeight.Bold
-                            )
-                            Spacer(modifier = Modifier.height(8.dp))
-                            Text(
-                                text = "Biometric authentication is required to access your financial records.",
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                            Spacer(modifier = Modifier.height(24.dp))
-                            Button(onClick = { promptBiometricUnlock() }) {
-                                Text("Unlock with Biometrics")
+                            Column(
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalArrangement = Arrangement.Center,
+                                modifier = Modifier.padding(24.dp)
+                            ) {
+                                Text(text = "🔒", fontSize = 56.sp)
+                                Spacer(modifier = Modifier.height(16.dp))
+                                Text(
+                                    text = "CashBuddy is Locked",
+                                    style = MaterialTheme.typography.headlineMedium,
+                                    fontWeight = FontWeight.Bold
+                                )
+                                Spacer(modifier = Modifier.height(8.dp))
+                                Text(
+                                    text = "Biometric authentication is required to access your financial records.",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                                Spacer(modifier = Modifier.height(24.dp))
+                                Button(onClick = { promptBiometricUnlock() }) {
+                                    Text("Unlock with Biometrics")
+                                }
                             }
                         }
                     }
@@ -114,7 +140,7 @@ class MainActivity : FragmentActivity() {
         if (isBiometricRequired && lastBackgroundTimestamp > 0) {
             val elapsed = System.currentTimeMillis() - lastBackgroundTimestamp
             if (elapsed >= TIMEOUT_LOCK_MS) {
-                isAuthenticated = false
+                authState = AuthState.LOCKED
                 promptBiometricUnlock()
             }
         }
@@ -133,7 +159,7 @@ class MainActivity : FragmentActivity() {
             object : BiometricPrompt.AuthenticationCallback() {
                 override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult) {
                     super.onAuthenticationSucceeded(result)
-                    isAuthenticated = true
+                    authState = AuthState.AUTHENTICATED
                 }
 
                 override fun onAuthenticationError(errorCode: Int, errString: CharSequence) {
@@ -142,7 +168,7 @@ class MainActivity : FragmentActivity() {
                     if (errorCode == BiometricPrompt.ERROR_NO_BIOMETRICS ||
                         errorCode == BiometricPrompt.ERROR_HW_NOT_PRESENT ||
                         errorCode == BiometricPrompt.ERROR_HW_UNAVAILABLE) {
-                        isAuthenticated = true
+                        authState = AuthState.AUTHENTICATED
                     }
                 }
             }

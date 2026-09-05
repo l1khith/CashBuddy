@@ -11,6 +11,8 @@ import android.service.notification.StatusBarNotification
 import androidx.core.app.NotificationCompat
 import com.cashbuddy.core.NotificationParser
 import com.cashbuddy.core.RawNotification
+import com.cashbuddy.core.TransactionClassifier
+import com.cashbuddy.data.classifier.ModelManager
 import com.cashbuddy.domain.model.Transaction
 import com.cashbuddy.domain.model.TransactionStatus
 import com.cashbuddy.domain.model.TransactionType
@@ -24,6 +26,7 @@ import com.cashbuddy.domain.repository.TransactionRepository
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.launch
 import org.koin.core.component.KoinComponent
@@ -37,8 +40,12 @@ class TransactionNotificationListener : NotificationListenerService(), KoinCompo
     private val accountRepository: AccountRepository by inject()
     private val categoryRepository: CategoryRepository by inject()
     private val settingsRepository: SettingsRepository by inject()
+    private val modelManager: ModelManager by inject()
+
+    private var classifier: TransactionClassifier? = null
 
     companion object {
+        private const val TAG = "TxNotificationListener"
         const val REVIEW_CHANNEL_ID = "cashbuddy_review_channel"
         const val REVIEW_CHANNEL_NAME = "Transaction Reviews"
         const val NOTIFICATION_ID_BASE = 1000
@@ -47,6 +54,26 @@ class TransactionNotificationListener : NotificationListenerService(), KoinCompo
     override fun onCreate() {
         super.onCreate()
         createNotificationChannel()
+        initClassifierAsync()
+    }
+
+    private fun initClassifierAsync() {
+        serviceScope.launch {
+            try {
+                val modelFile = modelManager.ensureModelExtracted()
+                if (modelFile != null && modelFile.exists()) {
+                    classifier = TransactionClassifier(modelFile.absolutePath)
+                    android.util.Log.i(TAG, "On-device INT8 ONNX TransactionClassifier initialized")
+                }
+            } catch (e: Throwable) {
+                android.util.Log.w(TAG, "Failed to initialize ONNX TransactionClassifier: ${e.message}")
+            }
+        }
+    }
+
+    override fun onDestroy() {
+        serviceScope.cancel()
+        super.onDestroy()
     }
 
     override fun onNotificationPosted(sbn: StatusBarNotification?) {
@@ -87,23 +114,44 @@ class TransactionNotificationListener : NotificationListenerService(), KoinCompo
                 }
                 if (isDuplicate) return@launch
 
-                // 3. Status determination: Human-in-the-loop policy
+                // 3. Resolve Category ID (with On-Device ML Classifier enhancement)
+                var resolvedCategoryName = parsed.categoryName
+                var effectiveConfidence = parsed.confidence
+
+                if (resolvedCategoryName.equals("UNKNOWN", ignoreCase = true) || parsed.confidence < 0.75f) {
+                    try {
+                        val queryText = parsed.merchant.ifBlank { parsed.rawText }
+                        val mlResult = classifier?.classify(queryText)
+                        if (mlResult != null && mlResult.confidence > 0.60f && mlResult.category != com.cashbuddy.core.Category.UNKNOWN) {
+                            resolvedCategoryName = mlResult.category.name
+                            effectiveConfidence = maxOf(effectiveConfidence, mlResult.confidence)
+                            android.util.Log.i(TAG, "ML Classifier refined category to $resolvedCategoryName (conf=${mlResult.confidence})")
+                        }
+                    } catch (e: Throwable) {
+                        android.util.Log.w(TAG, "ML classification fallback: ${e.message}")
+                    }
+                }
+
+                val allCategories = categoryRepository.getAll().firstOrNull() ?: emptyList()
+                val normalizedCategory = resolvedCategoryName.lowercase()
+                val matchedCategory = allCategories.find {
+                    it.name.equals(resolvedCategoryName, ignoreCase = true)
+                } ?: allCategories.find {
+                    it.name.lowercase().startsWith(normalizedCategory) ||
+                    normalizedCategory.startsWith(it.name.lowercase().substringBefore(" "))
+                } ?: allCategories.firstOrNull()
+                val categoryId = matchedCategory?.id ?: 1L
+
+                // 4. Status determination: Human-in-the-loop policy
                 // Rule: Confidence >= 0.85 AND amount < autoConfirmThreshold => CONFIRMED, else PENDING
                 val autoConfirmThreshold = settingsRepository.getAutoConfirmThreshold().firstOrNull() ?: 10000.0
                 val minConfidence = settingsRepository.getMinConfidenceThreshold().firstOrNull() ?: 0.85f
 
-                val status = if (parsed.confidence >= minConfidence && parsed.amount < autoConfirmThreshold) {
+                val status = if (effectiveConfidence >= minConfidence && parsed.amount < autoConfirmThreshold) {
                     TransactionStatus.CONFIRMED
                 } else {
                     TransactionStatus.PENDING
                 }
-
-                // 4. Resolve Category ID
-                val allCategories = categoryRepository.getAll().firstOrNull() ?: emptyList()
-                val matchedCategory = allCategories.find {
-                    it.name.equals(parsed.categoryName, ignoreCase = true)
-                } ?: allCategories.firstOrNull()
-                val categoryId = matchedCategory?.id ?: 1L
 
                 // 5. Resolve Account ID
                 val allAccounts = accountRepository.getAll().firstOrNull() ?: emptyList()
@@ -126,7 +174,7 @@ class TransactionNotificationListener : NotificationListenerService(), KoinCompo
                     rawText = parsed.rawText,
                     sourceApp = parsed.sourceApp,
                     merchant = parsed.merchant,
-                    confidence = parsed.confidence,
+                    confidence = effectiveConfidence,
                     timestamp = parsed.timestamp,
                     createdAt = parsed.timestamp,
                     updatedAt = parsed.timestamp

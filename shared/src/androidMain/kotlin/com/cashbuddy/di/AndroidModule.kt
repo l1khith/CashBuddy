@@ -44,4 +44,21 @@ val androidModule = module {
             null
         }
     }
+
+    // On-Device ML Model Manager & Rust Classifier
+    single { com.cashbuddy.data.classifier.ModelManager(get()) }
+
+    single {
+        try {
+            val modelManager: com.cashbuddy.data.classifier.ModelManager = get()
+            val file = modelManager.modelFile
+            if (file.exists() && file.length() > 0) {
+                com.cashbuddy.core.TransactionClassifier(file.absolutePath)
+            } else {
+                null
+            }
+        } catch (_: Throwable) {
+            null
+        }
+    }
 }
