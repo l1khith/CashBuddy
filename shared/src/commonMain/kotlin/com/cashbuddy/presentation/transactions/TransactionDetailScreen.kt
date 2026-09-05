@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -26,7 +27,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -42,13 +43,24 @@ import com.cashbuddy.presentation.theme.IncomeEmerald
 import com.cashbuddy.presentation.theme.TrustBluePrimary
 import kotlinx.coroutines.flow.collectLatest
 
+import com.cashbuddy.presentation.components.ConfidenceIndicator
+import com.cashbuddy.presentation.components.StatusBadge
+import com.cashbuddy.presentation.components.formatCurrency
+import com.cashbuddy.presentation.theme.AccentEmerald
+import com.cashbuddy.presentation.theme.CashBuddyTypography
+import com.cashbuddy.presentation.theme.DangerRed
+import com.cashbuddy.presentation.theme.PrimaryIndigo
+import com.cashbuddy.presentation.theme.RadiusLarge
+import com.cashbuddy.presentation.theme.RadiusMedium
+import com.cashbuddy.presentation.theme.getCategoryColor
+
 @Composable
 fun TransactionDetailScreen(
     viewModel: TransactionDetailViewModel,
     onNavigateBack: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val state by viewModel.uiState.collectAsState()
+    val state by viewModel.uiState.collectAsStateWithLifecycle()
 
     LaunchedEffect(Unit) {
         viewModel.navBackEffect.collectLatest {
@@ -64,85 +76,98 @@ fun TransactionDetailScreen(
                     .padding(innerPadding),
                 contentAlignment = Alignment.Center
             ) {
-                CircularProgressIndicator(color = TrustBluePrimary)
+                CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
             }
         } else {
             val tx = state.transaction!!
             val isDebit = tx.type == TransactionType.DEBIT
             val prefix = if (isDebit) "-₹" else "+₹"
-            val amountColor = if (isDebit) ExpenseCrimson else IncomeEmerald
+            val amountColor = if (isDebit) MaterialTheme.colorScheme.onSurface else AccentEmerald
 
             Column(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(innerPadding)
-                    .padding(20.dp)
+                    .padding(horizontal = 20.dp, vertical = 12.dp)
                     .verticalScroll(rememberScrollState()),
-                verticalArrangement = Arrangement.spacedBy(18.dp)
+                verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
                 // Back Button & Title
                 Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
                         text = "← Back",
-                        style = MaterialTheme.typography.labelLarge,
-                        color = TrustBluePrimary,
+                        style = CashBuddyTypography.labelLarge,
+                        color = MaterialTheme.colorScheme.primary,
                         modifier = Modifier
                             .clickable { onNavigateBack() }
                             .padding(4.dp)
                     )
                     Text(
                         text = "Transaction Details",
-                        style = MaterialTheme.typography.titleLarge,
+                        style = CashBuddyTypography.titleLarge,
                         fontWeight = FontWeight.Bold
                     )
+                    Spacer(modifier = Modifier.width(32.dp))
                 }
 
                 // Amount Header Card
                 Card(
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(16.dp),
+                    shape = RadiusLarge,
                     colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
-                    )
+                        containerColor = MaterialTheme.colorScheme.surface
+                    ),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
                 ) {
                     Column(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(20.dp),
+                            .padding(22.dp),
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
                         Text(
-                            text = "$prefix${tx.amount}",
-                            style = MaterialTheme.typography.displayLarge.copy(fontSize = 36.sp),
+                            text = "$prefix${formatCurrency(tx.amount)}",
+                            style = CashBuddyTypography.displayLarge.copy(fontSize = 38.sp),
                             fontWeight = FontWeight.Bold,
                             color = amountColor
                         )
                         Spacer(modifier = Modifier.height(4.dp))
                         Text(
                             text = if (isDebit) "Debit Expense" else "Credit Income",
-                            style = MaterialTheme.typography.bodyMedium,
+                            style = CashBuddyTypography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
-                        Spacer(modifier = Modifier.height(8.dp))
-                        ConfidenceBadge(confidence = tx.confidence)
+                        Spacer(modifier = Modifier.height(10.dp))
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            StatusBadge(status = tx.status)
+                            ConfidenceIndicator(confidence = tx.confidence)
+                        }
                     }
                 }
 
                 // Details Card
                 Card(
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(16.dp)
+                    shape = RadiusLarge,
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.surface
+                    ),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
                 ) {
                     Column(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(16.dp),
-                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                            .padding(18.dp),
+                        verticalArrangement = Arrangement.spacedBy(14.dp)
                     ) {
-                        DetailRow(label = "Merchant", value = tx.merchant)
+                        DetailRow(label = "Merchant", value = tx.merchant.ifBlank { "Unknown" })
                         DetailRow(label = "Status", value = tx.status.name)
                         DetailRow(label = "Source App", value = tx.sourceApp)
                     }
@@ -151,7 +176,7 @@ fun TransactionDetailScreen(
                 // Category Selector
                 Text(
                     text = "Change Category",
-                    style = MaterialTheme.typography.titleMedium,
+                    style = CashBuddyTypography.titleMedium,
                     fontWeight = FontWeight.SemiBold
                 )
                 Row(
@@ -162,18 +187,20 @@ fun TransactionDetailScreen(
                 ) {
                     state.categories.forEach { cat ->
                         val isSelected = cat.id == tx.categoryId
+                        val catColor = getCategoryColor(cat.name)
                         Box(
                             modifier = Modifier
-                                .clip(RoundedCornerShape(10.dp))
+                                .clip(RadiusMedium)
                                 .background(
-                                    if (isSelected) TrustBluePrimary else MaterialTheme.colorScheme.surfaceVariant
+                                    if (isSelected) catColor.copy(alpha = 0.25f) else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)
                                 )
                                 .clickable { viewModel.onCategoryChanged(cat.id) }
                                 .padding(horizontal = 14.dp, vertical = 8.dp)
                         ) {
                             Text(
                                 text = cat.name,
-                                color = if (isSelected) Color.White else MaterialTheme.colorScheme.onSurface,
+                                color = if (isSelected) catColor else MaterialTheme.colorScheme.onSurface,
+                                style = CashBuddyTypography.labelMedium,
                                 fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
                             )
                         }
@@ -184,35 +211,39 @@ fun TransactionDetailScreen(
                 if (tx.rawText.isNotBlank()) {
                     Text(
                         text = "Original Notification",
-                        style = MaterialTheme.typography.titleMedium,
+                        style = CashBuddyTypography.titleMedium,
                         fontWeight = FontWeight.SemiBold
                     )
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .clip(RoundedCornerShape(12.dp))
+                            .clip(RadiusMedium)
                             .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
                             .padding(14.dp)
                     ) {
                         Text(
                             text = tx.rawText,
-                            style = MaterialTheme.typography.bodySmall,
+                            style = CashBuddyTypography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                 }
 
-                Spacer(modifier = Modifier.height(12.dp))
+                Spacer(modifier = Modifier.height(8.dp))
 
                 // Delete Button
                 OutlinedButton(
                     onClick = { viewModel.onDeleteClicked() },
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = ButtonDefaults.outlinedButtonColors(contentColor = ExpenseCrimson),
-                    shape = RoundedCornerShape(12.dp)
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(48.dp),
+                    colors = ButtonDefaults.outlinedButtonColors(contentColor = DangerRed),
+                    shape = RadiusMedium
                 ) {
-                    Text(text = "🗑️ Delete Transaction", fontWeight = FontWeight.Bold)
+                    Text(text = "🗑️ Delete Transaction", style = CashBuddyTypography.labelLarge, color = DangerRed)
                 }
+
+                Spacer(modifier = Modifier.height(16.dp))
             }
         }
     }
@@ -222,16 +253,17 @@ fun TransactionDetailScreen(
 private fun DetailRow(label: String, value: String) {
     Row(
         modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
     ) {
         Text(
             text = label,
-            style = MaterialTheme.typography.bodyMedium,
+            style = CashBuddyTypography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
         Text(
             text = value,
-            style = MaterialTheme.typography.bodyMedium,
+            style = CashBuddyTypography.bodyMedium,
             fontWeight = FontWeight.SemiBold,
             color = MaterialTheme.colorScheme.onSurface
         )

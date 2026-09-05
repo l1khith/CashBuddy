@@ -32,7 +32,7 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -43,6 +43,15 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.cashbuddy.domain.model.Transaction
+import com.cashbuddy.presentation.components.ConfidenceIndicator
+import com.cashbuddy.presentation.components.formatCurrency
+import com.cashbuddy.presentation.theme.AccentEmerald
+import com.cashbuddy.presentation.theme.CashBuddyTypography
+import com.cashbuddy.presentation.theme.DangerRed
+import com.cashbuddy.presentation.theme.PrimaryIndigo
+import com.cashbuddy.presentation.theme.RadiusLarge
+import com.cashbuddy.presentation.theme.RadiusMedium
+import com.cashbuddy.presentation.theme.getCategoryColor
 import com.cashbuddy.domain.model.TransactionType
 import com.cashbuddy.presentation.components.ConfidenceBadge
 import com.cashbuddy.presentation.components.EmptyStateView
@@ -57,7 +66,7 @@ fun ReviewScreen(
     onNavigateBack: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
-    val state by viewModel.uiState.collectAsState()
+    val state by viewModel.uiState.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
 
     LaunchedEffect(Unit) {
@@ -209,75 +218,76 @@ private fun PendingReviewCard(
 ) {
     val isDebit = transaction.type == TransactionType.DEBIT
     val prefix = if (isDebit) "-₹" else "+₹"
-    val amountColor = if (isDebit) ExpenseCrimson else IncomeEmerald
+    val amountColor = if (isDebit) MaterialTheme.colorScheme.onSurface else AccentEmerald
+    val categoryColor = getCategoryColor(transaction.categoryName)
 
     Card(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(16.dp),
+        shape = RadiusLarge,
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f)
-        )
+            containerColor = MaterialTheme.colorScheme.surface
+        ),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(16.dp)
+                .padding(18.dp)
         ) {
-            // Amount & Confidence Badge
+            // Amount & Confidence Indicator
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "$prefix${transaction.amount}",
-                    style = MaterialTheme.typography.headlineMedium,
+                    text = "$prefix${formatCurrency(transaction.amount)}",
+                    style = CashBuddyTypography.headlineLarge,
                     fontWeight = FontWeight.Bold,
                     color = amountColor
                 )
-                ConfidenceBadge(confidence = transaction.confidence)
+                ConfidenceIndicator(confidence = transaction.confidence)
             }
 
-            Spacer(modifier = Modifier.height(6.dp))
+            Spacer(modifier = Modifier.height(8.dp))
 
             // Merchant & Source
             Text(
-                text = transaction.merchant,
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.SemiBold,
+                text = transaction.merchant.ifBlank { "Unknown Merchant" },
+                style = CashBuddyTypography.titleLarge,
                 color = MaterialTheme.colorScheme.onSurface
             )
             Text(
                 text = "Detected via ${transaction.sourceApp.substringAfterLast('.')}",
-                style = MaterialTheme.typography.bodySmall,
+                style = CashBuddyTypography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
 
             // Raw notification text preview
             if (transaction.rawText.isNotBlank()) {
-                Spacer(modifier = Modifier.height(8.dp))
+                Spacer(modifier = Modifier.height(10.dp))
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .clip(RoundedCornerShape(8.dp))
-                        .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.7f))
-                        .padding(8.dp)
+                        .clip(RadiusMedium)
+                        .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+                        .padding(10.dp)
                 ) {
                     Text(
                         text = transaction.rawText,
-                        style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.sp),
+                        style = CashBuddyTypography.bodySmall.copy(fontSize = 11.sp),
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         maxLines = 2
                     )
                 }
             }
 
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(14.dp))
 
             // Category Quick-Chip Selector
             Text(
                 text = "Assigned Category:",
-                style = MaterialTheme.typography.labelSmall,
+                style = CashBuddyTypography.labelMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
             Spacer(modifier = Modifier.height(6.dp))
@@ -285,30 +295,31 @@ private fun PendingReviewCard(
                 modifier = Modifier
                     .fillMaxWidth()
                     .horizontalScroll(rememberScrollState()),
-                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 allCategories.forEach { category ->
                     val isSelected = category.id == transaction.categoryId
+                    val catColor = getCategoryColor(category.name)
                     Box(
                         modifier = Modifier
-                            .clip(RoundedCornerShape(8.dp))
+                            .clip(RadiusMedium)
                             .background(
-                                if (isSelected) TrustBluePrimary else MaterialTheme.colorScheme.surface
+                                if (isSelected) catColor.copy(alpha = 0.25f) else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)
                             )
                             .clickable { onCategoryChange(category.id) }
-                            .padding(horizontal = 10.dp, vertical = 5.dp)
+                            .padding(horizontal = 12.dp, vertical = 6.dp)
                     ) {
                         Text(
                             text = category.name,
-                            style = MaterialTheme.typography.bodySmall,
-                            color = if (isSelected) Color.White else MaterialTheme.colorScheme.onSurface,
+                            style = CashBuddyTypography.labelMedium,
+                            color = if (isSelected) catColor else MaterialTheme.colorScheme.onSurface,
                             fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
                         )
                     }
                 }
             }
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(18.dp))
 
             // Action Buttons (Confirm & Discard)
             Row(
@@ -318,19 +329,19 @@ private fun PendingReviewCard(
                 OutlinedButton(
                     onClick = onReject,
                     modifier = Modifier.weight(1f),
-                    colors = ButtonDefaults.outlinedButtonColors(contentColor = ExpenseCrimson),
-                    shape = RoundedCornerShape(10.dp)
+                    colors = ButtonDefaults.outlinedButtonColors(contentColor = DangerRed),
+                    shape = RadiusMedium
                 ) {
-                    Text(text = "✕ Discard", fontWeight = FontWeight.SemiBold)
+                    Text(text = "✕ Discard", style = CashBuddyTypography.labelLarge, color = DangerRed)
                 }
 
                 Button(
                     onClick = onConfirm,
                     modifier = Modifier.weight(1.5f),
-                    colors = ButtonDefaults.buttonColors(containerColor = IncomeEmerald),
-                    shape = RoundedCornerShape(10.dp)
+                    colors = ButtonDefaults.buttonColors(containerColor = AccentEmerald),
+                    shape = RadiusMedium
                 ) {
-                    Text(text = "✓ Confirm", fontWeight = FontWeight.Bold, color = Color.White)
+                    Text(text = "✓ Confirm", style = CashBuddyTypography.labelLarge, color = Color.White)
                 }
             }
         }

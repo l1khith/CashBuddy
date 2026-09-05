@@ -20,7 +20,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -31,13 +31,18 @@ import com.cashbuddy.presentation.components.EmptyStateView
 import com.cashbuddy.presentation.components.TransactionItemCard
 import com.cashbuddy.presentation.theme.TrustBluePrimary
 
+import com.cashbuddy.presentation.components.TransactionCard
+import com.cashbuddy.presentation.theme.CashBuddyTypography
+import com.cashbuddy.presentation.theme.RadiusLarge
+import com.cashbuddy.presentation.theme.RadiusMedium
+
 @Composable
 fun TransactionListScreen(
     viewModel: TransactionListViewModel,
     onNavigateToDetail: (Long) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val state by viewModel.uiState.collectAsState()
+    val state by viewModel.uiState.collectAsStateWithLifecycle()
 
     Scaffold(modifier = modifier.fillMaxSize()) { innerPadding ->
         if (state.isLoading) {
@@ -47,7 +52,7 @@ fun TransactionListScreen(
                     .padding(innerPadding),
                 contentAlignment = Alignment.Center
             ) {
-                CircularProgressIndicator(color = TrustBluePrimary)
+                CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
             }
         } else {
             Column(
@@ -55,16 +60,16 @@ fun TransactionListScreen(
                     .fillMaxSize()
                     .padding(innerPadding)
             ) {
-                // Pinned Header, Search & Filters Section (Never scrolls away, never re-measures in LazyColumn)
+                // Pinned Header, Search & Filters Section
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 16.dp, vertical = 12.dp),
-                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     Text(
                         text = "Transactions",
-                        style = MaterialTheme.typography.headlineMedium,
+                        style = CashBuddyTypography.headlineMedium,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onBackground
                     )
@@ -74,9 +79,9 @@ fun TransactionListScreen(
                         value = state.searchQuery,
                         onValueChange = { viewModel.onSearchQueryChanged(it) },
                         modifier = Modifier.fillMaxWidth(),
-                        placeholder = { Text("Search merchant, note, or raw text...") },
+                        placeholder = { Text("Search merchant, note, or raw text...", style = CashBuddyTypography.bodyMedium) },
                         singleLine = true,
-                        shape = RoundedCornerShape(12.dp)
+                        shape = RadiusMedium
                     )
 
                     // Type Filter Chips (All, Debits, Credits)
@@ -87,17 +92,17 @@ fun TransactionListScreen(
                         FilterChip(
                             selected = state.selectedType == null,
                             onClick = { viewModel.onTypeSelected(null) },
-                            label = { Text("All (${state.totalCount})") }
+                            label = { Text("All (${state.totalCount})", style = CashBuddyTypography.labelMedium) }
                         )
                         FilterChip(
                             selected = state.selectedType == TransactionType.DEBIT,
                             onClick = { viewModel.onTypeSelected(TransactionType.DEBIT) },
-                            label = { Text("Debits (Expenses)") }
+                            label = { Text("Debits (Expenses)", style = CashBuddyTypography.labelMedium) }
                         )
                         FilterChip(
                             selected = state.selectedType == TransactionType.CREDIT,
                             onClick = { viewModel.onTypeSelected(TransactionType.CREDIT) },
-                            label = { Text("Credits (Income)") }
+                            label = { Text("Credits (Income)", style = CashBuddyTypography.labelMedium) }
                         )
                     }
                 }
@@ -127,8 +132,7 @@ fun TransactionListScreen(
                             key = { it.id },
                             contentType = { it.type }
                         ) { tx ->
-                            // Use pre-joined categoryName from SQL to avoid O(N*M) list searches during scroll
-                            TransactionItemCard(
+                            TransactionCard(
                                 transaction = tx,
                                 categoryName = tx.categoryName ?: "General",
                                 onClick = { onNavigateToDetail(tx.id) }

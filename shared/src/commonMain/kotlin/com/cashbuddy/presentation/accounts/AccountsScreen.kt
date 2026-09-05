@@ -26,7 +26,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -41,13 +41,20 @@ import com.cashbuddy.domain.model.Account
 import com.cashbuddy.domain.model.AccountType
 import com.cashbuddy.presentation.components.EmptyStateView
 import com.cashbuddy.presentation.theme.TrustBluePrimary
+import androidx.compose.foundation.background
+import androidx.compose.foundation.shape.CircleShape
+import com.cashbuddy.presentation.components.formatCurrency
+import com.cashbuddy.presentation.theme.CashBuddyTypography
+import com.cashbuddy.presentation.theme.PrimaryIndigo
+import com.cashbuddy.presentation.theme.RadiusLarge
+import com.cashbuddy.presentation.theme.RadiusMedium
 
 @Composable
 fun AccountsScreen(
     viewModel: AccountsViewModel,
     modifier: Modifier = Modifier
 ) {
-    val state by viewModel.uiState.collectAsState()
+    val state by viewModel.uiState.collectAsStateWithLifecycle()
     var showAddDialog by remember { mutableStateOf(false) }
 
     Scaffold(
@@ -120,12 +127,20 @@ fun AccountsScreen(
 
 @Composable
 private fun AccountItemCard(account: Account, onDelete: () -> Unit) {
+    val icon = when (account.type) {
+        AccountType.BANK -> "🏦"
+        AccountType.WALLET -> "📱"
+        AccountType.CREDIT_CARD -> "💳"
+        else -> "💰"
+    }
+
     Card(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(14.dp),
+        shape = RadiusLarge,
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
-        )
+            containerColor = MaterialTheme.colorScheme.surface
+        ),
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
     ) {
         Row(
             modifier = Modifier
@@ -134,24 +149,40 @@ private fun AccountItemCard(account: Account, onDelete: () -> Unit) {
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Column {
-                Text(
-                    text = account.name,
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold
-                )
-                Spacer(modifier = Modifier.height(2.dp))
-                Text(
-                    text = "${account.type.name} • ${account.number ?: "Active"}",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(14.dp)
+            ) {
+                Box(
+                    modifier = Modifier
+                        .height(44.dp)
+                        .padding(horizontal = 10.dp)
+                        .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f), CircleShape),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(text = icon, fontSize = 20.sp)
+                }
+
+                Column {
+                    Text(
+                        text = account.name,
+                        style = CashBuddyTypography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    Spacer(modifier = Modifier.height(2.dp))
+                    Text(
+                        text = "${account.type.name} • ${account.number ?: "Active"}",
+                        style = CashBuddyTypography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
             }
 
             Column(horizontalAlignment = Alignment.End) {
                 Text(
-                    text = "₹${account.balance.toLong()}",
-                    style = MaterialTheme.typography.titleLarge,
+                    text = "₹${formatCurrency(account.balance)}",
+                    style = CashBuddyTypography.titleLarge,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.primary
                 )

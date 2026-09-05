@@ -23,8 +23,9 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -38,12 +39,20 @@ import com.cashbuddy.presentation.theme.ExpenseCrimson
 import com.cashbuddy.presentation.theme.IncomeEmerald
 import com.cashbuddy.presentation.theme.TrustBluePrimary
 
+import com.cashbuddy.presentation.components.CategoryPieChart
+import com.cashbuddy.presentation.components.formatCurrency
+import com.cashbuddy.presentation.theme.CashBuddyTypography
+import com.cashbuddy.presentation.theme.RadiusLarge
+import com.cashbuddy.presentation.theme.RadiusMedium
+import com.cashbuddy.presentation.theme.RadiusSmall
+import com.cashbuddy.presentation.theme.getCategoryColor
+
 @Composable
 fun StatsScreen(
     viewModel: StatsViewModel,
     modifier: Modifier = Modifier
 ) {
-    val state by viewModel.uiState.collectAsState()
+    val state by viewModel.uiState.collectAsStateWithLifecycle()
 
     Scaffold(modifier = modifier.fillMaxSize()) { innerPadding ->
         if (state.isLoading) {
@@ -53,7 +62,7 @@ fun StatsScreen(
                     .padding(innerPadding),
                 contentAlignment = Alignment.Center
             ) {
-                CircularProgressIndicator(color = TrustBluePrimary)
+                CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
             }
         } else {
             LazyColumn(
@@ -66,20 +75,44 @@ fun StatsScreen(
                 item {
                     Text(
                         text = "Analytics & Insights",
-                        style = MaterialTheme.typography.headlineMedium,
+                        style = CashBuddyTypography.headlineMedium,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onBackground
                     )
                 }
 
-                // Monthly In/Out Card
+                // Interactive Donut Chart Hero
+                if (state.categoryBreakdowns.isNotEmpty()) {
+                    item {
+                        Card(
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RadiusLarge,
+                            colors = CardDefaults.cardColors(
+                                containerColor = MaterialTheme.colorScheme.surface
+                            ),
+                            elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 20.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                CategoryPieChart(breakdowns = state.categoryBreakdowns)
+                            }
+                        }
+                    }
+                }
+
+                // Monthly In/Out Summary Card
                 item {
                     Card(
                         modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(16.dp),
+                        shape = RadiusLarge,
                         colors = CardDefaults.cardColors(
-                            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
-                        )
+                            containerColor = MaterialTheme.colorScheme.surface
+                        ),
+                        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
                     ) {
                         Column(
                             modifier = Modifier
@@ -88,7 +121,7 @@ fun StatsScreen(
                         ) {
                             Text(
                                 text = "Current Month Summary",
-                                style = MaterialTheme.typography.titleMedium,
+                                style = CashBuddyTypography.titleMedium,
                                 fontWeight = FontWeight.SemiBold
                             )
                             Spacer(modifier = Modifier.height(14.dp))
@@ -99,12 +132,13 @@ fun StatsScreen(
                                 Column {
                                     Text(
                                         text = "Total Spent",
-                                        style = MaterialTheme.typography.bodySmall,
+                                        style = CashBuddyTypography.bodySmall,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant
                                     )
+                                    Spacer(modifier = Modifier.height(2.dp))
                                     Text(
-                                        text = "₹${state.totalExpense.toLong()}",
-                                        style = MaterialTheme.typography.titleLarge,
+                                        text = "₹${formatCurrency(state.totalExpense)}",
+                                        style = CashBuddyTypography.titleLarge,
                                         fontWeight = FontWeight.Bold,
                                         color = ExpenseCrimson
                                     )
@@ -112,12 +146,13 @@ fun StatsScreen(
                                 Column(horizontalAlignment = Alignment.End) {
                                     Text(
                                         text = "Total Received",
-                                        style = MaterialTheme.typography.bodySmall,
+                                        style = CashBuddyTypography.bodySmall,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant
                                     )
+                                    Spacer(modifier = Modifier.height(2.dp))
                                     Text(
-                                        text = "₹${state.totalIncome.toLong()}",
-                                        style = MaterialTheme.typography.titleLarge,
+                                        text = "₹${formatCurrency(state.totalIncome)}",
+                                        style = CashBuddyTypography.titleLarge,
                                         fontWeight = FontWeight.Bold,
                                         color = IncomeEmerald
                                     )
@@ -130,8 +165,8 @@ fun StatsScreen(
                 // Category Spending Header
                 item {
                     Text(
-                        text = "Spending by Category (Last 30 Days)",
-                        style = MaterialTheme.typography.titleLarge,
+                        text = "Spending by Category",
+                        style = CashBuddyTypography.titleLarge,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onBackground
                     )
@@ -147,7 +182,7 @@ fun StatsScreen(
                     }
                 } else {
                     val totalSpending = state.categoryBreakdowns.sumOf { it.totalAmount }.coerceAtLeast(1.0)
-                    items(state.categoryBreakdowns) { cat ->
+                    items(state.categoryBreakdowns, key = { it.categoryName }) { cat ->
                         CategorySpendingRow(cat = cat, totalSpending = totalSpending)
                     }
                 }
@@ -160,10 +195,15 @@ fun StatsScreen(
 private fun CategorySpendingRow(cat: CategoryBreakdown, totalSpending: Double) {
     val fraction = (cat.totalAmount / totalSpending).toFloat().coerceIn(0f, 1f)
     val percentage = (fraction * 100).toInt()
+    val categoryColor = getCategoryColor(cat.categoryName)
 
     Card(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(12.dp)
+        shape = RadiusMedium,
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surface
+        ),
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
     ) {
         Column(
             modifier = Modifier
@@ -177,14 +217,14 @@ private fun CategorySpendingRow(cat: CategoryBreakdown, totalSpending: Double) {
             ) {
                 Text(
                     text = cat.categoryName,
-                    style = MaterialTheme.typography.titleMedium,
+                    style = CashBuddyTypography.titleMedium,
                     fontWeight = FontWeight.SemiBold
                 )
                 Text(
-                    text = "₹${cat.totalAmount.toLong()} ($percentage%)",
-                    style = MaterialTheme.typography.titleMedium,
+                    text = "₹${formatCurrency(cat.totalAmount)} ($percentage%)",
+                    style = CashBuddyTypography.titleMedium,
                     fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.primary
+                    color = categoryColor
                 )
             }
             Spacer(modifier = Modifier.height(8.dp))
@@ -193,14 +233,14 @@ private fun CategorySpendingRow(cat: CategoryBreakdown, totalSpending: Double) {
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(8.dp)
-                    .clip(RoundedCornerShape(4.dp)),
-                color = TrustBluePrimary,
-                trackColor = MaterialTheme.colorScheme.surfaceVariant
+                    .clip(RadiusSmall),
+                color = categoryColor,
+                trackColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
             )
-            Spacer(modifier = Modifier.height(4.dp))
+            Spacer(modifier = Modifier.height(6.dp))
             Text(
-                text = "${cat.transactionCount} transactions • avg ₹${cat.averageAmount.toLong()}",
-                style = MaterialTheme.typography.bodySmall,
+                text = "${cat.transactionCount} transactions • avg ₹${formatCurrency(cat.averageAmount)}",
+                style = CashBuddyTypography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }

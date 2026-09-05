@@ -7,41 +7,47 @@ import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 
 private val DarkColorScheme = darkColorScheme(
-    primary = TrustBlueLight,
-    onPrimary = TrustBlueDark,
-    primaryContainer = TrustBlueDark,
-    onPrimaryContainer = TrustBlueLight,
-    secondary = TealMintLight,
-    onSecondary = TealMintDark,
-    secondaryContainer = TealMintDark,
-    onSecondaryContainer = TealMintLight,
+    primary = PrimaryIndigo,
+    onPrimary = TextPrimaryDark,
+    primaryContainer = PrimaryMuted,
+    onPrimaryContainer = TextPrimaryDark,
+    secondary = AccentEmerald,
+    onSecondary = BackgroundDark,
+    secondaryContainer = AccentMuted,
+    onSecondaryContainer = TextPrimaryDark,
+    tertiary = WarningAmber,
+    onTertiary = BackgroundDark,
     surface = SurfaceDark,
-    onSurface = OnSurfaceDark,
-    surfaceVariant = SurfaceVariantDark,
-    onSurfaceVariant = OnSurfaceVariantDark,
+    onSurface = TextPrimaryDark,
+    surfaceVariant = SurfaceElevatedDark,
+    onSurfaceVariant = TextSecondaryDark,
     background = BackgroundDark,
-    onBackground = OnSurfaceDark,
-    outline = OutlineDark,
-    error = ExpenseCrimson
+    onBackground = TextPrimaryDark,
+    outline = DividerDark,
+    error = DangerRed,
+    onError = TextPrimaryDark
 )
 
 private val LightColorScheme = lightColorScheme(
-    primary = TrustBluePrimary,
+    primary = PrimaryIndigo,
     onPrimary = SurfaceLight,
-    primaryContainer = TrustBlueLight.copy(alpha = 0.2f),
-    onPrimaryContainer = TrustBlueDark,
-    secondary = TealMintSecondary,
+    primaryContainer = PrimaryIndigo.copy(alpha = 0.12f),
+    onPrimaryContainer = PrimaryMuted,
+    secondary = AccentEmerald,
     onSecondary = SurfaceLight,
-    secondaryContainer = TealMintLight.copy(alpha = 0.2f),
-    onSecondaryContainer = TealMintDark,
+    secondaryContainer = AccentEmerald.copy(alpha = 0.12f),
+    onSecondaryContainer = AccentMuted,
+    tertiary = WarningAmber,
+    onTertiary = SurfaceLight,
     surface = SurfaceLight,
-    onSurface = OnSurfaceLight,
-    surfaceVariant = SurfaceVariantLight,
-    onSurfaceVariant = OnSurfaceVariantLight,
+    onSurface = TextPrimaryLight,
+    surfaceVariant = SurfaceElevatedLight,
+    onSurfaceVariant = TextSecondaryLight,
     background = BackgroundLight,
-    onBackground = OnSurfaceLight,
-    outline = OutlineLight,
-    error = ExpenseCrimson
+    onBackground = TextPrimaryLight,
+    outline = DividerLight,
+    error = DangerRed,
+    onError = SurfaceLight
 )
 
 @Composable

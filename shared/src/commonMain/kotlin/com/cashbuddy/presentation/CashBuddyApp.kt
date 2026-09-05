@@ -2,22 +2,11 @@ package com.cashbuddy.presentation
 
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Badge
-import androidx.compose.material3.BadgedBox
-import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.NavigationBar
-import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
@@ -29,6 +18,7 @@ import com.cashbuddy.presentation.addtransaction.AddTransactionScreen
 import com.cashbuddy.presentation.addtransaction.AddTransactionViewModel
 import com.cashbuddy.presentation.budget.BudgetScreen
 import com.cashbuddy.presentation.budget.BudgetViewModel
+import com.cashbuddy.presentation.components.CashBuddyBottomBar
 import com.cashbuddy.presentation.goals.GoalsScreen
 import com.cashbuddy.presentation.goals.GoalsViewModel
 import com.cashbuddy.presentation.home.HomeScreen
@@ -48,19 +38,6 @@ import com.cashbuddy.presentation.transactions.TransactionListViewModel
 import org.koin.compose.viewmodel.koinViewModel
 import org.koin.core.parameter.parametersOf
 
-sealed class BottomNavItem(
-    val title: String,
-    val iconEmoji: String,
-    val route: ScreenRoute
-) {
-    data object Home : BottomNavItem("Home", "🏠", ScreenRoute.Home)
-    data object Transactions : BottomNavItem("History", "💳", ScreenRoute.Transactions)
-    data object Review : BottomNavItem("Review", "⚠️", ScreenRoute.ReviewInbox)
-    data object Stats : BottomNavItem("Analytics", "📊", ScreenRoute.Stats)
-    data object Budgets : BottomNavItem("Budgets", "🎯", ScreenRoute.Budgets)
-    data object Settings : BottomNavItem("Settings", "⚙️", ScreenRoute.Settings)
-}
-
 @Composable
 fun CashBuddyApp(
     initialRoute: String? = null,
@@ -72,64 +49,72 @@ fun CashBuddyApp(
         val currentDestination = navBackStackEntry?.destination
 
         val homeViewModel: HomeViewModel = koinViewModel()
-        val homeState by homeViewModel.uiState.collectAsState()
+        val homeState by homeViewModel.uiState.collectAsStateWithLifecycle()
 
-        val bottomNavItems = listOf(
-            BottomNavItem.Home,
-            BottomNavItem.Transactions,
-            BottomNavItem.Review,
-            BottomNavItem.Stats,
-            BottomNavItem.Budgets,
-            BottomNavItem.Settings
-        )
+        val topLevelRoutes = listOf("Home", "Transactions", "Stats", "Settings")
 
         // Only show bottom navigation on top-level screens
         val isTopLevelDestination = currentDestination?.route?.let { routeStr ->
-            bottomNavItems.any { item -> routeStr.contains(item.route::class.simpleName ?: "") }
+            topLevelRoutes.any { routeStr.contains(it, ignoreCase = true) }
         } ?: true
+
+        val startDestination = when {
+            initialRoute?.contains("review", ignoreCase = true) == true -> ScreenRoute.ReviewInbox
+            initialRoute?.contains("transact", ignoreCase = true) == true -> ScreenRoute.Transactions
+            initialRoute?.contains("stat", ignoreCase = true) == true -> ScreenRoute.Stats
+            initialRoute?.contains("setting", ignoreCase = true) == true -> ScreenRoute.Settings
+            else -> ScreenRoute.Home
+        }
 
         Scaffold(
             modifier = modifier.fillMaxSize(),
             bottomBar = {
                 if (isTopLevelDestination) {
-                    NavigationBar {
-                        bottomNavItems.forEach { item ->
-                            val isSelected = currentDestination?.route?.contains(item.route::class.simpleName ?: "") == true
-
-                            NavigationBarItem(
-                                selected = isSelected,
-                                onClick = {
-                                    navController.navigate(item.route) {
-                                        popUpTo(ScreenRoute.Home) {
-                                            saveState = true
-                                        }
-                                        launchSingleTop = true
-                                        restoreState = true
-                                    }
-                                },
-                                icon = {
-                                    if (item is BottomNavItem.Review && homeState.unreviewedCount > 0) {
-                                        BadgedBox(
-                                            badge = {
-                                                Badge { Text("${homeState.unreviewedCount}") }
-                                            }
-                                        ) {
-                                            Text(text = item.iconEmoji)
-                                        }
-                                    } else {
-                                        Text(text = item.iconEmoji)
-                                    }
-                                },
-                                label = { Text(text = item.title) }
-                            )
+                    val currentRouteStr = currentDestination?.route ?: ""
+                    CashBuddyBottomBar(
+                        currentRoute = currentRouteStr,
+                        onNavigateToHome = {
+                            navController.navigate(ScreenRoute.Home) {
+                                popUpTo(ScreenRoute.Home) { saveState = true }
+                                launchSingleTop = true
+                                restoreState = true
+                            }
+                        },
+                        onNavigateToTransactions = {
+                            navController.navigate(ScreenRoute.Transactions) {
+                                popUpTo(ScreenRoute.Home) { saveState = true }
+                                launchSingleTop = true
+                                restoreState = true
+                            }
+                        },
+                        onNavigateToStats = {
+                            navController.navigate(ScreenRoute.Stats) {
+                                popUpTo(ScreenRoute.Home) { saveState = true }
+                                launchSingleTop = true
+                                restoreState = true
+                            }
+                        },
+                        onNavigateToSettings = {
+                            navController.navigate(ScreenRoute.Settings) {
+                                popUpTo(ScreenRoute.Home) { saveState = true }
+                                launchSingleTop = true
+                                restoreState = true
+                            }
+                        },
+                        onAddClick = {
+                            navController.navigate(ScreenRoute.AddTransaction())
+                        },
+                        unreviewedCount = homeState.unreviewedCount,
+                        onNavigateToReview = {
+                            navController.navigate(ScreenRoute.ReviewInbox)
                         }
-                    }
+                    )
                 }
             }
         ) { innerPadding ->
             NavHost(
                 navController = navController,
-                startDestination = ScreenRoute.Home,
+                startDestination = startDestination,
                 modifier = Modifier.padding(innerPadding)
             ) {
                 composable<ScreenRoute.Home> {

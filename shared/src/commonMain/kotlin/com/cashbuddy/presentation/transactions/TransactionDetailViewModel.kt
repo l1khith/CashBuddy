@@ -12,7 +12,7 @@ import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.firstOrNull
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
 
 data class TransactionDetailUiState(
@@ -35,20 +35,30 @@ class TransactionDetailViewModel(
 
     init {
         viewModelScope.launch {
-            val tx = transactionRepository.getById(transactionId).firstOrNull()
-            val cats = categoryRepository.getAll().firstOrNull() ?: emptyList()
-            _uiState.value = TransactionDetailUiState(
-                transaction = tx,
-                categories = cats,
-                isLoading = false
-            )
+            combine(
+                transactionRepository.getById(transactionId),
+                categoryRepository.getAll()
+            ) { tx, cats ->
+                TransactionDetailUiState(
+                    transaction = tx,
+                    categories = cats,
+                    isLoading = false
+                )
+            }.collect { newState ->
+                _uiState.value = newState
+            }
         }
     }
 
     fun onCategoryChanged(newCategoryId: Long) {
         viewModelScope.launch {
             val tx = _uiState.value.transaction ?: return@launch
-            val updated = tx.copy(categoryId = newCategoryId)
+            val newCategory = _uiState.value.categories.find { it.id == newCategoryId }
+            val updated = tx.copy(
+                categoryId = newCategoryId,
+                categoryName = newCategory?.name,
+                categoryColor = newCategory?.color
+            )
             transactionRepository.update(updated)
             _uiState.value = _uiState.value.copy(transaction = updated)
         }

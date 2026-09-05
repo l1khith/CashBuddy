@@ -32,7 +32,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -49,12 +49,19 @@ import com.cashbuddy.presentation.theme.TealMintSecondary
 import com.cashbuddy.presentation.theme.TrustBluePrimary
 import kotlinx.coroutines.flow.collectLatest
 
+import com.cashbuddy.presentation.theme.AccentEmerald
+import com.cashbuddy.presentation.theme.CashBuddyTypography
+import com.cashbuddy.presentation.theme.DangerRed
+import com.cashbuddy.presentation.theme.PrimaryIndigo
+import com.cashbuddy.presentation.theme.RadiusLarge
+import com.cashbuddy.presentation.theme.RadiusMedium
+
 @Composable
 fun SettingsScreen(
     viewModel: SettingsViewModel,
     modifier: Modifier = Modifier
 ) {
-    val state by viewModel.uiState.collectAsState()
+    val state by viewModel.uiState.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
     var showClearDialog by remember { mutableStateOf(false) }
 
@@ -75,7 +82,7 @@ fun SettingsScreen(
                     .padding(innerPadding),
                 contentAlignment = Alignment.Center
             ) {
-                CircularProgressIndicator(color = TrustBluePrimary)
+                CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
             }
         } else {
             LazyColumn(
@@ -88,7 +95,7 @@ fun SettingsScreen(
                 item {
                     Text(
                         text = "Settings",
-                        style = MaterialTheme.typography.headlineMedium,
+                        style = CashBuddyTypography.headlineMedium,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onBackground
                     )
@@ -98,26 +105,26 @@ fun SettingsScreen(
                 item {
                     Card(
                         modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(16.dp),
+                        shape = RadiusLarge,
                         colors = CardDefaults.cardColors(
-                            containerColor = TealMintSecondary.copy(alpha = 0.1f)
+                            containerColor = AccentEmerald.copy(alpha = 0.1f)
                         )
                     ) {
-                        Column(modifier = Modifier.padding(16.dp)) {
+                        Column(modifier = Modifier.padding(18.dp)) {
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Text(text = "🛡️", fontSize = 24.sp)
                                 Spacer(modifier = Modifier.padding(4.dp))
                                 Text(
                                     text = "100% Offline & Private",
-                                    style = MaterialTheme.typography.titleMedium,
+                                    style = CashBuddyTypography.titleMedium,
                                     fontWeight = FontWeight.Bold,
-                                    color = TealMintSecondary
+                                    color = AccentEmerald
                                 )
                             }
                             Spacer(modifier = Modifier.height(6.dp))
                             Text(
                                 text = "CashBuddy does not request INTERNET or SMS permissions. All notifications, classification, and database storage remain entirely on your device, encrypted with AES-256 GCM.",
-                                style = MaterialTheme.typography.bodySmall,
+                                style = CashBuddyTypography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
@@ -128,7 +135,7 @@ fun SettingsScreen(
                 item {
                     Text(
                         text = "Automation & Review Policy",
-                        style = MaterialTheme.typography.titleLarge,
+                        style = CashBuddyTypography.titleLarge,
                         fontWeight = FontWeight.Bold
                     )
                 }
@@ -136,10 +143,11 @@ fun SettingsScreen(
                 item {
                     Card(
                         modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(14.dp)
+                        shape = RadiusLarge,
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
                     ) {
                         Column(
-                            modifier = Modifier.padding(16.dp),
+                            modifier = Modifier.padding(18.dp),
                             verticalArrangement = Arrangement.spacedBy(16.dp)
                         ) {
                             // Notification Intake Toggle

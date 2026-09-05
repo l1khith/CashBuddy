@@ -30,7 +30,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -43,6 +43,15 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.cashbuddy.domain.model.Budget
+import com.cashbuddy.presentation.components.formatCurrency
+import com.cashbuddy.presentation.theme.AccentEmerald
+import com.cashbuddy.presentation.theme.CashBuddyTypography
+import com.cashbuddy.presentation.theme.DangerRed
+import com.cashbuddy.presentation.theme.RadiusLarge
+import com.cashbuddy.presentation.theme.RadiusMedium
+import com.cashbuddy.presentation.theme.RadiusSmall
+import com.cashbuddy.presentation.theme.WarningAmber
+import com.cashbuddy.presentation.theme.getCategoryColor
 import com.cashbuddy.domain.model.BudgetPeriod
 import com.cashbuddy.presentation.components.EmptyStateView
 import com.cashbuddy.presentation.theme.ConfidenceMedium
@@ -55,7 +64,7 @@ fun BudgetScreen(
     viewModel: BudgetViewModel,
     modifier: Modifier = Modifier
 ) {
-    val state by viewModel.uiState.collectAsState()
+    val state by viewModel.uiState.collectAsStateWithLifecycle()
     var showAddDialog by remember { mutableStateOf(false) }
 
     Scaffold(
@@ -139,24 +148,26 @@ private fun BudgetProgressCard(
         (budget.spentAmount / budget.amount).toFloat().coerceIn(0f, 1f)
     } else 0f
     val percentUsed = (if (budget.amount > 0) (budget.spentAmount / budget.amount * 100) else 0.0).toInt()
+    val categoryColor = getCategoryColor(budget.categoryName)
 
     val (barColor, statusText) = when {
-        budget.spentAmount >= budget.amount -> ExpenseCrimson to "🚨 Over budget!"
-        percentUsed >= 80 -> ConfidenceMedium to "⚠️ Approaching limit ($percentUsed% used)"
-        else -> IncomeEmerald to "On track ($percentUsed% used)"
+        budget.spentAmount >= budget.amount -> DangerRed to "🚨 Over budget!"
+        percentUsed >= 80 -> WarningAmber to "⚠️ Approaching limit ($percentUsed% used)"
+        else -> AccentEmerald to "On track ($percentUsed% used)"
     }
 
     Card(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(14.dp),
+        shape = RadiusLarge,
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
-        )
+            containerColor = MaterialTheme.colorScheme.surface
+        ),
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(16.dp)
+                .padding(18.dp)
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -165,34 +176,35 @@ private fun BudgetProgressCard(
             ) {
                 Text(
                     text = budget.categoryName ?: "General",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold
+                    style = CashBuddyTypography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = categoryColor
                 )
                 Text(
-                    text = "₹${budget.spentAmount.toLong()} / ₹${budget.amount.toLong()}",
-                    style = MaterialTheme.typography.titleMedium,
+                    text = "₹${formatCurrency(budget.spentAmount)} / ₹${formatCurrency(budget.amount)}",
+                    style = CashBuddyTypography.titleMedium,
                     fontWeight = FontWeight.SemiBold,
                     color = MaterialTheme.colorScheme.onSurface
                 )
             }
 
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(10.dp))
 
             LinearProgressIndicator(
                 progress = { fraction },
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(8.dp)
-                    .clip(RoundedCornerShape(4.dp)),
+                    .clip(RadiusSmall),
                 color = barColor,
-                trackColor = MaterialTheme.colorScheme.surfaceVariant
+                trackColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
             )
 
-            Spacer(modifier = Modifier.height(6.dp))
+            Spacer(modifier = Modifier.height(8.dp))
 
             Text(
                 text = statusText,
-                style = MaterialTheme.typography.bodySmall,
+                style = CashBuddyTypography.bodySmall,
                 color = barColor,
                 fontWeight = FontWeight.Medium
             )

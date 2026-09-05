@@ -27,7 +27,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -40,6 +40,13 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.cashbuddy.domain.model.Goal
+import com.cashbuddy.presentation.components.formatCurrency
+import com.cashbuddy.presentation.theme.AccentEmerald
+import com.cashbuddy.presentation.theme.CashBuddyTypography
+import com.cashbuddy.presentation.theme.PrimaryIndigo
+import com.cashbuddy.presentation.theme.RadiusLarge
+import com.cashbuddy.presentation.theme.RadiusMedium
+import com.cashbuddy.presentation.theme.RadiusSmall
 import com.cashbuddy.presentation.components.EmptyStateView
 import com.cashbuddy.presentation.theme.IncomeEmerald
 import com.cashbuddy.presentation.theme.TealMintSecondary
@@ -50,7 +57,7 @@ fun GoalsScreen(
     viewModel: GoalsViewModel,
     modifier: Modifier = Modifier
 ) {
-    val state by viewModel.uiState.collectAsState()
+    val state by viewModel.uiState.collectAsStateWithLifecycle()
     var showAddDialog by remember { mutableStateOf(false) }
     var contributingGoal by remember { mutableStateOf<Goal?>(null) }
 
@@ -124,12 +131,12 @@ fun GoalsScreen(
         )
     }
 
-    if (contributingGoal != null) {
+    contributingGoal?.let { goal ->
         ContributeGoalDialog(
-            goalName = contributingGoal!!.name,
+            goalName = goal.name,
             onDismiss = { contributingGoal = null },
             onContribute = { amount ->
-                viewModel.contribute(contributingGoal!!.id, amount)
+                viewModel.contribute(goal.id, amount)
                 contributingGoal = null
             }
         )
@@ -143,18 +150,21 @@ private fun GoalItemCard(goal: Goal, onContribute: () -> Unit) {
     } else 0f
     val percent = (fraction * 100).toInt()
 
-val isDone = goal.status == com.cashbuddy.domain.model.GoalStatus.COMPLETED
+    val isDone = goal.status == com.cashbuddy.domain.model.GoalStatus.COMPLETED
+    val progressColor = if (isDone) AccentEmerald else PrimaryIndigo
+
     Card(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(14.dp),
+        shape = RadiusLarge,
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
-        )
+            containerColor = MaterialTheme.colorScheme.surface
+        ),
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(16.dp)
+                .padding(18.dp)
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -163,30 +173,30 @@ val isDone = goal.status == com.cashbuddy.domain.model.GoalStatus.COMPLETED
             ) {
                 Text(
                     text = goal.name,
-                    style = MaterialTheme.typography.titleMedium,
+                    style = CashBuddyTypography.titleMedium,
                     fontWeight = FontWeight.Bold
                 )
                 Text(
                     text = "$percent%",
-                    style = MaterialTheme.typography.titleMedium,
+                    style = CashBuddyTypography.titleMedium,
                     fontWeight = FontWeight.Bold,
-                    color = if (isDone) IncomeEmerald else TealMintSecondary
+                    color = progressColor
                 )
             }
 
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(10.dp))
 
             LinearProgressIndicator(
                 progress = { fraction },
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(8.dp)
-                    .clip(RoundedCornerShape(4.dp)),
-                color = if (isDone) IncomeEmerald else TealMintSecondary,
-                trackColor = MaterialTheme.colorScheme.surfaceVariant
+                    .clip(RadiusSmall),
+                color = progressColor,
+                trackColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
             )
 
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(12.dp))
 
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -194,23 +204,23 @@ val isDone = goal.status == com.cashbuddy.domain.model.GoalStatus.COMPLETED
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "Saved ₹${goal.currentAmount.toLong()} of ₹${goal.targetAmount.toLong()}",
-                    style = MaterialTheme.typography.bodySmall,
+                    text = "Saved ₹${formatCurrency(goal.currentAmount)} of ₹${formatCurrency(goal.targetAmount)}",
+                    style = CashBuddyTypography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
 
                 if (!isDone) {
                     OutlinedButton(
                         onClick = onContribute,
-                        shape = RoundedCornerShape(8.dp)
+                        shape = RadiusMedium
                     ) {
-                        Text("+ Add Money", fontSize = 12.sp)
+                        Text("+ Add Money", style = CashBuddyTypography.labelSmall)
                     }
                 } else {
                     Text(
                         text = "✓ Completed!",
-                        color = IncomeEmerald,
-                        style = MaterialTheme.typography.labelMedium,
+                        color = AccentEmerald,
+                        style = CashBuddyTypography.labelMedium,
                         fontWeight = FontWeight.Bold
                     )
                 }
