@@ -21,7 +21,9 @@ import com.cashbuddy.domain.parser.ParsedNotificationResult
 import com.cashbuddy.domain.parser.RawNotificationData
 import com.cashbuddy.domain.repository.AccountRepository
 import com.cashbuddy.domain.repository.CategoryRepository
+import com.cashbuddy.domain.repository.MerchantRuleRepository
 import com.cashbuddy.domain.repository.SettingsRepository
+import com.cashbuddy.domain.repository.TrainingDataRepository
 import com.cashbuddy.domain.repository.TransactionRepository
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -41,6 +43,8 @@ class TransactionNotificationListener : NotificationListenerService(), KoinCompo
     private val categoryRepository: CategoryRepository by inject()
     private val settingsRepository: SettingsRepository by inject()
     private val modelManager: ModelManager by inject()
+    private val trainingDataRepository: TrainingDataRepository by inject()
+    private val merchantRuleRepository: MerchantRuleRepository by inject()
 
     private var classifier: TransactionClassifier? = null
 
@@ -98,9 +102,29 @@ class TransactionNotificationListener : NotificationListenerService(), KoinCompo
                 if (!isEnabled) return@launch
 
                 // 1. Try Rust parser, fallback to Kotlin parser
-                val parsed = parseNotification(packageName, title, text, postTime) ?: return@launch
+                val parsed = parseNotification(packageName, title, text, postTime)
 
-                // 2. Duplicate suppression (within 5-minute window)
+                // 2. Training Data Pipeline: Record raw notification for allowlisted banking apps
+                if (KotlinNotificationParser.ALLOWED_PACKAGES.contains(packageName)) {
+                    val fullRawText = if (title.isNotBlank()) "$title: $text" else text
+                    try {
+                        trainingDataRepository.recordRawNotification(
+                            rawText = fullRawText,
+                            source = "notification",
+                            sourceApp = packageName,
+                            extractedAmount = parsed?.amount,
+                            extractedType = parsed?.type?.name,
+                            extractedMerchant = parsed?.merchant,
+                            timestamp = postTime
+                        )
+                    } catch (e: Throwable) {
+                        android.util.Log.w(TAG, "Failed to record raw training sample: ${e.message}")
+                    }
+                }
+
+                if (parsed == null) return@launch
+
+                // 3. Duplicate suppression (within 5-minute window)
                 val windowMs = 300_000L
                 val nearbyTransactions = transactionRepository.getByDateRange(
                     postTime - windowMs,
@@ -114,11 +138,23 @@ class TransactionNotificationListener : NotificationListenerService(), KoinCompo
                 }
                 if (isDuplicate) return@launch
 
-                // 3. Resolve Category ID (with On-Device ML Classifier enhancement)
+                // 4. Resolve Category ID (3-tier hierarchy: Learned Rule -> Rule-based Parser -> ONNX ML)
                 var resolvedCategoryName = parsed.categoryName
                 var effectiveConfidence = parsed.confidence
 
-                if (resolvedCategoryName.equals("UNKNOWN", ignoreCase = true) || parsed.confidence < 0.75f) {
+                // Tier 1: Check instant user-learned merchant rule
+                val learnedRule = try {
+                    merchantRuleRepository.findMatch(parsed.merchant)
+                } catch (_: Throwable) {
+                    null
+                }
+
+                if (learnedRule != null && learnedRule.categoryName != null) {
+                    resolvedCategoryName = learnedRule.categoryName
+                    effectiveConfidence = 1.0f // Learned user rule overrides with 100% confidence
+                    android.util.Log.i(TAG, "Applied user-learned rule for '${parsed.merchant}' -> $resolvedCategoryName")
+                } else if (resolvedCategoryName.equals("UNKNOWN", ignoreCase = true) || parsed.confidence < 0.75f) {
+                    // Tier 3: On-Device Quantized DistilBERT ML Classifier
                     try {
                         val queryText = parsed.merchant.ifBlank { parsed.rawText }
                         val mlResult = classifier?.classify(queryText)
