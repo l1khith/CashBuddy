@@ -59,6 +59,7 @@ import com.cashbuddy.presentation.theme.RadiusMedium
 @Composable
 fun SettingsScreen(
     viewModel: SettingsViewModel,
+    onNavigateToPersonalization: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
@@ -370,6 +371,15 @@ fun SettingsScreen(
                             }
 
                             // Actions
+                            Button(
+                                onClick = onNavigateToPersonalization,
+                                modifier = Modifier.fillMaxWidth(),
+                                shape = RadiusMedium,
+                                colors = ButtonDefaults.buttonColors(containerColor = PrimaryIndigo)
+                            ) {
+                                Text("🧠 Open Personalization Dashboard")
+                            }
+
                             OutlinedButton(
                                 onClick = { viewModel.exportTrainingDataset() },
                                 modifier = Modifier.fillMaxWidth(),

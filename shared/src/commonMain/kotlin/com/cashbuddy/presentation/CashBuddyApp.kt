@@ -24,6 +24,9 @@ import com.cashbuddy.presentation.goals.GoalsViewModel
 import com.cashbuddy.presentation.home.HomeScreen
 import com.cashbuddy.presentation.home.HomeViewModel
 import com.cashbuddy.presentation.navigation.ScreenRoute
+import com.cashbuddy.presentation.personalization.DataViewScreen
+import com.cashbuddy.presentation.personalization.PersonalizationDashboardScreen
+import com.cashbuddy.presentation.personalization.PersonalizationViewModel
 import com.cashbuddy.presentation.review.ReviewScreen
 import com.cashbuddy.presentation.review.ReviewViewModel
 import com.cashbuddy.presentation.settings.SettingsScreen
@@ -176,13 +179,33 @@ fun CashBuddyApp(
 
                 composable<ScreenRoute.Settings> {
                     val settingsViewModel: SettingsViewModel = koinViewModel()
-                    SettingsScreen(viewModel = settingsViewModel)
+                    SettingsScreen(
+                        viewModel = settingsViewModel,
+                        onNavigateToPersonalization = { navController.navigate(ScreenRoute.PersonalizationDashboard) }
+                    )
                 }
 
                 composable<ScreenRoute.AddTransaction> {
                     val addViewModel: AddTransactionViewModel = koinViewModel()
                     AddTransactionScreen(
                         viewModel = addViewModel,
+                        onNavigateBack = { navController.popBackStack() }
+                    )
+                }
+
+                composable<ScreenRoute.PersonalizationDashboard> {
+                    val personalizationViewModel: PersonalizationViewModel = koinViewModel()
+                    PersonalizationDashboardScreen(
+                        viewModel = personalizationViewModel,
+                        onNavigateBack = { navController.popBackStack() },
+                        onNavigateToDataView = { navController.navigate(ScreenRoute.DataView) }
+                    )
+                }
+
+                composable<ScreenRoute.DataView> {
+                    val personalizationViewModel: PersonalizationViewModel = koinViewModel()
+                    DataViewScreen(
+                        viewModel = personalizationViewModel,
                         onNavigateBack = { navController.popBackStack() }
                     )
                 }

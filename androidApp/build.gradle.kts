@@ -27,7 +27,6 @@ dependencies {
     implementation(libs.compose.material3)
     implementation(libs.compose.ui)
     implementation(libs.compose.uiToolingPreview)
-    implementation("com.microsoft.onnxruntime:onnxruntime-android:1.18.0")
     debugImplementation(libs.compose.uiTooling)
 }
 
@@ -58,6 +57,10 @@ android {
         release {
             isMinifyEnabled = true
             isShrinkResources = true
+            ndk {
+                abiFilters.clear()
+                abiFilters.add("arm64-v8a")
+            }
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"

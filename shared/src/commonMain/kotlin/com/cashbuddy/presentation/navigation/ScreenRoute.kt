@@ -32,4 +32,10 @@ sealed interface ScreenRoute {
 
     @Serializable
     data class AddTransaction(val prefilledId: Long? = null) : ScreenRoute
+
+    @Serializable
+    data object PersonalizationDashboard : ScreenRoute
+
+    @Serializable
+    data object DataView : ScreenRoute
 }

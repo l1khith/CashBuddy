@@ -1,0 +1,424 @@
+package com.cashbuddy.presentation.personalization
+
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.cashbuddy.presentation.theme.AccentEmerald
+import com.cashbuddy.presentation.theme.CashBuddyTypography
+import com.cashbuddy.presentation.theme.DangerRed
+import com.cashbuddy.presentation.theme.PrimaryIndigo
+import com.cashbuddy.presentation.theme.RadiusLarge
+import com.cashbuddy.presentation.theme.RadiusMedium
+import com.cashbuddy.presentation.theme.WarningAmber
+import kotlinx.coroutines.flow.collectLatest
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun PersonalizationDashboardScreen(
+    viewModel: PersonalizationViewModel,
+    onNavigateBack: () -> Unit,
+    onNavigateToDataView: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val state by viewModel.uiState.collectAsStateWithLifecycle()
+    val snackbarHostState = remember { SnackbarHostState() }
+    var showResetDialog by remember { mutableStateOf(false) }
+
+    LaunchedEffect(Unit) {
+        viewModel.messageEffect.collectLatest { msg ->
+            snackbarHostState.showSnackbar(msg)
+        }
+    }
+
+    Scaffold(
+        modifier = modifier.fillMaxSize(),
+        snackbarHost = { SnackbarHost(snackbarHostState) },
+        topBar = {
+            TopAppBar(
+                title = {
+                    Text(
+                        text = "My Personalization",
+                        style = CashBuddyTypography.titleLarge,
+                        fontWeight = FontWeight.Bold
+                    )
+                },
+                navigationIcon = {
+                    TextButton(onClick = onNavigateBack) {
+                        Text(
+                            text = "← Back",
+                            style = CashBuddyTypography.labelLarge,
+                            color = PrimaryIndigo
+                        )
+                    }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.background
+                )
+            )
+        }
+    ) { innerPadding ->
+        if (state.isLoading) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(innerPadding),
+                contentAlignment = Alignment.Center
+            ) {
+                CircularProgressIndicator(color = PrimaryIndigo)
+            }
+        } else {
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(innerPadding),
+                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                // Hero Personalization Stats Card
+                item {
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RadiusLarge,
+                        colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.surface
+                        )
+                    ) {
+                        Column(
+                            modifier = Modifier.padding(20.dp),
+                            verticalArrangement = Arrangement.spacedBy(16.dp)
+                        ) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Column {
+                                    Text(
+                                        text = "Categorization Accuracy",
+                                        style = CashBuddyTypography.labelMedium,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                    Text(
+                                        text = "${state.accuracyRate}%",
+                                        style = CashBuddyTypography.displayLarge,
+                                        fontWeight = FontWeight.ExtraBold,
+                                        color = AccentEmerald
+                                    )
+                                }
+                                Box(
+                                    modifier = Modifier
+                                        .background(
+                                            AccentEmerald.copy(alpha = 0.15f),
+                                            shape = RadiusMedium
+                                        )
+                                        .padding(horizontal = 12.dp, vertical = 6.dp)
+                                ) {
+                                    Text(
+                                        text = "⚡ Instant Local Learning",
+                                        style = CashBuddyTypography.labelSmall,
+                                        color = AccentEmerald,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                }
+                            }
+
+                            // 3 Metric Badges
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                MetricBadge(
+                                    label = "Learned",
+                                    value = "${state.learnedMerchantsCount}",
+                                    unit = "merchants",
+                                    color = PrimaryIndigo,
+                                    modifier = Modifier.weight(1f)
+                                )
+                                MetricBadge(
+                                    label = "Corrections",
+                                    value = "${state.correctionsCount}",
+                                    unit = "feedback",
+                                    color = WarningAmber,
+                                    modifier = Modifier.weight(1f)
+                                )
+                                MetricBadge(
+                                    label = "Raw Alerts",
+                                    value = "${state.rawSamplesCount}",
+                                    unit = "samples",
+                                    color = AccentEmerald,
+                                    modifier = Modifier.weight(1f)
+                                )
+                            }
+                        }
+                    }
+                }
+
+                // Action Controls Card
+                item {
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RadiusLarge,
+                        colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.surface
+                        )
+                    ) {
+                        Column(
+                            modifier = Modifier.padding(18.dp),
+                            verticalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            Text(
+                                text = "Personalization Actions",
+                                style = CashBuddyTypography.titleMedium,
+                                fontWeight = FontWeight.Bold
+                            )
+
+                            // Train Now Button
+                            Button(
+                                onClick = { viewModel.trainNow() },
+                                modifier = Modifier.fillMaxWidth(),
+                                shape = RadiusMedium,
+                                colors = ButtonDefaults.buttonColors(containerColor = PrimaryIndigo),
+                                enabled = !state.isTraining
+                            ) {
+                                if (state.isTraining) {
+                                    CircularProgressIndicator(
+                                        color = Color.White,
+                                        modifier = Modifier.size(20.dp),
+                                        strokeWidth = 2.dp
+                                    )
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Text("Evaluating Pending Rules...")
+                                } else {
+                                    Text("⚡ Train / Re-categorize Now")
+                                }
+                            }
+
+                            // View Data Button
+                            OutlinedButton(
+                                onClick = onNavigateToDataView,
+                                modifier = Modifier.fillMaxWidth(),
+                                shape = RadiusMedium
+                            ) {
+                                Text("📋 View My Training Data (${state.rawSamplesCount + state.correctionsCount} records)")
+                            }
+
+                            // Export Dataset Button
+                            OutlinedButton(
+                                onClick = { viewModel.exportDataset() },
+                                modifier = Modifier.fillMaxWidth(),
+                                shape = RadiusMedium
+                            ) {
+                                Text("📤 Export Training Dataset (JSONL)")
+                            }
+
+                            // Reset Button
+                            TextButton(
+                                onClick = { showResetDialog = true },
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Text(
+                                    text = "🧹 Reset All Learned Personalization",
+                                    color = DangerRed
+                                )
+                            }
+                        }
+                    }
+                }
+
+                // Recent Corrections Header
+                item {
+                    Text(
+                        text = "Recent Learned Corrections",
+                        style = CashBuddyTypography.titleLarge,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+
+                if (state.recentCorrections.isEmpty()) {
+                    item {
+                        Card(
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RadiusMedium,
+                            colors = CardDefaults.cardColors(
+                                containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                            )
+                        ) {
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(24.dp),
+                                horizontalAlignment = Alignment.CenterHorizontally
+                            ) {
+                                Text(text = "🌱", fontSize = 32.sp)
+                                Spacer(modifier = Modifier.height(8.dp))
+                                Text(
+                                    text = "No user corrections recorded yet",
+                                    style = CashBuddyTypography.titleSmall,
+                                    fontWeight = FontWeight.SemiBold
+                                )
+                                Text(
+                                    text = "When you edit a category in transaction details, PaisaPal will learn it instantly.",
+                                    style = CashBuddyTypography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+                    }
+                } else {
+                    items(state.recentCorrections, key = { it.id }) { correction ->
+                        CorrectionItemCard(correction = correction)
+                    }
+                }
+            }
+        }
+    }
+
+    if (showResetDialog) {
+        AlertDialog(
+            onDismissRequest = { showResetDialog = false },
+            title = { Text("Reset Learned Rules & Data?") },
+            text = { Text("This will delete all learned merchant rules, user correction history, and raw training logs. Auto-categorization will revert to default built-in heuristics.") },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        viewModel.resetLearningData()
+                        showResetDialog = false
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = DangerRed)
+                ) {
+                    Text("Reset Everything")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showResetDialog = false }) { Text("Cancel") }
+            }
+        )
+    }
+}
+
+@Composable
+private fun MetricBadge(
+    label: String,
+    value: String,
+    unit: String,
+    color: Color,
+    modifier: Modifier = Modifier
+) {
+    Card(
+        modifier = modifier,
+        shape = RadiusMedium,
+        colors = CardDefaults.cardColors(
+            containerColor = color.copy(alpha = 0.08f)
+        )
+    ) {
+        Column(modifier = Modifier.padding(12.dp)) {
+            Text(
+                text = value,
+                style = CashBuddyTypography.titleLarge,
+                fontWeight = FontWeight.Bold,
+                color = color
+            )
+            Text(
+                text = "$label • $unit",
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+    }
+}
+
+@Composable
+private fun CorrectionItemCard(
+    correction: com.cashbuddy.domain.model.UserCorrection,
+    modifier: Modifier = Modifier
+) {
+    Card(
+        modifier = modifier.fillMaxWidth(),
+        shape = RadiusMedium,
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(14.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Box(
+                modifier = Modifier
+                    .background(PrimaryIndigo.copy(alpha = 0.15f), shape = RadiusMedium)
+                    .padding(10.dp)
+            ) {
+                Text(text = "🧠", fontSize = 18.sp)
+            }
+            Spacer(modifier = Modifier.width(12.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = correction.merchant,
+                    style = CashBuddyTypography.titleSmall,
+                    fontWeight = FontWeight.Bold
+                )
+                Spacer(modifier = Modifier.height(2.dp))
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        text = correction.oldCategory ?: "Unassigned",
+                        style = CashBuddyTypography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Text(
+                        text = " ➔ ",
+                        style = CashBuddyTypography.bodySmall,
+                        color = PrimaryIndigo,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Text(
+                        text = correction.newCategory,
+                        style = CashBuddyTypography.bodySmall,
+                        fontWeight = FontWeight.Bold,
+                        color = AccentEmerald
+                    )
+                }
+            }
+        }
+    }
+}
