@@ -4,13 +4,17 @@ import com.cashbuddy.data.repository.AccountRepositoryImpl
 import com.cashbuddy.data.repository.BudgetRepositoryImpl
 import com.cashbuddy.data.repository.CategoryRepositoryImpl
 import com.cashbuddy.data.repository.GoalRepositoryImpl
+import com.cashbuddy.data.repository.MerchantRuleRepositoryImpl
 import com.cashbuddy.data.repository.SettingsRepositoryImpl
+import com.cashbuddy.data.repository.TrainingDataRepositoryImpl
 import com.cashbuddy.data.repository.TransactionRepositoryImpl
 import com.cashbuddy.domain.repository.AccountRepository
 import com.cashbuddy.domain.repository.BudgetRepository
 import com.cashbuddy.domain.repository.CategoryRepository
 import com.cashbuddy.domain.repository.GoalRepository
+import com.cashbuddy.domain.repository.MerchantRuleRepository
 import com.cashbuddy.domain.repository.SettingsRepository
+import com.cashbuddy.domain.repository.TrainingDataRepository
 import com.cashbuddy.domain.repository.TransactionRepository
 import com.cashbuddy.domain.usecase.CalculateBalanceUseCase
 import com.cashbuddy.domain.usecase.ConfirmTransactionUseCase
@@ -53,6 +57,8 @@ val appModule = module {
     singleOf(::BudgetRepositoryImpl) bind BudgetRepository::class
     singleOf(::GoalRepositoryImpl) bind GoalRepository::class
     singleOf(::SettingsRepositoryImpl) bind SettingsRepository::class
+    singleOf(::MerchantRuleRepositoryImpl) bind MerchantRuleRepository::class
+    singleOf(::TrainingDataRepositoryImpl) bind TrainingDataRepository::class
 
     // Use Cases
     factoryOf(::CalculateBalanceUseCase)
@@ -71,11 +77,11 @@ val appModule = module {
     viewModelOf(::HomeViewModel)
     viewModelOf(::ReviewViewModel)
     viewModelOf(::TransactionListViewModel)
-    viewModel { (id: Long) -> TransactionDetailViewModel(id, get(), get()) }
+    viewModel { (id: Long) -> TransactionDetailViewModel(id, get(), get(), get(), get()) }
     viewModelOf(::StatsViewModel)
     viewModelOf(::AccountsViewModel)
     viewModelOf(::BudgetViewModel)
     viewModelOf(::GoalsViewModel)
-    viewModel { SettingsViewModel(get(), get(), get(), get(), getOrNull()) }
+    viewModel { SettingsViewModel(get(), get(), get(), get(), get(), getOrNull()) }
     viewModelOf(::AddTransactionViewModel)
 }

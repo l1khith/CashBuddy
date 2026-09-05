@@ -78,7 +78,18 @@ class ReviewViewModel(
     private fun modifyCategory(transactionId: Long, newCategoryId: Long) {
         viewModelScope.launch {
             val tx = _uiState.value.transactions.find { it.id == transactionId } ?: return@launch
-            modifyTransactionUseCase(tx.copy(categoryId = newCategoryId))
+            val oldCategoryName = tx.categoryName
+            val newCategory = _uiState.value.allCategories.find { it.id == newCategoryId }
+            val updatedTx = tx.copy(
+                categoryId = newCategoryId,
+                categoryName = newCategory?.name,
+                categoryColor = newCategory?.color
+            )
+            modifyTransactionUseCase(
+                transaction = updatedTx,
+                oldCategoryName = oldCategoryName,
+                newCategoryName = newCategory?.name
+            )
             _uiState.value = reducer.reduce(_uiState.value, ReviewResult.CategoryModified(transactionId, newCategoryId))
         }
     }

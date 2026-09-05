@@ -64,6 +64,7 @@ fun SettingsScreen(
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
     var showClearDialog by remember { mutableStateOf(false) }
+    var showClearTrainingDialog by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {
         viewModel.messageEffect.collectLatest { msg ->
@@ -293,6 +294,102 @@ fun SettingsScreen(
                     }
                 }
 
+                // On-Device Learning & Training Data
+                item {
+                    Text(
+                        text = "On-Device Learning & Training Data",
+                        style = CashBuddyTypography.titleLarge,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+
+                item {
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RadiusLarge,
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+                    ) {
+                        Column(
+                            modifier = Modifier.padding(18.dp),
+                            verticalArrangement = Arrangement.spacedBy(14.dp)
+                        ) {
+                            Text(
+                                text = "CashBuddy learns your categorization habits 100% locally. Correcting a category immediately creates local merchant rules, and allowlisted banking alerts are stored securely for local fine-tuning.",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+
+                            // Stats Row
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                            ) {
+                                Card(
+                                    modifier = Modifier.weight(1f),
+                                    shape = RadiusMedium,
+                                    colors = CardDefaults.cardColors(
+                                        containerColor = PrimaryIndigo.copy(alpha = 0.08f)
+                                    )
+                                ) {
+                                    Column(modifier = Modifier.padding(12.dp)) {
+                                        Text(
+                                            text = "${state.rawTrainingSamplesCount}",
+                                            style = CashBuddyTypography.titleLarge,
+                                            fontWeight = FontWeight.Bold,
+                                            color = PrimaryIndigo
+                                        )
+                                        Text(
+                                            text = "Raw Samples",
+                                            style = MaterialTheme.typography.labelSmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                    }
+                                }
+
+                                Card(
+                                    modifier = Modifier.weight(1f),
+                                    shape = RadiusMedium,
+                                    colors = CardDefaults.cardColors(
+                                        containerColor = AccentEmerald.copy(alpha = 0.08f)
+                                    )
+                                ) {
+                                    Column(modifier = Modifier.padding(12.dp)) {
+                                        Text(
+                                            text = "${state.userCorrectionsCount}",
+                                            style = CashBuddyTypography.titleLarge,
+                                            fontWeight = FontWeight.Bold,
+                                            color = AccentEmerald
+                                        )
+                                        Text(
+                                            text = "User Corrections",
+                                            style = MaterialTheme.typography.labelSmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                    }
+                                }
+                            }
+
+                            // Actions
+                            OutlinedButton(
+                                onClick = { viewModel.exportTrainingDataset() },
+                                modifier = Modifier.fillMaxWidth(),
+                                shape = RadiusMedium
+                            ) {
+                                Text("📤 Export Training Dataset (JSONL)")
+                            }
+
+                            OutlinedButton(
+                                onClick = { showClearTrainingDialog = true },
+                                modifier = Modifier.fillMaxWidth(),
+                                shape = RadiusMedium,
+                                colors = ButtonDefaults.outlinedButtonColors(contentColor = DangerRed)
+                            ) {
+                                Text("🧹 Reset Training Data & Corrections")
+                            }
+                        }
+                    }
+                }
+
                 // Data Management Section
                 item {
                     Text(
@@ -374,6 +471,28 @@ fun SettingsScreen(
             },
             dismissButton = {
                 TextButton(onClick = { showClearDialog = false }) { Text("Cancel") }
+            }
+        )
+    }
+
+    if (showClearTrainingDialog) {
+        AlertDialog(
+            onDismissRequest = { showClearTrainingDialog = false },
+            title = { Text("Reset Training Data & Corrections?") },
+            text = { Text("This will permanently delete all captured raw notification logs and user corrections used for local fine-tuning. Learned merchant rules will also be cleared. This action cannot be undone.") },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        viewModel.clearTrainingData()
+                        showClearTrainingDialog = false
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = DangerRed)
+                ) {
+                    Text("Reset Dataset")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showClearTrainingDialog = false }) { Text("Cancel") }
             }
         )
     }

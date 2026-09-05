@@ -12,6 +12,7 @@ import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
+import com.cashbuddy.domain.repository.TrainingDataRepository
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
@@ -24,6 +25,8 @@ data class SettingsUiState(
     val biometricLockEnabled: Boolean = false,
     val totalTransactionsCount: Int = 0,
     val totalAccountsCount: Int = 0,
+    val rawTrainingSamplesCount: Long = 0,
+    val userCorrectionsCount: Long = 0,
     val isLoading: Boolean = true
 )
 
@@ -32,6 +35,7 @@ class SettingsViewModel(
     private val transactionRepository: TransactionRepository,
     private val accountRepository: AccountRepository,
     private val exportDataUseCase: ExportDataUseCase,
+    private val trainingDataRepository: TrainingDataRepository,
     private val fileExporter: FileExporter? = null
 ) : ViewModel() {
 
@@ -46,8 +50,9 @@ class SettingsViewModel(
             combine(
                 settingsRepository.getSettings(),
                 transactionRepository.getAll(),
-                accountRepository.getAll()
-            ) { settings, txs, accounts ->
+                accountRepository.getAll(),
+                trainingDataRepository.getStats()
+            ) { settings, txs, accounts, stats ->
                 SettingsUiState(
                     notificationEnabled = settings.notificationsEnabled,
                     autoConfirmThreshold = settings.autoConfirmThreshold,
@@ -55,6 +60,8 @@ class SettingsViewModel(
                     biometricLockEnabled = settings.biometricEnabled,
                     totalTransactionsCount = txs.size,
                     totalAccountsCount = accounts.size,
+                    rawTrainingSamplesCount = stats.rawCount,
+                    userCorrectionsCount = stats.correctionsCount,
                     isLoading = false
                 )
             }.collect {
@@ -105,6 +112,34 @@ class SettingsViewModel(
             } else {
                 _messageEffect.emit("Data exported successfully")
             }
+        }
+    }
+
+    fun exportTrainingDataset(onJsonlReady: (String) -> Unit = {}) {
+        viewModelScope.launch {
+            val jsonl = trainingDataRepository.exportTrainingDataJsonl()
+            onJsonlReady(jsonl)
+            if (fileExporter != null) {
+                val fileName = "cashbuddy_training_${currentTimeMillis()}.jsonl"
+                val result = fileExporter.exportCsvFile(fileName, jsonl)
+                result.fold(
+                    onSuccess = { path ->
+                        _messageEffect.emit("Training dataset exported: $path")
+                    },
+                    onFailure = { err ->
+                        _messageEffect.emit("Training export failed: ${err.message}")
+                    }
+                )
+            } else {
+                _messageEffect.emit("Training dataset generated (${_uiState.value.rawTrainingSamplesCount} raw, ${_uiState.value.userCorrectionsCount} corrections)")
+            }
+        }
+    }
+
+    fun clearTrainingData() {
+        viewModelScope.launch {
+            trainingDataRepository.clearTrainingData()
+            _messageEffect.emit("Training data & corrections wiped")
         }
     }
 

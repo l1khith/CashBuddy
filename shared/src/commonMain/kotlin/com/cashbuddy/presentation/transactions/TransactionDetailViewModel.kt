@@ -5,7 +5,10 @@ import androidx.lifecycle.viewModelScope
 import com.cashbuddy.domain.model.Category
 import com.cashbuddy.domain.model.Transaction
 import com.cashbuddy.domain.repository.CategoryRepository
+import com.cashbuddy.domain.repository.MerchantRuleRepository
+import com.cashbuddy.domain.repository.TrainingDataRepository
 import com.cashbuddy.domain.repository.TransactionRepository
+import com.cashbuddy.platform.currentTimeMillis
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -24,7 +27,9 @@ data class TransactionDetailUiState(
 class TransactionDetailViewModel(
     private val transactionId: Long,
     private val transactionRepository: TransactionRepository,
-    private val categoryRepository: CategoryRepository
+    private val categoryRepository: CategoryRepository,
+    private val trainingDataRepository: TrainingDataRepository,
+    private val merchantRuleRepository: MerchantRuleRepository
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(TransactionDetailUiState())
@@ -53,6 +58,7 @@ class TransactionDetailViewModel(
     fun onCategoryChanged(newCategoryId: Long) {
         viewModelScope.launch {
             val tx = _uiState.value.transaction ?: return@launch
+            val oldCategoryName = tx.categoryName
             val newCategory = _uiState.value.categories.find { it.id == newCategoryId }
             val updated = tx.copy(
                 categoryId = newCategoryId,
@@ -61,6 +67,23 @@ class TransactionDetailViewModel(
             )
             transactionRepository.update(updated)
             _uiState.value = _uiState.value.copy(transaction = updated)
+
+            val targetLabel = newCategory?.name ?: return@launch
+            if (!targetLabel.equals(oldCategoryName, ignoreCase = true)) {
+                trainingDataRepository.recordCorrection(
+                    merchant = tx.merchant,
+                    sourceApp = tx.sourceApp,
+                    rawText = tx.rawText,
+                    oldCategory = oldCategoryName,
+                    newCategory = targetLabel,
+                    timestamp = currentTimeMillis()
+                )
+                merchantRuleRepository.learnRule(
+                    merchant = tx.merchant,
+                    categoryId = newCategoryId,
+                    priority = 100L
+                )
+            }
         }
     }
 
