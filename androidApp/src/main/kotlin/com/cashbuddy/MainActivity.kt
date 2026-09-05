@@ -70,16 +70,22 @@ class MainActivity : FragmentActivity() {
             }
         }
 
-        // Asynchronously extract and verify ONNX ML model assets in the background
+        // Load learned merchant rules into Rust CategoryEngine at app startup
         lifecycleScope.launch(Dispatchers.IO) {
             try {
-                val modelManager: com.cashbuddy.data.classifier.ModelManager by inject()
-                val modelFile = modelManager.ensureModelExtracted()
-                if (modelFile != null && modelFile.exists()) {
-                    android.util.Log.i("MainActivity", "ONNX ML model ready at: ${modelFile.absolutePath}")
+                val merchantRuleRepository: com.cashbuddy.domain.repository.MerchantRuleRepository by inject()
+                val categoryEngine: com.cashbuddy.core.CategoryEngine? by inject()
+                val rules = merchantRuleRepository.getAll().firstOrNull() ?: emptyList()
+                val entries = rules.map {
+                    com.cashbuddy.core.MerchantRuleEntry(
+                        merchant = it.pattern,
+                        category = it.categoryName ?: "Unknown"
+                    )
                 }
+                categoryEngine?.loadUserRules(entries)
+                android.util.Log.i("MainActivity", "Loaded ${entries.size} merchant rules into Rust CategoryEngine")
             } catch (e: Throwable) {
-                android.util.Log.w("MainActivity", "Background model extraction skipped or failed: ${e.message}")
+                android.util.Log.w("MainActivity", "CategoryEngine initialization: ${e.message}")
             }
         }
 

@@ -45,18 +45,10 @@ val androidModule = module {
         }
     }
 
-    // On-Device ML Model Manager & Rust Classifier
-    single { com.cashbuddy.data.classifier.ModelManager(get()) }
-
+    // Rust Priority Category Engine (Option C: Hybrid Rules + Tiny Personalization)
     single {
         try {
-            val modelManager: com.cashbuddy.data.classifier.ModelManager = get()
-            val file = modelManager.modelFile
-            if (file.exists() && file.length() > 0) {
-                com.cashbuddy.core.TransactionClassifier(file.absolutePath)
-            } else {
-                null
-            }
+            com.cashbuddy.core.CategoryEngine()
         } catch (_: Throwable) {
             null
         }

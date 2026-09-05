@@ -9,10 +9,10 @@ import android.os.Build
 import android.service.notification.NotificationListenerService
 import android.service.notification.StatusBarNotification
 import androidx.core.app.NotificationCompat
+import com.cashbuddy.core.CategoryEngine
+import com.cashbuddy.core.MerchantRuleEntry
 import com.cashbuddy.core.NotificationParser
 import com.cashbuddy.core.RawNotification
-import com.cashbuddy.core.TransactionClassifier
-import com.cashbuddy.data.classifier.ModelManager
 import com.cashbuddy.domain.model.Transaction
 import com.cashbuddy.domain.model.TransactionStatus
 import com.cashbuddy.domain.model.TransactionType
@@ -42,11 +42,9 @@ class TransactionNotificationListener : NotificationListenerService(), KoinCompo
     private val accountRepository: AccountRepository by inject()
     private val categoryRepository: CategoryRepository by inject()
     private val settingsRepository: SettingsRepository by inject()
-    private val modelManager: ModelManager by inject()
     private val trainingDataRepository: TrainingDataRepository by inject()
     private val merchantRuleRepository: MerchantRuleRepository by inject()
-
-    private var classifier: TransactionClassifier? = null
+    private val categoryEngine: CategoryEngine? by inject()
 
     companion object {
         private const val TAG = "TxNotificationListener"
@@ -58,19 +56,23 @@ class TransactionNotificationListener : NotificationListenerService(), KoinCompo
     override fun onCreate() {
         super.onCreate()
         createNotificationChannel()
-        initClassifierAsync()
+        loadRulesIntoEngine()
     }
 
-    private fun initClassifierAsync() {
+    private fun loadRulesIntoEngine() {
         serviceScope.launch {
             try {
-                val modelFile = modelManager.ensureModelExtracted()
-                if (modelFile != null && modelFile.exists()) {
-                    classifier = TransactionClassifier(modelFile.absolutePath)
-                    android.util.Log.i(TAG, "On-device INT8 ONNX TransactionClassifier initialized")
+                val rules = merchantRuleRepository.getAll().firstOrNull() ?: emptyList()
+                val entries = rules.map {
+                    MerchantRuleEntry(
+                        merchant = it.pattern,
+                        category = it.categoryName ?: "Unknown"
+                    )
                 }
+                categoryEngine?.loadUserRules(entries)
+                android.util.Log.i(TAG, "Loaded ${entries.size} merchant rules into Rust CategoryEngine")
             } catch (e: Throwable) {
-                android.util.Log.w(TAG, "Failed to initialize ONNX TransactionClassifier: ${e.message}")
+                android.util.Log.w(TAG, "Failed to load rules into CategoryEngine: ${e.message}")
             }
         }
     }
@@ -138,34 +140,18 @@ class TransactionNotificationListener : NotificationListenerService(), KoinCompo
                 }
                 if (isDuplicate) return@launch
 
-                // 4. Resolve Category ID (3-tier hierarchy: Learned Rule -> Rule-based Parser -> ONNX ML)
+                // 4. Resolve Category ID (Priority: Rust CategoryEngine [UserRule -> KeywordMap] -> Parser Heuristics -> Fallback)
                 var resolvedCategoryName = parsed.categoryName
                 var effectiveConfidence = parsed.confidence
 
-                // Tier 1: Check instant user-learned merchant rule
-                val learnedRule = try {
-                    merchantRuleRepository.findMatch(parsed.merchant)
-                } catch (_: Throwable) {
-                    null
-                }
-
-                if (learnedRule != null && learnedRule.categoryName != null) {
-                    resolvedCategoryName = learnedRule.categoryName
-                    effectiveConfidence = 1.0f // Learned user rule overrides with 100% confidence
-                    android.util.Log.i(TAG, "Applied user-learned rule for '${parsed.merchant}' -> $resolvedCategoryName")
-                } else if (resolvedCategoryName.equals("UNKNOWN", ignoreCase = true) || parsed.confidence < 0.75f) {
-                    // Tier 3: On-Device Quantized DistilBERT ML Classifier
-                    try {
-                        val queryText = parsed.merchant.ifBlank { parsed.rawText }
-                        val mlResult = classifier?.classify(queryText)
-                        if (mlResult != null && mlResult.confidence > 0.60f && mlResult.category != com.cashbuddy.core.Category.UNKNOWN) {
-                            resolvedCategoryName = mlResult.category.name
-                            effectiveConfidence = maxOf(effectiveConfidence, mlResult.confidence)
-                            android.util.Log.i(TAG, "ML Classifier refined category to $resolvedCategoryName (conf=${mlResult.confidence})")
-                        }
-                    } catch (e: Throwable) {
-                        android.util.Log.w(TAG, "ML classification fallback: ${e.message}")
-                    }
+                // Query Rust Priority Category Engine
+                val engineMatch = categoryEngine?.getCategory(parsed.merchant)
+                if (engineMatch != null && !engineMatch.category.equals("Unknown", ignoreCase = true)) {
+                    resolvedCategoryName = engineMatch.category
+                    effectiveConfidence = engineMatch.confidence
+                    android.util.Log.i(TAG, "CategoryEngine matched '${parsed.merchant}' -> $resolvedCategoryName (conf=$effectiveConfidence, src=${engineMatch.source})")
+                } else if (resolvedCategoryName.equals("UNKNOWN", ignoreCase = true)) {
+                    effectiveConfidence = 0.50f
                 }
 
                 val allCategories = categoryRepository.getAll().firstOrNull() ?: emptyList()

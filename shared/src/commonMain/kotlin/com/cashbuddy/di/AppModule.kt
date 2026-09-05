@@ -26,11 +26,13 @@ import com.cashbuddy.domain.usecase.GetUnreviewedCountUseCase
 import com.cashbuddy.domain.usecase.ManualAddTransactionUseCase
 import com.cashbuddy.domain.usecase.ModifyTransactionUseCase
 import com.cashbuddy.domain.usecase.RejectTransactionUseCase
+import com.cashbuddy.domain.usecase.BatchCategorizeUseCase
 import com.cashbuddy.presentation.accounts.AccountsViewModel
 import com.cashbuddy.presentation.addtransaction.AddTransactionViewModel
 import com.cashbuddy.presentation.budget.BudgetViewModel
 import com.cashbuddy.presentation.goals.GoalsViewModel
 import com.cashbuddy.presentation.home.HomeViewModel
+import com.cashbuddy.presentation.personalization.PersonalizationViewModel
 import com.cashbuddy.presentation.review.ReviewReducer
 import com.cashbuddy.presentation.review.ReviewViewModel
 import com.cashbuddy.presentation.settings.SettingsViewModel
@@ -72,6 +74,7 @@ val appModule = module {
     factoryOf(::ModifyTransactionUseCase)
     factoryOf(::ExportDataUseCase)
     factoryOf(::ReviewReducer)
+    factoryOf(::BatchCategorizeUseCase)
 
     // ViewModels
     viewModelOf(::HomeViewModel)
@@ -83,5 +86,6 @@ val appModule = module {
     viewModelOf(::BudgetViewModel)
     viewModelOf(::GoalsViewModel)
     viewModel { SettingsViewModel(get(), get(), get(), get(), get(), getOrNull()) }
+    viewModel { PersonalizationViewModel(get(), get(), get(), get(), getOrNull()) }
     viewModelOf(::AddTransactionViewModel)
 }
