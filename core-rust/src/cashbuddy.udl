@@ -57,22 +57,22 @@ interface NotificationParser {
     ParsedTransaction? parse(RawNotification notification);
 };
 
-dictionary CategoryScore {
-    Category category;
-    float score;
-};
-
-dictionary ClassificationResult {
-    Category category;
+dictionary CategoryMatch {
+    string category;
     float confidence;
-    sequence<CategoryScore> all_scores;
+    string source;
 };
 
-interface TransactionClassifier {
-    [Throws=CoreError]
-    constructor(string model_path);
-    [Throws=CoreError]
-    ClassificationResult classify(string text);
+dictionary MerchantRuleEntry {
+    string merchant;
+    string category;
+};
+
+interface CategoryEngine {
+    constructor();
+    void load_user_rules(sequence<MerchantRuleEntry> rules);
+    void learn_correction(string merchant, string category);
+    CategoryMatch get_category(string merchant);
 };
 
 dictionary EncryptedData {

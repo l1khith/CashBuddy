@@ -1,9 +1,9 @@
-pub mod classifier;
+pub mod category_engine;
 pub mod crypto;
 pub mod parser;
 pub mod security;
 
-pub use classifier::TransactionClassifier;
+pub use category_engine::{CategoryEngine, CategoryMatch, MerchantRuleEntry};
 pub use crypto::CryptoManager;
 pub use parser::NotificationParser;
 pub use security::SecurityValidator;
@@ -69,19 +69,6 @@ pub struct RawNotification {
     pub title: String,
     pub text: String,
     pub timestamp: i64,
-}
-
-#[derive(Debug, Clone)]
-pub struct CategoryScore {
-    pub category: Category,
-    pub score: f32,
-}
-
-#[derive(Debug, Clone)]
-pub struct ClassificationResult {
-    pub category: Category,
-    pub confidence: f32,
-    pub all_scores: Vec<CategoryScore>,
 }
 
 #[derive(Debug, Clone)]
