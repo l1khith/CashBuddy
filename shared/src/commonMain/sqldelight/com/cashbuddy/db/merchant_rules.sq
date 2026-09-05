@@ -38,5 +38,18 @@ VALUES (?, ?, ?, ?, 0, ?);
 update:
 UPDATE merchant_rules SET pattern = ?, category_id = ?, is_regex = ?, priority = ? WHERE id = ?;
 
+findByPattern:
+SELECT mr.*, c.name AS category_name, c.color AS category_color
+FROM merchant_rules mr
+JOIN categories c ON mr.category_id = c.id
+WHERE mr.pattern = ?
+LIMIT 1;
+
+updateByPattern:
+UPDATE merchant_rules SET category_id = ?, priority = ? WHERE pattern = ?;
+
+deleteByPattern:
+DELETE FROM merchant_rules WHERE pattern = ?;
+
 deleteById:
 DELETE FROM merchant_rules WHERE id = ?;

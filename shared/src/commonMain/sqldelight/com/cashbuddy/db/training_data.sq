@@ -1,0 +1,54 @@
+CREATE TABLE raw_training_data (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    raw_text TEXT NOT NULL,
+    source TEXT NOT NULL,
+    source_app TEXT,
+    extracted_amount REAL,
+    extracted_type TEXT,
+    extracted_merchant TEXT,
+    timestamp INTEGER NOT NULL
+);
+
+CREATE TABLE user_corrections (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    merchant TEXT NOT NULL,
+    source_app TEXT,
+    raw_text TEXT,
+    old_category TEXT,
+    new_category TEXT NOT NULL,
+    timestamp INTEGER NOT NULL
+);
+
+CREATE INDEX idx_raw_training_data_timestamp ON raw_training_data(timestamp);
+CREATE INDEX idx_user_corrections_merchant ON user_corrections(merchant);
+CREATE INDEX idx_user_corrections_timestamp ON user_corrections(timestamp);
+
+-- Raw Training Data Queries
+insertRaw:
+INSERT INTO raw_training_data (raw_text, source, source_app, extracted_amount, extracted_type, extracted_merchant, timestamp)
+VALUES (?, ?, ?, ?, ?, ?, ?);
+
+getAllRaw:
+SELECT * FROM raw_training_data
+ORDER BY timestamp DESC;
+
+getRawCount:
+SELECT COUNT(*) FROM raw_training_data;
+
+clearRaw:
+DELETE FROM raw_training_data;
+
+-- User Correction Queries
+insertCorrection:
+INSERT INTO user_corrections (merchant, source_app, raw_text, old_category, new_category, timestamp)
+VALUES (?, ?, ?, ?, ?, ?);
+
+getAllCorrections:
+SELECT * FROM user_corrections
+ORDER BY timestamp DESC;
+
+getCorrectionCount:
+SELECT COUNT(*) FROM user_corrections;
+
+clearCorrections:
+DELETE FROM user_corrections;
