@@ -18,12 +18,19 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.layout.size
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.DoneAll
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
@@ -172,8 +179,15 @@ fun ReviewScreen(
                             colors = ButtonDefaults.buttonColors(containerColor = IncomeEmerald),
                             shape = RoundedCornerShape(12.dp)
                         ) {
+                            Icon(
+                                imageVector = Icons.Default.DoneAll,
+                                contentDescription = null,
+                                tint = Color.White,
+                                modifier = Modifier.size(18.dp)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
                             Text(
-                                text = "✓ Quick Confirm All ${state.highConfidenceCount} High-Confidence",
+                                text = "Quick Confirm All (${state.highConfidenceCount})",
                                 fontWeight = FontWeight.Bold,
                                 color = Color.White
                             )
@@ -185,8 +199,8 @@ fun ReviewScreen(
                 if (filteredTransactions.isEmpty()) {
                     item {
                         EmptyStateView(
-                            icon = "🎉",
-                            title = "Inbox Zero!",
+                            imageVector = Icons.Default.CheckCircle,
+                            title = "Inbox Zero",
                             subtitle = "All pending transactions have been reviewed and confirmed."
                         )
                     }
@@ -332,7 +346,14 @@ private fun PendingReviewCard(
                     colors = ButtonDefaults.outlinedButtonColors(contentColor = DangerRed),
                     shape = RadiusMedium
                 ) {
-                    Text(text = "✕ Discard", style = CashBuddyTypography.labelLarge, color = DangerRed)
+                    Icon(
+                        imageVector = Icons.Default.Close,
+                        contentDescription = null,
+                        modifier = Modifier.size(16.dp),
+                        tint = DangerRed
+                    )
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text(text = "Discard", style = CashBuddyTypography.labelLarge, color = DangerRed)
                 }
 
                 Button(
@@ -341,7 +362,14 @@ private fun PendingReviewCard(
                     colors = ButtonDefaults.buttonColors(containerColor = AccentEmerald),
                     shape = RadiusMedium
                 ) {
-                    Text(text = "✓ Confirm", style = CashBuddyTypography.labelLarge, color = Color.White)
+                    Icon(
+                        imageVector = Icons.Default.Check,
+                        contentDescription = null,
+                        modifier = Modifier.size(16.dp),
+                        tint = Color.White
+                    )
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text(text = "Confirm", style = CashBuddyTypography.labelLarge, color = Color.White)
                 }
             }
         }

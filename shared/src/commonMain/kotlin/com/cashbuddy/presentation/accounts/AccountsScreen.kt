@@ -12,7 +12,14 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.layout.size
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AccountBalance
+import androidx.compose.material.icons.filled.AccountBalanceWallet
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.CreditCard
+import androidx.compose.material.icons.filled.Paid
+import androidx.compose.material3.Icon
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
@@ -65,7 +72,10 @@ fun AccountsScreen(
                 containerColor = TrustBluePrimary,
                 contentColor = Color.White
             ) {
-                Text(text = "+", fontSize = 24.sp, fontWeight = FontWeight.Bold)
+                Icon(
+                    imageVector = Icons.Default.Add,
+                    contentDescription = "Add Account"
+                )
             }
         }
     ) { innerPadding ->
@@ -98,10 +108,10 @@ fun AccountsScreen(
                 if (state.accounts.isEmpty()) {
                     item {
                         EmptyStateView(
-                            icon = "🏦",
+                            imageVector = Icons.Default.AccountBalance,
                             title = "No accounts added yet",
                             subtitle = "Add your bank account or payment wallet to track balances.",
-                            actionButtonText = "+ Add First Account",
+                            actionButtonText = "Add First Account",
                             onActionClick = { showAddDialog = true }
                         )
                     }
@@ -128,10 +138,10 @@ fun AccountsScreen(
 @Composable
 private fun AccountItemCard(account: Account, onDelete: () -> Unit) {
     val icon = when (account.type) {
-        AccountType.BANK -> "🏦"
-        AccountType.WALLET -> "📱"
-        AccountType.CREDIT_CARD -> "💳"
-        else -> "💰"
+        AccountType.BANK -> Icons.Default.AccountBalance
+        AccountType.WALLET -> Icons.Default.AccountBalanceWallet
+        AccountType.CREDIT_CARD -> Icons.Default.CreditCard
+        else -> Icons.Default.Paid
     }
 
     Card(
@@ -155,12 +165,16 @@ private fun AccountItemCard(account: Account, onDelete: () -> Unit) {
             ) {
                 Box(
                     modifier = Modifier
-                        .height(44.dp)
-                        .padding(horizontal = 10.dp)
+                        .size(44.dp)
                         .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f), CircleShape),
                     contentAlignment = Alignment.Center
                 ) {
-                    Text(text = icon, fontSize = 20.sp)
+                    Icon(
+                        imageVector = icon,
+                        contentDescription = account.type.name,
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(24.dp)
+                    )
                 }
 
                 Column {

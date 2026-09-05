@@ -15,8 +15,25 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AccountBalance
+import androidx.compose.material.icons.filled.ArrowDownward
+import androidx.compose.material.icons.filled.ArrowUpward
+import androidx.compose.material.icons.filled.CardGiftcard
+import androidx.compose.material.icons.filled.DirectionsCar
+import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.LocalHospital
+import androidx.compose.material.icons.filled.Movie
+import androidx.compose.material.icons.filled.Receipt
+import androidx.compose.material.icons.filled.Replay
+import androidx.compose.material.icons.filled.Restaurant
+import androidx.compose.material.icons.filled.School
+import androidx.compose.material.icons.filled.Security
+import androidx.compose.material.icons.automirrored.filled.TrendingUp
+import androidx.compose.material.icons.filled.ShoppingBag
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -26,6 +43,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -102,9 +120,11 @@ fun TransactionCard(
                     .background(categoryColor.copy(alpha = 0.15f)),
                 contentAlignment = Alignment.Center
             ) {
-                Text(
-                    text = getCategoryEmoji(categoryName, isDebit),
-                    fontSize = 20.sp
+                Icon(
+                    imageVector = getCategoryIcon(categoryName, isDebit),
+                    contentDescription = categoryName,
+                    tint = categoryColor,
+                    modifier = Modifier.size(22.dp)
                 )
             }
 
@@ -172,24 +192,24 @@ fun TransactionItemCard(
     )
 }
 
-private fun getCategoryEmoji(categoryName: String, isDebit: Boolean): String {
+private fun getCategoryIcon(categoryName: String, isDebit: Boolean): ImageVector {
     val lower = categoryName.lowercase()
     return when {
-        lower.contains("food") || lower.contains("dining") -> "🍔"
-        lower.contains("transport") -> "🚗"
-        lower.contains("shopping") -> "🛍️"
-        lower.contains("bill") || lower.contains("utilit") -> "📄"
-        lower.contains("entertainment") -> "🎬"
-        lower.contains("health") || lower.contains("medical") -> "🏥"
-        lower.contains("education") -> "🎓"
-        lower.contains("housing") || lower.contains("rent") -> "🏠"
-        lower.contains("insurance") -> "🛡️"
-        lower.contains("invest") -> "📈"
-        lower.contains("salary") -> "💰"
-        lower.contains("refund") -> "🔄"
-        lower.contains("gift") -> "🎁"
-        isDebit -> "↓"
-        else -> "↑"
+        lower.contains("food") || lower.contains("dining") || lower.contains("restaurant") -> Icons.Default.Restaurant
+        lower.contains("transport") || lower.contains("car") || lower.contains("auto") -> Icons.Default.DirectionsCar
+        lower.contains("shopping") || lower.contains("store") -> Icons.Default.ShoppingBag
+        lower.contains("bill") || lower.contains("utilit") || lower.contains("recharge") -> Icons.Default.Receipt
+        lower.contains("entertainment") || lower.contains("movie") || lower.contains("ott") -> Icons.Default.Movie
+        lower.contains("health") || lower.contains("medical") || lower.contains("pharm") -> Icons.Default.LocalHospital
+        lower.contains("education") || lower.contains("course") || lower.contains("fee") -> Icons.Default.School
+        lower.contains("housing") || lower.contains("rent") -> Icons.Default.Home
+        lower.contains("insurance") -> Icons.Default.Security
+        lower.contains("invest") -> Icons.AutoMirrored.Filled.TrendingUp
+        lower.contains("salary") -> Icons.Default.AccountBalance
+        lower.contains("refund") -> Icons.Default.Replay
+        lower.contains("gift") -> Icons.Default.CardGiftcard
+        isDebit -> Icons.Default.ArrowDownward
+        else -> Icons.Default.ArrowUpward
     }
 }
 

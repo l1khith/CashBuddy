@@ -16,11 +16,17 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.layout.size
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
@@ -98,20 +104,19 @@ fun TransactionDetailScreen(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text(
-                        text = "← Back",
-                        style = CashBuddyTypography.labelLarge,
-                        color = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier
-                            .clickable { onNavigateBack() }
-                            .padding(4.dp)
-                    )
+                    IconButton(onClick = onNavigateBack) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = "Back",
+                            tint = MaterialTheme.colorScheme.onBackground
+                        )
+                    }
                     Text(
                         text = "Transaction Details",
                         style = CashBuddyTypography.titleLarge,
                         fontWeight = FontWeight.Bold
                     )
-                    Spacer(modifier = Modifier.width(32.dp))
+                    Spacer(modifier = Modifier.width(48.dp))
                 }
 
                 // Amount Header Card
@@ -240,7 +245,16 @@ fun TransactionDetailScreen(
                     colors = ButtonDefaults.outlinedButtonColors(contentColor = DangerRed),
                     shape = RadiusMedium
                 ) {
-                    Text(text = "🗑️ Delete Transaction", style = CashBuddyTypography.labelLarge, color = DangerRed)
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            imageVector = Icons.Default.Delete,
+                            contentDescription = null,
+                            tint = DangerRed,
+                            modifier = Modifier.size(18.dp)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(text = "Delete Transaction", style = CashBuddyTypography.labelLarge, color = DangerRed)
+                    }
                 }
 
                 Spacer(modifier = Modifier.height(16.dp))

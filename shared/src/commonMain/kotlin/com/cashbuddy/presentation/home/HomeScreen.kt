@@ -18,10 +18,15 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowForward
+import androidx.compose.material.icons.automirrored.filled.ReceiptLong
+import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -100,24 +105,9 @@ fun HomeScreen(
                                 color = MaterialTheme.colorScheme.onBackground
                             )
                             Text(
-                                text = "100% Offline Personal Finance",
+                                text = "Personal Finance",
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-
-                        // Local Privacy Badge
-                        Box(
-                            modifier = Modifier
-                                .clip(RoundedCornerShape(20.dp))
-                                .background(TealMintSecondary.copy(alpha = 0.15f))
-                                .padding(horizontal = 10.dp, vertical = 5.dp)
-                        ) {
-                            Text(
-                                text = "🛡️ Zero Network",
-                                style = MaterialTheme.typography.labelSmall,
-                                color = TealMintSecondary,
-                                fontWeight = FontWeight.SemiBold
                             )
                         }
                     }
@@ -155,7 +145,12 @@ fun HomeScreen(
                                     verticalAlignment = Alignment.CenterVertically,
                                     modifier = Modifier.weight(1f)
                                 ) {
-                                    Text(text = "⚠️", fontSize = 22.sp)
+                                    Icon(
+                                        imageVector = Icons.Default.Warning,
+                                        contentDescription = null,
+                                        tint = ConfidenceMedium,
+                                        modifier = Modifier.size(24.dp)
+                                    )
                                     Spacer(modifier = Modifier.width(12.dp))
                                     Column {
                                         Text(
@@ -172,12 +167,21 @@ fun HomeScreen(
                                     }
                                 }
 
-                                Text(
-                                    text = "Review →",
-                                    style = MaterialTheme.typography.labelLarge,
-                                    fontWeight = FontWeight.Bold,
-                                    color = ConfidenceMedium
-                                )
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Text(
+                                        text = "Review",
+                                        style = MaterialTheme.typography.labelLarge,
+                                        fontWeight = FontWeight.Bold,
+                                        color = ConfidenceMedium
+                                    )
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                    Icon(
+                                        imageVector = Icons.AutoMirrored.Filled.ArrowForward,
+                                        contentDescription = null,
+                                        tint = ConfidenceMedium,
+                                        modifier = Modifier.size(16.dp)
+                                    )
+                                }
                             }
                         }
                     }
@@ -212,10 +216,10 @@ fun HomeScreen(
                 if (state.recentTransactions.isEmpty()) {
                     item {
                         EmptyStateView(
-                            icon = "💳",
+                            imageVector = Icons.AutoMirrored.Filled.ReceiptLong,
                             title = "No activity recorded yet",
                             subtitle = "Transactions from bank and UPI notifications will appear here automatically.",
-                            actionButtonText = "+ Add First Transaction",
+                            actionButtonText = "Add First Transaction",
                             onActionClick = { viewModel.onAddTransactionClicked() }
                         )
                     }

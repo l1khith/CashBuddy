@@ -17,12 +17,20 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.PieChart
+import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
@@ -75,7 +83,10 @@ fun BudgetScreen(
                 containerColor = TrustBluePrimary,
                 contentColor = Color.White
             ) {
-                Text(text = "+", fontSize = 24.sp, fontWeight = FontWeight.Bold)
+                Icon(
+                    imageVector = Icons.Default.Add,
+                    contentDescription = "Add Budget"
+                )
             }
         }
     ) { innerPadding ->
@@ -108,10 +119,10 @@ fun BudgetScreen(
                 if (state.budgets.isEmpty()) {
                     item {
                         EmptyStateView(
-                            icon = "🎯",
+                            imageVector = Icons.Default.PieChart,
                             title = "No budgets configured",
                             subtitle = "Set monthly spending limits for categories to stay on track.",
-                            actionButtonText = "+ Set First Budget",
+                            actionButtonText = "Set First Budget",
                             onActionClick = { showAddDialog = true }
                         )
                     }
@@ -150,10 +161,10 @@ private fun BudgetProgressCard(
     val percentUsed = (if (budget.amount > 0) (budget.spentAmount / budget.amount * 100) else 0.0).toInt()
     val categoryColor = getCategoryColor(budget.categoryName)
 
-    val (barColor, statusText) = when {
-        budget.spentAmount >= budget.amount -> DangerRed to "🚨 Over budget!"
-        percentUsed >= 80 -> WarningAmber to "⚠️ Approaching limit ($percentUsed% used)"
-        else -> AccentEmerald to "On track ($percentUsed% used)"
+    val (barColor, statusIcon, statusText) = when {
+        budget.spentAmount >= budget.amount -> Triple(DangerRed, Icons.Default.Warning, "Over budget!")
+        percentUsed >= 80 -> Triple(WarningAmber, Icons.Default.Warning, "Approaching limit ($percentUsed% used)")
+        else -> Triple(AccentEmerald, Icons.Default.CheckCircle, "On track ($percentUsed% used)")
     }
 
     Card(
@@ -202,12 +213,21 @@ private fun BudgetProgressCard(
 
             Spacer(modifier = Modifier.height(8.dp))
 
-            Text(
-                text = statusText,
-                style = CashBuddyTypography.bodySmall,
-                color = barColor,
-                fontWeight = FontWeight.Medium
-            )
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                    imageVector = statusIcon,
+                    contentDescription = null,
+                    tint = barColor,
+                    modifier = Modifier.size(14.dp)
+                )
+                Spacer(modifier = Modifier.width(4.dp))
+                Text(
+                    text = statusText,
+                    style = CashBuddyTypography.bodySmall,
+                    color = barColor,
+                    fontWeight = FontWeight.Medium
+                )
+            }
         }
     }
 }

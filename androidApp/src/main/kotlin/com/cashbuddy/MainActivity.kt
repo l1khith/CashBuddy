@@ -14,7 +14,11 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material3.Button
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.getValue
@@ -83,9 +87,7 @@ class MainActivity : FragmentActivity() {
                     )
                 }
                 categoryEngine?.loadUserRules(entries)
-                android.util.Log.i("MainActivity", "Loaded ${entries.size} merchant rules into Rust CategoryEngine")
-            } catch (e: Throwable) {
-                android.util.Log.w("MainActivity", "CategoryEngine initialization: ${e.message}")
+            } catch (_: Throwable) {
             }
         }
 
@@ -116,7 +118,12 @@ class MainActivity : FragmentActivity() {
                                 verticalArrangement = Arrangement.Center,
                                 modifier = Modifier.padding(24.dp)
                             ) {
-                                Text(text = "🔒", fontSize = 56.sp)
+                                Icon(
+                                    imageVector = Icons.Default.Lock,
+                                    contentDescription = "Locked",
+                                    modifier = Modifier.size(56.dp),
+                                    tint = MaterialTheme.colorScheme.primary
+                                )
                                 Spacer(modifier = Modifier.height(16.dp))
                                 Text(
                                     text = "CashBuddy is Locked",

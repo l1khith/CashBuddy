@@ -16,10 +16,17 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ReceiptLong
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.BarChart
+import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Badge
 import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.FloatingActionButtonDefaults
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -28,6 +35,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -74,7 +82,7 @@ fun CashBuddyBottomBar(
         ) {
             // Home
             BarNavItem(
-                icon = "🏠",
+                icon = Icons.Default.Home,
                 label = "Home",
                 selected = currentRoute.contains("Home", ignoreCase = true),
                 onClick = onNavigateToHome
@@ -82,7 +90,7 @@ fun CashBuddyBottomBar(
 
             // Transactions
             BarNavItem(
-                icon = "💳",
+                icon = Icons.AutoMirrored.Filled.ReceiptLong,
                 label = "History",
                 selected = currentRoute.contains("Transactions", ignoreCase = true),
                 onClick = onNavigateToTransactions
@@ -99,17 +107,17 @@ fun CashBuddyBottomBar(
                     .size(54.dp)
                     .offset(y = (-4).dp)
             ) {
-                Text(
-                    text = "+",
-                    fontSize = 28.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = Color.White
+                Icon(
+                    imageVector = Icons.Default.Add,
+                    contentDescription = "Add Transaction",
+                    tint = Color.White,
+                    modifier = Modifier.size(28.dp)
                 )
             }
 
             // Stats
             BarNavItem(
-                icon = "📊",
+                icon = Icons.Default.BarChart,
                 label = "Stats",
                 selected = currentRoute.contains("Stats", ignoreCase = true),
                 onClick = onNavigateToStats
@@ -117,7 +125,7 @@ fun CashBuddyBottomBar(
 
             // Settings
             BarNavItem(
-                icon = "⚙️",
+                icon = Icons.Default.Settings,
                 label = "Settings",
                 selected = currentRoute.contains("Settings", ignoreCase = true),
                 onClick = onNavigateToSettings
@@ -128,7 +136,7 @@ fun CashBuddyBottomBar(
 
 @Composable
 private fun BarNavItem(
-    icon: String,
+    icon: ImageVector,
     label: String,
     selected: Boolean,
     onClick: () -> Unit
@@ -149,9 +157,11 @@ private fun BarNavItem(
             )
             .padding(horizontal = 10.dp, vertical = 6.dp)
     ) {
-        Text(
-            text = icon,
-            fontSize = 20.sp
+        Icon(
+            imageVector = icon,
+            contentDescription = label,
+            modifier = Modifier.size(24.dp),
+            tint = color
         )
         Spacer(modifier = Modifier.height(2.dp))
         Text(

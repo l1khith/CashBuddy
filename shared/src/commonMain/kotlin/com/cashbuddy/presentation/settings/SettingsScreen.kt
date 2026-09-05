@@ -13,15 +13,24 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.DeleteForever
+import androidx.compose.material.icons.filled.DeleteSweep
+import androidx.compose.material.icons.filled.Download
+import androidx.compose.material.icons.filled.FileDownload
+import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
@@ -103,35 +112,7 @@ fun SettingsScreen(
                     )
                 }
 
-                // Privacy Card
-                item {
-                    Card(
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RadiusLarge,
-                        colors = CardDefaults.cardColors(
-                            containerColor = AccentEmerald.copy(alpha = 0.1f)
-                        )
-                    ) {
-                        Column(modifier = Modifier.padding(18.dp)) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Text(text = "🛡️", fontSize = 24.sp)
-                                Spacer(modifier = Modifier.padding(4.dp))
-                                Text(
-                                    text = "100% Offline & Private",
-                                    style = CashBuddyTypography.titleMedium,
-                                    fontWeight = FontWeight.Bold,
-                                    color = AccentEmerald
-                                )
-                            }
-                            Spacer(modifier = Modifier.height(6.dp))
-                            Text(
-                                text = "CashBuddy does not request INTERNET or SMS permissions. All notifications, classification, and database storage remain entirely on your device, encrypted with AES-256 GCM.",
-                                style = CashBuddyTypography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                    }
-                }
+
 
                 // Automation & Threshold Rules
                 item {
@@ -315,7 +296,7 @@ fun SettingsScreen(
                             verticalArrangement = Arrangement.spacedBy(14.dp)
                         ) {
                             Text(
-                                text = "CashBuddy learns your categorization habits 100% locally. Correcting a category immediately creates local merchant rules, and allowlisted banking alerts are stored securely for local fine-tuning.",
+                                text = "Personalize categorization by correcting categories. Correcting a transaction saves a merchant rule for future transactions.",
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -377,7 +358,13 @@ fun SettingsScreen(
                                 shape = RadiusMedium,
                                 colors = ButtonDefaults.buttonColors(containerColor = PrimaryIndigo)
                             ) {
-                                Text("🧠 Open Personalization Dashboard")
+                                Icon(
+                                    imageVector = Icons.Default.Tune,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text("Personalization Dashboard")
                             }
 
                             OutlinedButton(
@@ -385,7 +372,13 @@ fun SettingsScreen(
                                 modifier = Modifier.fillMaxWidth(),
                                 shape = RadiusMedium
                             ) {
-                                Text("📤 Export Training Dataset (JSONL)")
+                                Icon(
+                                    imageVector = Icons.Default.FileDownload,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text("Export Training Dataset (JSONL)")
                             }
 
                             OutlinedButton(
@@ -394,7 +387,13 @@ fun SettingsScreen(
                                 shape = RadiusMedium,
                                 colors = ButtonDefaults.outlinedButtonColors(contentColor = DangerRed)
                             ) {
-                                Text("🧹 Reset Training Data & Corrections")
+                                Icon(
+                                    imageVector = Icons.Default.DeleteSweep,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text("Reset Training Data & Corrections")
                             }
                         }
                     }
@@ -423,7 +422,13 @@ fun SettingsScreen(
                                 modifier = Modifier.fillMaxWidth(),
                                 shape = RoundedCornerShape(10.dp)
                             ) {
-                                Text("📥 Export All Transactions (CSV)")
+                                Icon(
+                                    imageVector = Icons.Default.Download,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text("Export All Transactions (CSV)")
                             }
 
                             Button(
@@ -432,7 +437,14 @@ fun SettingsScreen(
                                 colors = ButtonDefaults.buttonColors(containerColor = ExpenseCrimson),
                                 shape = RoundedCornerShape(10.dp)
                             ) {
-                                Text("🗑️ Clear All Data", color = Color.White)
+                                Icon(
+                                    imageVector = Icons.Default.DeleteForever,
+                                    contentDescription = null,
+                                    tint = Color.White,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text("Clear All Data", color = Color.White)
                             }
                         }
                     }
@@ -451,11 +463,6 @@ fun SettingsScreen(
                             style = MaterialTheme.typography.bodyMedium,
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                        Text(
-                            text = "KMP + Rust Core • SQLCipher AES-256 GCM",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
                         )
                     }
                 }

@@ -12,9 +12,11 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
@@ -80,6 +82,13 @@ fun TransactionListScreen(
                         onValueChange = { viewModel.onSearchQueryChanged(it) },
                         modifier = Modifier.fillMaxWidth(),
                         placeholder = { Text("Search merchant, note, or raw text...", style = CashBuddyTypography.bodyMedium) },
+                        leadingIcon = {
+                            Icon(
+                                imageVector = Icons.Default.Search,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        },
                         singleLine = true,
                         shape = RadiusMedium
                     )
@@ -116,7 +125,7 @@ fun TransactionListScreen(
                         contentAlignment = Alignment.Center
                     ) {
                         EmptyStateView(
-                            icon = "🔍",
+                            imageVector = Icons.Default.Search,
                             title = "No matching transactions",
                             subtitle = "Try adjusting your search query or filters."
                         )

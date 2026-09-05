@@ -70,9 +70,7 @@ class TransactionNotificationListener : NotificationListenerService(), KoinCompo
                     )
                 }
                 categoryEngine?.loadUserRules(entries)
-                android.util.Log.i(TAG, "Loaded ${entries.size} merchant rules into Rust CategoryEngine")
-            } catch (e: Throwable) {
-                android.util.Log.w(TAG, "Failed to load rules into CategoryEngine: ${e.message}")
+            } catch (_: Throwable) {
             }
         }
     }
@@ -119,8 +117,7 @@ class TransactionNotificationListener : NotificationListenerService(), KoinCompo
                             extractedMerchant = parsed?.merchant,
                             timestamp = postTime
                         )
-                    } catch (e: Throwable) {
-                        android.util.Log.w(TAG, "Failed to record raw training sample: ${e.message}")
+                    } catch (_: Throwable) {
                     }
                 }
 
@@ -149,7 +146,6 @@ class TransactionNotificationListener : NotificationListenerService(), KoinCompo
                 if (engineMatch != null && !engineMatch.category.equals("Unknown", ignoreCase = true)) {
                     resolvedCategoryName = engineMatch.category
                     effectiveConfidence = engineMatch.confidence
-                    android.util.Log.i(TAG, "CategoryEngine matched '${parsed.merchant}' -> $resolvedCategoryName (conf=$effectiveConfidence, src=${engineMatch.source})")
                 } else if (resolvedCategoryName.equals("UNKNOWN", ignoreCase = true)) {
                     effectiveConfidence = 0.50f
                 }
@@ -208,9 +204,8 @@ class TransactionNotificationListener : NotificationListenerService(), KoinCompo
                 if (status == TransactionStatus.PENDING) {
                     showReviewAlert(insertedId, parsed.amount, parsed.merchant)
                 }
-            } catch (e: Throwable) {
-                // Fail-safe: 100% offline, zero crash
-                e.printStackTrace()
+            } catch (_: Throwable) {
+                // Fail-safe handling
             }
         }
     }

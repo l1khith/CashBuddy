@@ -15,10 +15,16 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.layout.size
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -69,11 +75,11 @@ fun DataViewScreen(
                     )
                 },
                 navigationIcon = {
-                    TextButton(onClick = onNavigateBack) {
-                        Text(
-                            text = "← Back",
-                            style = CashBuddyTypography.labelLarge,
-                            color = PrimaryIndigo
+                    IconButton(onClick = onNavigateBack) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = "Back",
+                            tint = PrimaryIndigo
                         )
                     }
                 },
@@ -237,12 +243,14 @@ private fun CorrectionCard(correction: UserCorrection) {
                     style = CashBuddyTypography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
-                Text(
-                    text = " ➔ ",
-                    style = CashBuddyTypography.bodySmall,
-                    color = PrimaryIndigo,
-                    fontWeight = FontWeight.Bold
+                Spacer(modifier = Modifier.width(4.dp))
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.ArrowForward,
+                    contentDescription = null,
+                    tint = PrimaryIndigo,
+                    modifier = Modifier.size(12.dp)
                 )
+                Spacer(modifier = Modifier.width(4.dp))
                 Text(
                     text = correction.newCategory,
                     style = CashBuddyTypography.bodySmall,

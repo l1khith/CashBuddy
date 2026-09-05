@@ -15,6 +15,16 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowForward
+import androidx.compose.material.icons.filled.Bolt
+import androidx.compose.material.icons.filled.DeleteSweep
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.FileDownload
+import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.Sync
+import androidx.compose.material.icons.filled.TableRows
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -22,6 +32,8 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
@@ -84,11 +96,11 @@ fun PersonalizationDashboardScreen(
                     )
                 },
                 navigationIcon = {
-                    TextButton(onClick = onNavigateBack) {
-                        Text(
-                            text = "← Back",
-                            style = CashBuddyTypography.labelLarge,
-                            color = PrimaryIndigo
+                    IconButton(onClick = onNavigateBack) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = "Back",
+                            tint = PrimaryIndigo
                         )
                     }
                 },
@@ -152,14 +164,23 @@ fun PersonalizationDashboardScreen(
                                             AccentEmerald.copy(alpha = 0.15f),
                                             shape = RadiusMedium
                                         )
-                                        .padding(horizontal = 12.dp, vertical = 6.dp)
+                                        .padding(horizontal = 10.dp, vertical = 5.dp)
                                 ) {
-                                    Text(
-                                        text = "⚡ Instant Local Learning",
-                                        style = CashBuddyTypography.labelSmall,
-                                        color = AccentEmerald,
-                                        fontWeight = FontWeight.Bold
-                                    )
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Icon(
+                                            imageVector = Icons.Default.Bolt,
+                                            contentDescription = null,
+                                            tint = AccentEmerald,
+                                            modifier = Modifier.size(14.dp)
+                                        )
+                                        Spacer(modifier = Modifier.width(4.dp))
+                                        Text(
+                                            text = "Local Rules",
+                                            style = CashBuddyTypography.labelSmall,
+                                            color = AccentEmerald,
+                                            fontWeight = FontWeight.Bold
+                                        )
+                                    }
                                 }
                             }
 
@@ -230,7 +251,14 @@ fun PersonalizationDashboardScreen(
                                     Spacer(modifier = Modifier.width(8.dp))
                                     Text("Evaluating Pending Rules...")
                                 } else {
-                                    Text("⚡ Train / Re-categorize Now")
+                                    Icon(
+                                        imageVector = Icons.Default.Sync,
+                                        contentDescription = null,
+                                        tint = Color.White,
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Text("Train / Re-categorize Now")
                                 }
                             }
 
@@ -240,7 +268,13 @@ fun PersonalizationDashboardScreen(
                                 modifier = Modifier.fillMaxWidth(),
                                 shape = RadiusMedium
                             ) {
-                                Text("📋 View My Training Data (${state.rawSamplesCount + state.correctionsCount} records)")
+                                Icon(
+                                    imageVector = Icons.Default.TableRows,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text("View Training Data (${state.rawSamplesCount + state.correctionsCount} records)")
                             }
 
                             // Export Dataset Button
@@ -249,7 +283,13 @@ fun PersonalizationDashboardScreen(
                                 modifier = Modifier.fillMaxWidth(),
                                 shape = RadiusMedium
                             ) {
-                                Text("📤 Export Training Dataset (JSONL)")
+                                Icon(
+                                    imageVector = Icons.Default.FileDownload,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text("Export Training Dataset (JSONL)")
                             }
 
                             // Reset Button
@@ -257,8 +297,15 @@ fun PersonalizationDashboardScreen(
                                 onClick = { showResetDialog = true },
                                 modifier = Modifier.fillMaxWidth()
                             ) {
+                                Icon(
+                                    imageVector = Icons.Default.DeleteSweep,
+                                    contentDescription = null,
+                                    tint = DangerRed,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
                                 Text(
-                                    text = "🧹 Reset All Learned Personalization",
+                                    text = "Reset All Learned Personalization",
                                     color = DangerRed
                                 )
                             }
@@ -290,7 +337,12 @@ fun PersonalizationDashboardScreen(
                                     .padding(24.dp),
                                 horizontalAlignment = Alignment.CenterHorizontally
                             ) {
-                                Text(text = "🌱", fontSize = 32.sp)
+                                Icon(
+                                    imageVector = Icons.Default.Info,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(32.dp),
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
                                 Spacer(modifier = Modifier.height(8.dp))
                                 Text(
                                     text = "No user corrections recorded yet",
@@ -298,7 +350,7 @@ fun PersonalizationDashboardScreen(
                                     fontWeight = FontWeight.SemiBold
                                 )
                                 Text(
-                                    text = "When you edit a category in transaction details, PaisaPal will learn it instantly.",
+                                    text = "When you edit a category in transaction details, CashBuddy will learn it instantly.",
                                     style = CashBuddyTypography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
@@ -389,7 +441,12 @@ private fun CorrectionItemCard(
                     .background(PrimaryIndigo.copy(alpha = 0.15f), shape = RadiusMedium)
                     .padding(10.dp)
             ) {
-                Text(text = "🧠", fontSize = 18.sp)
+                Icon(
+                    imageVector = Icons.Default.Edit,
+                    contentDescription = null,
+                    tint = PrimaryIndigo,
+                    modifier = Modifier.size(18.dp)
+                )
             }
             Spacer(modifier = Modifier.width(12.dp))
             Column(modifier = Modifier.weight(1f)) {
@@ -405,12 +462,14 @@ private fun CorrectionItemCard(
                         style = CashBuddyTypography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
-                    Text(
-                        text = " ➔ ",
-                        style = CashBuddyTypography.bodySmall,
-                        color = PrimaryIndigo,
-                        fontWeight = FontWeight.Bold
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.ArrowForward,
+                        contentDescription = null,
+                        tint = PrimaryIndigo,
+                        modifier = Modifier.size(12.dp)
                     )
+                    Spacer(modifier = Modifier.width(4.dp))
                     Text(
                         text = correction.newCategory,
                         style = CashBuddyTypography.bodySmall,
