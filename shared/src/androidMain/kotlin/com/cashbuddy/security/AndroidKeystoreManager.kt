@@ -43,7 +43,17 @@ class AndroidKeystoreManager(private val context: Context) {
                 val iv = Base64.decode(ivBase64, Base64.NO_WRAP)
                 return decryptPassphrase(encryptedBytes, iv)
             } catch (e: Exception) {
-                // If hardware key became invalid (e.g. OS upgrade / key wipe), fall through to generate fresh
+                // CRITICAL: Never overwrite key if an existing encrypted database exists
+                // Doing so would make the database permanently unreadable
+                val dbFile = context.getDatabasePath("cashbuddy.db")
+                if (dbFile.exists()) {
+                    throw IllegalStateException(
+                        "Hardware Keystore decryption failed for existing database. " +
+                        "Cannot regenerate passphrase without destroying user data.",
+                        e
+                    )
+                }
+                // Only fall through to generate fresh key if no database file exists yet
             }
         }
 

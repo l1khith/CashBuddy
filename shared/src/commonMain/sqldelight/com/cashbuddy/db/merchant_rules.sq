@@ -34,3 +34,9 @@ UPDATE merchant_rules SET match_count = match_count + 1 WHERE id = ?;
 insert:
 INSERT INTO merchant_rules (pattern, category_id, is_regex, priority, match_count, created_at)
 VALUES (?, ?, ?, ?, 0, ?);
+
+update:
+UPDATE merchant_rules SET pattern = ?, category_id = ?, is_regex = ?, priority = ? WHERE id = ?;
+
+deleteById:
+DELETE FROM merchant_rules WHERE id = ?;

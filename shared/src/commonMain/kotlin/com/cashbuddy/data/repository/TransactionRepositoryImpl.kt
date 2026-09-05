@@ -117,9 +117,7 @@ class TransactionRepositoryImpl(
             created_at = transaction.createdAt,
             updated_at = transaction.updatedAt
         )
-        // Return rowid
-        db.transactionsQueries.getBalance().executeAsOne() // verify trigger
-        transaction.id
+        queries.lastInsertRowId().executeAsOne()
     }
 
     override suspend fun updateStatus(id: Long, status: TransactionStatus): Unit = withContext(dispatcher) {

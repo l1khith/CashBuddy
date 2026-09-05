@@ -42,3 +42,13 @@ SELECT * FROM categories WHERE type = ? ORDER BY sort_order;
 
 getById:
 SELECT * FROM categories WHERE id = ?;
+
+insert:
+INSERT INTO categories (name, type, icon, color, is_default, sort_order, parent_id, created_at)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?);
+
+update:
+UPDATE categories SET name = ?, type = ?, icon = ?, color = ?, sort_order = ?, parent_id = ? WHERE id = ?;
+
+deleteById:
+DELETE FROM categories WHERE id = ? AND is_default = 0;

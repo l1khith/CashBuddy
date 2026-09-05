@@ -18,11 +18,16 @@ actual class DatabaseDriverFactory(private val context: Context) {
             // Failsafe for test environments where sqlcipher native libs may not be bundled
         }
 
-        return AndroidSqliteDriver(
+        val driver = AndroidSqliteDriver(
             schema = AppDatabase.Schema,
             context = context,
             name = "cashbuddy.db",
-            factory = SupportOpenHelperFactory(passphrase)
+            factory = SupportOpenHelperFactory(passphrase.copyOf())
         )
+
+        // Zeroize original passphrase from heap — factory holds its own copy for lazy DB open
+        java.util.Arrays.fill(passphrase, 0.toByte())
+
+        return driver
     }
 }

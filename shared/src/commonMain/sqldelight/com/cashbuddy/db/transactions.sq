@@ -39,6 +39,38 @@ BEGIN
     UPDATE accounts SET balance = balance + new.amount, updated_at = new.created_at WHERE id = new.account_id;
 END;
 
+-- Balance update when pending transaction is confirmed (DEBIT)
+CREATE TRIGGER update_account_balance_on_confirm_debit
+AFTER UPDATE OF status ON transactions
+WHEN old.status != 'CONFIRMED' AND new.status = 'CONFIRMED' AND new.type = 'DEBIT' AND new.account_id IS NOT NULL
+BEGIN
+    UPDATE accounts SET balance = balance - new.amount, updated_at = new.updated_at WHERE id = new.account_id;
+END;
+
+-- Balance update when pending transaction is confirmed (CREDIT)
+CREATE TRIGGER update_account_balance_on_confirm_credit
+AFTER UPDATE OF status ON transactions
+WHEN old.status != 'CONFIRMED' AND new.status = 'CONFIRMED' AND new.type = 'CREDIT' AND new.account_id IS NOT NULL
+BEGIN
+    UPDATE accounts SET balance = balance + new.amount, updated_at = new.updated_at WHERE id = new.account_id;
+END;
+
+-- Balance reversal when confirmed DEBIT transaction is deleted
+CREATE TRIGGER revert_account_balance_on_delete_debit
+AFTER DELETE ON transactions
+WHEN old.status = 'CONFIRMED' AND old.type = 'DEBIT' AND old.account_id IS NOT NULL
+BEGIN
+    UPDATE accounts SET balance = balance + old.amount WHERE id = old.account_id;
+END;
+
+-- Balance reversal when confirmed CREDIT transaction is deleted
+CREATE TRIGGER revert_account_balance_on_delete_credit
+AFTER DELETE ON transactions
+WHEN old.status = 'CONFIRMED' AND old.type = 'CREDIT' AND old.account_id IS NOT NULL
+BEGIN
+    UPDATE accounts SET balance = balance - old.amount WHERE id = old.account_id;
+END;
+
 getAll:
 SELECT t.*, c.name AS category_name, c.color AS category_color, c.icon AS category_icon,
        a.name AS account_name, a.type AS account_type
@@ -120,3 +152,6 @@ SELECT
     COALESCE(SUM(CASE WHEN type = 'CREDIT' AND status = 'CONFIRMED' THEN amount ELSE 0.0 END), 0.0) -
     COALESCE(SUM(CASE WHEN type = 'DEBIT' AND status = 'CONFIRMED' THEN amount ELSE 0.0 END), 0.0)
 FROM transactions;
+
+lastInsertRowId:
+SELECT last_insert_rowid();

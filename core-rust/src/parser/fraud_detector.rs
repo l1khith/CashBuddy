@@ -28,12 +28,17 @@ impl FraudDetector {
         let cutoff = timestamp - 60_000;
         timestamps.retain(|&t| t > cutoff);
 
-        if timestamps.len() >= MAX_TRANSACTIONS_PER_MINUTE {
+        let result = if timestamps.len() >= MAX_TRANSACTIONS_PER_MINUTE {
             false
         } else {
             timestamps.push(timestamp);
             true
-        }
+        };
+
+        // Evict package entries with no recent activity to prevent unbounded map growth
+        map.retain(|_, v| !v.is_empty());
+
+        result
     }
 
     /// Computes deterministic signature for duplicate suppression (5-minute window)
