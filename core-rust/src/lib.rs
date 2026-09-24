@@ -1,12 +1,18 @@
 pub mod category_engine;
 pub mod crypto;
+pub mod dedup;
 pub mod parser;
+pub mod screenshot_parser;
 pub mod security;
+pub mod sms_parser;
 
 pub use category_engine::{CategoryEngine, CategoryMatch, MerchantRuleEntry};
 pub use crypto::CryptoManager;
+pub use dedup::is_duplicate_transaction;
 pub use parser::NotificationParser;
+pub use screenshot_parser::{parse_screenshot_text, ScreenshotTransaction};
 pub use security::SecurityValidator;
+pub use sms_parser::{is_trusted_sender, learn_trusted_sender, parse_sms, SmsTransaction};
 
 #[derive(Debug, thiserror::Error)]
 pub enum CoreError {

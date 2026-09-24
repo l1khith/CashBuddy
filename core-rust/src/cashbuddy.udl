@@ -1,8 +1,37 @@
-namespace cashbuddy {};
+namespace cashbuddy {
+    SmsTransaction? parse_sms(string sender, string body);
+    void learn_trusted_sender(string sender);
+    boolean is_trusted_sender(string sender);
+    ScreenshotTransaction? parse_screenshot_text(string raw_text);
+    boolean is_duplicate_transaction(double amount1, string merchant1, i64 time1, double amount2, string merchant2, i64 time2, i64 window_secs);
+};
 
 enum TransactionType {
     "Debit",
     "Credit"
+};
+
+dictionary SmsTransaction {
+    double amount;
+    TransactionType transaction_type;
+    string category;
+    string merchant;
+    string? account_last4;
+    string? bank;
+    string raw_text;
+    float confidence;
+    i64 timestamp;
+};
+
+dictionary ScreenshotTransaction {
+    double amount;
+    TransactionType transaction_type;
+    string merchant;
+    string category;
+    string? utr_or_ref;
+    string app_name;
+    float confidence;
+    string raw_text;
 };
 
 enum Category {

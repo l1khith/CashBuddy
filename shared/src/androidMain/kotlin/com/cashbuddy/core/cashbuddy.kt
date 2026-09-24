@@ -746,6 +746,16 @@ internal interface UniffiForeignFutureCompleteVoid : com.sun.jna.Callback {
 
 
 
+
+
+
+
+
+
+
+
+
+
 // A JNA Library to expose the extern-C FFI definitions.
 // This is an implementation detail which will be called internally by the public API.
 
@@ -807,6 +817,16 @@ internal interface UniffiLib : Library {
     ): Pointer
     fun uniffi_cashbuddy_core_fn_method_securityvalidator_is_device_compromised(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
     ): Byte
+    fun uniffi_cashbuddy_core_fn_func_is_duplicate_transaction(`amount1`: Double,`merchant1`: RustBuffer.ByValue,`time1`: Long,`amount2`: Double,`merchant2`: RustBuffer.ByValue,`time2`: Long,`windowSecs`: Long,uniffi_out_err: UniffiRustCallStatus, 
+    ): Byte
+    fun uniffi_cashbuddy_core_fn_func_is_trusted_sender(`sender`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): Byte
+    fun uniffi_cashbuddy_core_fn_func_learn_trusted_sender(`sender`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): Unit
+    fun uniffi_cashbuddy_core_fn_func_parse_screenshot_text(`rawText`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    fun uniffi_cashbuddy_core_fn_func_parse_sms(`sender`: RustBuffer.ByValue,`body`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
     fun ffi_cashbuddy_core_rustbuffer_alloc(`size`: Long,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
     fun ffi_cashbuddy_core_rustbuffer_from_bytes(`bytes`: ForeignBytes.ByValue,uniffi_out_err: UniffiRustCallStatus, 
@@ -919,6 +939,16 @@ internal interface UniffiLib : Library {
     ): Unit
     fun ffi_cashbuddy_core_rust_future_complete_void(`handle`: Long,uniffi_out_err: UniffiRustCallStatus, 
     ): Unit
+    fun uniffi_cashbuddy_core_checksum_func_is_duplicate_transaction(
+    ): Short
+    fun uniffi_cashbuddy_core_checksum_func_is_trusted_sender(
+    ): Short
+    fun uniffi_cashbuddy_core_checksum_func_learn_trusted_sender(
+    ): Short
+    fun uniffi_cashbuddy_core_checksum_func_parse_screenshot_text(
+    ): Short
+    fun uniffi_cashbuddy_core_checksum_func_parse_sms(
+    ): Short
     fun uniffi_cashbuddy_core_checksum_method_categoryengine_get_category(
     ): Short
     fun uniffi_cashbuddy_core_checksum_method_categoryengine_learn_correction(
@@ -962,6 +992,21 @@ private fun uniffiCheckContractApiVersion(lib: UniffiLib) {
 
 @Suppress("UNUSED_PARAMETER")
 private fun uniffiCheckApiChecksums(lib: UniffiLib) {
+    if (lib.uniffi_cashbuddy_core_checksum_func_is_duplicate_transaction() != 61309.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_cashbuddy_core_checksum_func_is_trusted_sender() != 64580.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_cashbuddy_core_checksum_func_learn_trusted_sender() != 1404.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_cashbuddy_core_checksum_func_parse_screenshot_text() != 10799.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_cashbuddy_core_checksum_func_parse_sms() != 55082.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
     if (lib.uniffi_cashbuddy_core_checksum_method_categoryengine_get_category() != 29132.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
@@ -2523,6 +2568,122 @@ public object FfiConverterTypeRawNotification: FfiConverterRustBuffer<RawNotific
 
 
 
+data class ScreenshotTransaction (
+    var `amount`: kotlin.Double, 
+    var `transactionType`: TransactionType, 
+    var `merchant`: kotlin.String, 
+    var `category`: kotlin.String, 
+    var `utrOrRef`: kotlin.String?, 
+    var `appName`: kotlin.String, 
+    var `confidence`: kotlin.Float, 
+    var `rawText`: kotlin.String
+) {
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeScreenshotTransaction: FfiConverterRustBuffer<ScreenshotTransaction> {
+    override fun read(buf: ByteBuffer): ScreenshotTransaction {
+        return ScreenshotTransaction(
+            FfiConverterDouble.read(buf),
+            FfiConverterTypeTransactionType.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterOptionalString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterFloat.read(buf),
+            FfiConverterString.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: ScreenshotTransaction) = (
+            FfiConverterDouble.allocationSize(value.`amount`) +
+            FfiConverterTypeTransactionType.allocationSize(value.`transactionType`) +
+            FfiConverterString.allocationSize(value.`merchant`) +
+            FfiConverterString.allocationSize(value.`category`) +
+            FfiConverterOptionalString.allocationSize(value.`utrOrRef`) +
+            FfiConverterString.allocationSize(value.`appName`) +
+            FfiConverterFloat.allocationSize(value.`confidence`) +
+            FfiConverterString.allocationSize(value.`rawText`)
+    )
+
+    override fun write(value: ScreenshotTransaction, buf: ByteBuffer) {
+            FfiConverterDouble.write(value.`amount`, buf)
+            FfiConverterTypeTransactionType.write(value.`transactionType`, buf)
+            FfiConverterString.write(value.`merchant`, buf)
+            FfiConverterString.write(value.`category`, buf)
+            FfiConverterOptionalString.write(value.`utrOrRef`, buf)
+            FfiConverterString.write(value.`appName`, buf)
+            FfiConverterFloat.write(value.`confidence`, buf)
+            FfiConverterString.write(value.`rawText`, buf)
+    }
+}
+
+
+
+data class SmsTransaction (
+    var `amount`: kotlin.Double, 
+    var `transactionType`: TransactionType, 
+    var `category`: kotlin.String, 
+    var `merchant`: kotlin.String, 
+    var `accountLast4`: kotlin.String?, 
+    var `bank`: kotlin.String?, 
+    var `rawText`: kotlin.String, 
+    var `confidence`: kotlin.Float, 
+    var `timestamp`: kotlin.Long
+) {
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeSmsTransaction: FfiConverterRustBuffer<SmsTransaction> {
+    override fun read(buf: ByteBuffer): SmsTransaction {
+        return SmsTransaction(
+            FfiConverterDouble.read(buf),
+            FfiConverterTypeTransactionType.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterOptionalString.read(buf),
+            FfiConverterOptionalString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterFloat.read(buf),
+            FfiConverterLong.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: SmsTransaction) = (
+            FfiConverterDouble.allocationSize(value.`amount`) +
+            FfiConverterTypeTransactionType.allocationSize(value.`transactionType`) +
+            FfiConverterString.allocationSize(value.`category`) +
+            FfiConverterString.allocationSize(value.`merchant`) +
+            FfiConverterOptionalString.allocationSize(value.`accountLast4`) +
+            FfiConverterOptionalString.allocationSize(value.`bank`) +
+            FfiConverterString.allocationSize(value.`rawText`) +
+            FfiConverterFloat.allocationSize(value.`confidence`) +
+            FfiConverterLong.allocationSize(value.`timestamp`)
+    )
+
+    override fun write(value: SmsTransaction, buf: ByteBuffer) {
+            FfiConverterDouble.write(value.`amount`, buf)
+            FfiConverterTypeTransactionType.write(value.`transactionType`, buf)
+            FfiConverterString.write(value.`category`, buf)
+            FfiConverterString.write(value.`merchant`, buf)
+            FfiConverterOptionalString.write(value.`accountLast4`, buf)
+            FfiConverterOptionalString.write(value.`bank`, buf)
+            FfiConverterString.write(value.`rawText`, buf)
+            FfiConverterFloat.write(value.`confidence`, buf)
+            FfiConverterLong.write(value.`timestamp`, buf)
+    }
+}
+
+
+
 
 enum class Category {
     
@@ -2747,6 +2908,70 @@ public object FfiConverterOptionalTypeParsedTransaction: FfiConverterRustBuffer<
 /**
  * @suppress
  */
+public object FfiConverterOptionalTypeScreenshotTransaction: FfiConverterRustBuffer<ScreenshotTransaction?> {
+    override fun read(buf: ByteBuffer): ScreenshotTransaction? {
+        if (buf.get().toInt() == 0) {
+            return null
+        }
+        return FfiConverterTypeScreenshotTransaction.read(buf)
+    }
+
+    override fun allocationSize(value: ScreenshotTransaction?): ULong {
+        if (value == null) {
+            return 1UL
+        } else {
+            return 1UL + FfiConverterTypeScreenshotTransaction.allocationSize(value)
+        }
+    }
+
+    override fun write(value: ScreenshotTransaction?, buf: ByteBuffer) {
+        if (value == null) {
+            buf.put(0)
+        } else {
+            buf.put(1)
+            FfiConverterTypeScreenshotTransaction.write(value, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterOptionalTypeSmsTransaction: FfiConverterRustBuffer<SmsTransaction?> {
+    override fun read(buf: ByteBuffer): SmsTransaction? {
+        if (buf.get().toInt() == 0) {
+            return null
+        }
+        return FfiConverterTypeSmsTransaction.read(buf)
+    }
+
+    override fun allocationSize(value: SmsTransaction?): ULong {
+        if (value == null) {
+            return 1UL
+        } else {
+            return 1UL + FfiConverterTypeSmsTransaction.allocationSize(value)
+        }
+    }
+
+    override fun write(value: SmsTransaction?, buf: ByteBuffer) {
+        if (value == null) {
+            buf.put(0)
+        } else {
+            buf.put(1)
+            FfiConverterTypeSmsTransaction.write(value, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
 public object FfiConverterSequenceUByte: FfiConverterRustBuffer<List<kotlin.UByte>> {
     override fun read(buf: ByteBuffer): List<kotlin.UByte> {
         val len = buf.getInt()
@@ -2795,5 +3020,49 @@ public object FfiConverterSequenceTypeMerchantRuleEntry: FfiConverterRustBuffer<
             FfiConverterTypeMerchantRuleEntry.write(it, buf)
         }
     }
+} fun `isDuplicateTransaction`(`amount1`: kotlin.Double, `merchant1`: kotlin.String, `time1`: kotlin.Long, `amount2`: kotlin.Double, `merchant2`: kotlin.String, `time2`: kotlin.Long, `windowSecs`: kotlin.Long): kotlin.Boolean {
+            return FfiConverterBoolean.lift(
+    uniffiRustCall() { _status ->
+    UniffiLib.INSTANCE.uniffi_cashbuddy_core_fn_func_is_duplicate_transaction(
+        FfiConverterDouble.lower(`amount1`),FfiConverterString.lower(`merchant1`),FfiConverterLong.lower(`time1`),FfiConverterDouble.lower(`amount2`),FfiConverterString.lower(`merchant2`),FfiConverterLong.lower(`time2`),FfiConverterLong.lower(`windowSecs`),_status)
 }
+    )
+    }
+    
+ fun `isTrustedSender`(`sender`: kotlin.String): kotlin.Boolean {
+            return FfiConverterBoolean.lift(
+    uniffiRustCall() { _status ->
+    UniffiLib.INSTANCE.uniffi_cashbuddy_core_fn_func_is_trusted_sender(
+        FfiConverterString.lower(`sender`),_status)
+}
+    )
+    }
+    
+ fun `learnTrustedSender`(`sender`: kotlin.String)
+        = 
+    uniffiRustCall() { _status ->
+    UniffiLib.INSTANCE.uniffi_cashbuddy_core_fn_func_learn_trusted_sender(
+        FfiConverterString.lower(`sender`),_status)
+}
+    
+    
+ fun `parseScreenshotText`(`rawText`: kotlin.String): ScreenshotTransaction? {
+            return FfiConverterOptionalTypeScreenshotTransaction.lift(
+    uniffiRustCall() { _status ->
+    UniffiLib.INSTANCE.uniffi_cashbuddy_core_fn_func_parse_screenshot_text(
+        FfiConverterString.lower(`rawText`),_status)
+}
+    )
+    }
+    
+ fun `parseSms`(`sender`: kotlin.String, `body`: kotlin.String): SmsTransaction? {
+            return FfiConverterOptionalTypeSmsTransaction.lift(
+    uniffiRustCall() { _status ->
+    UniffiLib.INSTANCE.uniffi_cashbuddy_core_fn_func_parse_sms(
+        FfiConverterString.lower(`sender`),FfiConverterString.lower(`body`),_status)
+}
+    )
+    }
+    
+
 
