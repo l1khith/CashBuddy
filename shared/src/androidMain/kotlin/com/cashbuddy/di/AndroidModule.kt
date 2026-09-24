@@ -1,5 +1,6 @@
 package com.cashbuddy.di
 
+import android.util.Log
 import app.cash.sqldelight.db.SqlDriver
 import com.cashbuddy.core.CryptoManager
 import com.cashbuddy.core.NotificationParser
@@ -10,6 +11,8 @@ import com.cashbuddy.db.AppDatabase
 import com.cashbuddy.domain.parser.KotlinNotificationParser
 import org.koin.dsl.module
 
+private const val TAG = "AndroidModule"
+
 val androidModule = module {
     // Database Driver & Encrypted Database Instance
     single { com.cashbuddy.security.AndroidKeystoreManager(get()) }
@@ -18,13 +21,14 @@ val androidModule = module {
     single<SqlDriver> { get<DatabaseDriverFactory>().createDriver() }
     single<AppDatabase> { createDatabase(get<SqlDriver>()) }
 
-    // Rust Core Native Singletons (lazy/fail-safe)
+    // Rust Core Native Singletons (lazy/fail-safe with logging)
     single { KotlinNotificationParser() }
 
     single {
         try {
             NotificationParser()
-        } catch (_: Throwable) {
+        } catch (e: Throwable) {
+            Log.e(TAG, "Failed to initialize Rust NotificationParser", e)
             null
         }
     }
@@ -32,7 +36,8 @@ val androidModule = module {
     single {
         try {
             CryptoManager()
-        } catch (_: Throwable) {
+        } catch (e: Throwable) {
+            Log.e(TAG, "Failed to initialize Rust CryptoManager", e)
             null
         }
     }
@@ -40,7 +45,8 @@ val androidModule = module {
     single {
         try {
             SecurityValidator()
-        } catch (_: Throwable) {
+        } catch (e: Throwable) {
+            Log.e(TAG, "Failed to initialize Rust SecurityValidator", e)
             null
         }
     }
@@ -49,8 +55,10 @@ val androidModule = module {
     single {
         try {
             com.cashbuddy.core.CategoryEngine()
-        } catch (_: Throwable) {
+        } catch (e: Throwable) {
+            Log.e(TAG, "Failed to initialize Rust CategoryEngine", e)
             null
         }
     }
 }
+
