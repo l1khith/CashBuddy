@@ -29,6 +29,7 @@ dependencies {
     implementation(libs.compose.ui)
     implementation(libs.compose.uiToolingPreview)
     debugImplementation(libs.compose.uiTooling)
+    implementation("com.google.android.gms:play-services-mlkit-text-recognition:19.0.1")
 }
 
 android {

@@ -87,7 +87,46 @@ class MainActivity : FragmentActivity() {
                     )
                 }
                 categoryEngine?.loadUserRules(entries)
+
+                // Load learned trusted bank senders into Rust core
+                val trustedSenderRepository: com.cashbuddy.domain.repository.TrustedSenderRepository by inject()
+                val senders = trustedSenderRepository.getAllSenders().firstOrNull() ?: emptyList()
+                for (s in senders) {
+                    com.cashbuddy.core.learnTrustedSender(s.senderId)
+                }
             } catch (_: Throwable) {
+            }
+        }
+
+        // Layer 2: Handle incoming shared UPI payment screenshots
+        val screenshotHandler = com.cashbuddy.screenshot.ScreenshotHandler(this)
+        val cachedScreenshotFiles = mutableListOf<java.io.File>()
+
+        if (intent?.action == android.content.Intent.ACTION_SEND && intent?.type?.startsWith("image/") == true) {
+            val imageUri = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+                intent?.getParcelableExtra(android.content.Intent.EXTRA_STREAM, android.net.Uri::class.java)
+            } else {
+                @Suppress("DEPRECATION")
+                intent?.getParcelableExtra(android.content.Intent.EXTRA_STREAM)
+            }
+            if (imageUri != null) {
+                screenshotHandler.copyUriToCache(imageUri)?.let { cachedScreenshotFiles.add(it) }
+            }
+        } else if (intent?.action == android.content.Intent.ACTION_SEND_MULTIPLE && intent?.type?.startsWith("image/") == true) {
+            val uris = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+                intent?.getParcelableArrayListExtra(android.content.Intent.EXTRA_STREAM, android.net.Uri::class.java)
+            } else {
+                @Suppress("DEPRECATION")
+                intent?.getParcelableArrayListExtra(android.content.Intent.EXTRA_STREAM)
+            }
+            uris?.forEach { uri ->
+                screenshotHandler.copyUriToCache(uri)?.let { cachedScreenshotFiles.add(it) }
+            }
+        }
+
+        if (cachedScreenshotFiles.isNotEmpty()) {
+            lifecycleScope.launch(Dispatchers.IO) {
+                screenshotHandler.processScreenshots(cachedScreenshotFiles)
             }
         }
 
