@@ -8,6 +8,7 @@ import android.content.Intent
 import android.os.Build
 import android.service.notification.NotificationListenerService
 import android.service.notification.StatusBarNotification
+import android.util.Log
 import androidx.core.app.NotificationCompat
 import com.cashbuddy.core.CategoryEngine
 import com.cashbuddy.core.MerchantRuleEntry
@@ -45,6 +46,7 @@ class TransactionNotificationListener : NotificationListenerService(), KoinCompo
     private val trainingDataRepository: TrainingDataRepository by inject()
     private val merchantRuleRepository: MerchantRuleRepository by inject()
     private val categoryEngine: CategoryEngine? by inject()
+    private val rustParser: NotificationParser? by inject()
 
     companion object {
         private const val TAG = "TxNotificationListener"
@@ -70,7 +72,8 @@ class TransactionNotificationListener : NotificationListenerService(), KoinCompo
                     )
                 }
                 categoryEngine?.loadUserRules(entries)
-            } catch (_: Throwable) {
+            } catch (e: Throwable) {
+                Log.e(TAG, "Failed to load rules into CategoryEngine", e)
             }
         }
     }
@@ -117,7 +120,8 @@ class TransactionNotificationListener : NotificationListenerService(), KoinCompo
                             extractedMerchant = parsed?.merchant,
                             timestamp = postTime
                         )
-                    } catch (_: Throwable) {
+                    } catch (e: Throwable) {
+                        Log.w(TAG, "Failed to record raw notification for training", e)
                     }
                 }
 
@@ -151,14 +155,18 @@ class TransactionNotificationListener : NotificationListenerService(), KoinCompo
                 }
 
                 val allCategories = categoryRepository.getAll().firstOrNull() ?: emptyList()
-                val normalizedCategory = resolvedCategoryName.lowercase()
                 val matchedCategory = allCategories.find {
                     it.name.equals(resolvedCategoryName, ignoreCase = true)
                 } ?: allCategories.find {
-                    it.name.lowercase().startsWith(normalizedCategory) ||
-                    normalizedCategory.startsWith(it.name.lowercase().substringBefore(" "))
-                } ?: allCategories.firstOrNull()
-                val categoryId = matchedCategory?.id ?: 1L
+                    it.name.lowercase().startsWith(resolvedCategoryName.lowercase()) ||
+                    resolvedCategoryName.lowercase().startsWith(it.name.lowercase().substringBefore(" "))
+                }
+                // Explicit fallback: find "Uncategorized" or "Other", never pick an arbitrary category
+                val fallbackCategory = matchedCategory
+                    ?: allCategories.find { it.name.equals("Uncategorized", ignoreCase = true) }
+                    ?: allCategories.find { it.name.equals("Other", ignoreCase = true) }
+                    ?: allCategories.firstOrNull()
+                val categoryId = fallbackCategory?.id ?: 1L
 
                 // 4. Status determination: Human-in-the-loop policy
                 // Rule: Confidence >= 0.85 AND amount < autoConfirmThreshold => CONFIRMED, else PENDING
@@ -178,8 +186,12 @@ class TransactionNotificationListener : NotificationListenerService(), KoinCompo
                     allAccounts.find { it.number?.endsWith(last4) == true }
                 } else {
                     allAccounts.find { it.name.contains(parsed.sourceApp, ignoreCase = true) }
-                } ?: allAccounts.firstOrNull()
-                val accountId = matchedAccount?.id ?: 1L
+                }
+                // Explicit fallback: prefer "Default" account, never pick an arbitrary one
+                val resolvedAccount = matchedAccount
+                    ?: allAccounts.find { it.name.equals("Default", ignoreCase = true) }
+                    ?: allAccounts.firstOrNull()
+                val accountId = resolvedAccount?.id ?: 1L
 
                 // 6. Persist Transaction
                 val newTransaction = Transaction(
@@ -204,8 +216,8 @@ class TransactionNotificationListener : NotificationListenerService(), KoinCompo
                 if (status == TransactionStatus.PENDING) {
                     showReviewAlert(insertedId, parsed.amount, parsed.merchant)
                 }
-            } catch (_: Throwable) {
-                // Fail-safe handling
+            } catch (e: Throwable) {
+                Log.e(TAG, "Failed to process notification from ${activeSbn.packageName}", e)
             }
         }
     }
@@ -216,35 +228,37 @@ class TransactionNotificationListener : NotificationListenerService(), KoinCompo
         text: String,
         postTime: Long
     ): ParsedNotificationResult? {
-        // Attempt native Rust engine
-        try {
-            val rustParser = NotificationParser()
-            val raw = RawNotification(
-                packageName = packageName,
-                title = title,
-                text = text,
-                timestamp = postTime
-            )
-            val parsed = rustParser.parse(raw)
-            if (parsed != null) {
-                return ParsedNotificationResult(
-                    amount = parsed.amount,
-                    type = if (parsed.transactionType == com.cashbuddy.core.TransactionType.DEBIT) {
-                        TransactionType.DEBIT
-                    } else {
-                        TransactionType.CREDIT
-                    },
-                    categoryName = parsed.category.name,
-                    merchant = parsed.merchant,
-                    accountId = parsed.accountId,
-                    sourceApp = parsed.sourceApp,
-                    rawText = parsed.rawText,
-                    confidence = parsed.confidence,
-                    timestamp = parsed.timestamp
+        // Attempt native Rust engine using injected singleton
+        val parser = rustParser
+        if (parser != null) {
+            try {
+                val raw = RawNotification(
+                    packageName = packageName,
+                    title = title,
+                    text = text,
+                    timestamp = postTime
                 )
+                val parsed = parser.parse(raw)
+                if (parsed != null) {
+                    return ParsedNotificationResult(
+                        amount = parsed.amount,
+                        type = if (parsed.transactionType == com.cashbuddy.core.TransactionType.DEBIT) {
+                            TransactionType.DEBIT
+                        } else {
+                            TransactionType.CREDIT
+                        },
+                        categoryName = parsed.category.name,
+                        merchant = parsed.merchant,
+                        accountId = parsed.accountId,
+                        sourceApp = parsed.sourceApp,
+                        rawText = parsed.rawText,
+                        confidence = parsed.confidence,
+                        timestamp = parsed.timestamp
+                    )
+                }
+            } catch (e: Throwable) {
+                Log.w(TAG, "Rust parser failed for $packageName, falling back to Kotlin", e)
             }
-        } catch (_: Throwable) {
-            // Rust native lib unavailable or fallback
         }
 
         // Pure Kotlin parser fallback
