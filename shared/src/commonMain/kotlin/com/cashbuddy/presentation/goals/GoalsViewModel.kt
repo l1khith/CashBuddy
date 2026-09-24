@@ -8,8 +8,10 @@ import com.cashbuddy.domain.repository.GoalRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import androidx.compose.runtime.Immutable
 import kotlinx.coroutines.launch
 
+@Immutable
 data class GoalsUiState(
     val goals: List<Goal> = emptyList(),
     val totalSaved: Double = 0.0,

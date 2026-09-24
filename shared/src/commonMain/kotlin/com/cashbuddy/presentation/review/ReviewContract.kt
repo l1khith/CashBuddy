@@ -1,5 +1,6 @@
 package com.cashbuddy.presentation.review
 
+import androidx.compose.runtime.Immutable
 import com.cashbuddy.domain.model.Category
 import com.cashbuddy.domain.model.Transaction
 
@@ -12,6 +13,7 @@ sealed interface ReviewIntent {
     data object ConfirmAllHighConfidence : ReviewIntent
 }
 
+@Immutable
 data class ReviewState(
     val transactions: List<Transaction> = emptyList(),
     val allCategories: List<Category> = emptyList(),

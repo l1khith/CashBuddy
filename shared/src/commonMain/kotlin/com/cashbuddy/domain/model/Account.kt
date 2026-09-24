@@ -1,5 +1,7 @@
 package com.cashbuddy.domain.model
 
+import androidx.compose.runtime.Immutable
+
 enum class AccountType {
     BANK,
     WALLET,
@@ -8,6 +10,7 @@ enum class AccountType {
     INVESTMENT
 }
 
+@Immutable
 data class Account(
     val id: Long = 0,
     val name: String,

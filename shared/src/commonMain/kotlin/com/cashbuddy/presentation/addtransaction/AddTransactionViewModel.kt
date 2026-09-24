@@ -22,8 +22,10 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
 import kotlinx.datetime.Clock
 import kotlinx.datetime.TimeZone
+import androidx.compose.runtime.Immutable
 import kotlinx.datetime.toLocalDateTime
 
+@Immutable
 data class AddTransactionUiState(
     val categories: List<Category> = emptyList(),
     val accounts: List<Account> = emptyList(),

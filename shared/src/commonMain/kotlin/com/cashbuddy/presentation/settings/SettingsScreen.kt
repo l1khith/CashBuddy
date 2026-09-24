@@ -69,6 +69,7 @@ import com.cashbuddy.presentation.theme.RadiusMedium
 fun SettingsScreen(
     viewModel: SettingsViewModel,
     onNavigateToPersonalization: () -> Unit = {},
+    onOpenNotificationSettings: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
@@ -155,6 +156,20 @@ fun SettingsScreen(
                                     checked = state.notificationEnabled,
                                     onCheckedChange = { viewModel.setNotificationEnabled(it) }
                                 )
+                            }
+
+                            OutlinedButton(
+                                onClick = onOpenNotificationSettings,
+                                modifier = Modifier.fillMaxWidth(),
+                                shape = RoundedCornerShape(10.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Tune,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text("Android Notification Access Settings")
                             }
 
                             // Auto-Confirm Max Amount Threshold

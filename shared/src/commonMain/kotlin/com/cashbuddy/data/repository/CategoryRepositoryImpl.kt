@@ -45,7 +45,8 @@ class CategoryRepositoryImpl(
                 created_at__________ = currentTimestamp,
                 created_at___________ = currentTimestamp,
                 created_at____________ = currentTimestamp,
-                created_at_____________ = currentTimestamp
+                created_at_____________ = currentTimestamp,
+                created_at______________ = currentTimestamp
             )
         }
     }

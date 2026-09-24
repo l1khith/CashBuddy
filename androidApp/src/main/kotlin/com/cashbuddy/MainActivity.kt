@@ -1,9 +1,13 @@
 package com.cashbuddy
 
+import android.content.Intent
+import android.os.Build
 import android.os.Bundle
+import android.provider.Settings
 import android.view.WindowManager
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.biometric.BiometricManager
 import androidx.biometric.BiometricPrompt
 import androidx.compose.foundation.background
@@ -29,6 +33,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.FragmentActivity
 import androidx.lifecycle.lifecycleScope
@@ -49,6 +54,11 @@ class MainActivity : FragmentActivity() {
     private var isBiometricRequired = false
     private var lastBackgroundTimestamp: Long = 0L
 
+    private val requestNotificationPermissionLauncher =
+        registerForActivityResult(ActivityResultContracts.RequestPermission()) { _ ->
+            // POST_NOTIFICATIONS result handled
+        }
+
     companion object {
         private const val TIMEOUT_LOCK_MS = 300_000L // 5 minutes
     }
@@ -63,6 +73,8 @@ class MainActivity : FragmentActivity() {
             WindowManager.LayoutParams.FLAG_SECURE
         )
 
+        checkAndPromptNotificationPermissions()
+
         lifecycleScope.launch {
             val biometricEnabled = settingsRepository.getBiometricEnabled().firstOrNull() ?: false
             if (biometricEnabled) {
@@ -74,9 +86,15 @@ class MainActivity : FragmentActivity() {
             }
         }
 
-        // Load learned merchant rules into Rust CategoryEngine at app startup
+        // Seed defaults and load learned merchant rules and trusted senders into pure Kotlin core
         lifecycleScope.launch(Dispatchers.IO) {
             try {
+                val now = System.currentTimeMillis()
+                val categoryRepo: com.cashbuddy.domain.repository.CategoryRepository by inject()
+                val accountRepo: com.cashbuddy.domain.repository.AccountRepository by inject()
+                categoryRepo.seedDefaults(now)
+                accountRepo.seedDefaults(now)
+
                 val merchantRuleRepository: com.cashbuddy.domain.repository.MerchantRuleRepository by inject()
                 val categoryEngine: com.cashbuddy.core.CategoryEngine by inject()
                 val rules = merchantRuleRepository.getAll().firstOrNull() ?: emptyList()
@@ -88,14 +106,13 @@ class MainActivity : FragmentActivity() {
                 }
                 categoryEngine.loadUserRules(entries)
 
-                // Load learned trusted bank senders into Rust core
                 val trustedSenderRepository: com.cashbuddy.domain.repository.TrustedSenderRepository by inject()
                 val senders = trustedSenderRepository.getAllSenders().firstOrNull() ?: emptyList()
                 for (s in senders) {
                     com.cashbuddy.core.learnTrustedSender(s.senderId)
                 }
             } catch (e: Throwable) {
-                android.util.Log.e("MainActivity", "Failed to load rules/trusted senders", e)
+                android.util.Log.e("MainActivity", "Failed to seed defaults or load rules/senders", e)
             }
         }
 
@@ -163,7 +180,16 @@ class MainActivity : FragmentActivity() {
                         )
                     }
                     AuthState.AUTHENTICATED -> {
-                        CashBuddyApp(initialRoute = initialRoute)
+                        CashBuddyApp(
+                            initialRoute = initialRoute,
+                            onOpenNotificationSettings = {
+                                try {
+                                    startActivity(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS))
+                                } catch (e: Throwable) {
+                                    android.util.Log.e("MainActivity", "Failed to open notification settings", e)
+                                }
+                            }
+                        )
                     }
                     AuthState.LOCKED -> {
                         Box(
@@ -257,4 +283,37 @@ class MainActivity : FragmentActivity() {
 
         prompt.authenticate(promptInfo)
     }
+
+    private fun checkAndPromptNotificationPermissions() {
+        // 1. Android 13+ POST_NOTIFICATIONS runtime permission
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            if (ContextCompat.checkSelfPermission(this, android.Manifest.permission.POST_NOTIFICATIONS) !=
+                android.content.pm.PackageManager.PERMISSION_GRANTED) {
+                requestNotificationPermissionLauncher.launch(android.Manifest.permission.POST_NOTIFICATIONS)
+            }
+        }
+
+        // 2. NotificationListenerService Access check
+        val isListenerGranted = NotificationManagerCompat.getEnabledListenerPackages(this)
+            .contains(packageName)
+        if (!isListenerGranted) {
+            showNotificationListenerDialog()
+        }
+    }
+
+    private fun showNotificationListenerDialog() {
+        android.app.AlertDialog.Builder(this)
+            .setTitle("Enable Automatic Expense Tracking")
+            .setMessage("CashBuddy operates 100% offline and captures transactions passively from bank and UPI notifications. Please enable Notification Access for CashBuddy in Android settings.")
+            .setPositiveButton("Open Settings") { _, _ ->
+                try {
+                    startActivity(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS))
+                } catch (e: Throwable) {
+                    android.util.Log.e("MainActivity", "Could not open notification settings", e)
+                }
+            }
+            .setNegativeButton("Later", null)
+            .show()
+    }
 }
+

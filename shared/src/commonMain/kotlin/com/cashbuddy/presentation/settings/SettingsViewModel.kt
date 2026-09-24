@@ -15,9 +15,11 @@ import kotlinx.coroutines.flow.StateFlow
 import com.cashbuddy.domain.repository.TrainingDataRepository
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
+import androidx.compose.runtime.Immutable
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
 
+@Immutable
 data class SettingsUiState(
     val notificationEnabled: Boolean = true,
     val autoConfirmThreshold: Double = 10000.0,

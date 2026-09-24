@@ -12,7 +12,7 @@ class NotificationParser(
     private val categoryEngine: CategoryEngine = CategoryEngine()
 ) {
 
-    private val allowedPackages: Set<String> = setOf(
+    val allowedPackages: Set<String> = setOf(
         // Curated Indian UPI & Wallet apps
         "com.google.android.apps.nbu.paisa.user",
         "com.phonepe.app",
@@ -24,6 +24,8 @@ class NotificationParser(
         "com.naviapp",
         "com.mobikwik_new",
         "com.freecharge.android",
+        "com.samsung.android.spay",
+        "com.fampay.in",
 
         // Curated Indian Banks (Private, Public, Neobanks)
         "com.snapwork.hdfc",
@@ -46,6 +48,8 @@ class NotificationParser(
         "com.boi.omnineo",
         "com.cbi.mobile",
         "com.uco.ucobank",
+        "com.psb.mobile",
+        "com.iob.mconnect",
         "money.jupiter",
         "money.fi.banking",
         "com.onecard.app",
@@ -53,6 +57,22 @@ class NotificationParser(
         "in.uni.cards",
         "com.scapia.cards",
         "com.niyo.equitas"
+    )
+
+    val smsPackages: Set<String> = setOf(
+        "com.google.android.apps.messaging",
+        "com.samsung.android.messaging",
+        "com.android.mms",
+        "com.oneplus.mms",
+        "com.oppo.mms",
+        "com.coloros.mms",
+        "com.vivo.mms",
+        "com.huawei.message"
+    )
+
+    private val bankSignals = listOf(
+        "a/c", "acct", "account", "bank", "card", "ending", "avl bal", "bal:", "balance",
+        "upi ref", "vpa", "neft", "rtgs", "imps", "debited", "credited", "spent", "withdrawn"
     )
 
     private val otpKeywords = listOf(
@@ -104,31 +124,50 @@ class NotificationParser(
     )
 
     private val merchantPatterns = listOf(
-        Regex("""(?i)(?:paid|sent)\s+.*?to\s+([A-Za-z0-9&._'-]+(?:\s+[A-Za-z0-9&._'-]+)?)(?:\s+(?:via|using|ref|on|a/c|\.|$))"""),
-        Regex("""(?i)(?:spent|paid|purchase)\s+.*?at\s+([A-Za-z0-9&._'-]+(?:\s+[A-Za-z0-9&._'-]+)?)(?:\s+(?:for|via|using|ref|on|a/c|\.|$))"""),
-        Regex("""(?i)(?:to|from)\s+([A-Za-z0-9&._'-]+(?:\s+[A-Za-z0-9&._'-]+)?)(?:\s+(?:via|using|ref|on|a/c|\.|$))"""),
+        Regex("""(?i)(?:paid|sent)\s+.*?to\s+([A-Za-z0-9&._'-]+(?:\s+[A-Za-z0-9&._'-]+)?)(?:\s*(?:via|using|ref|on|a/c|\.|\,|$))"""),
+        Regex("""(?i)(?:spent|paid|purchase)\s+.*?at\s+([A-Za-z0-9&._'-]+(?:\s+[A-Za-z0-9&._'-]+)?)(?:\s*(?:for|via|using|ref|on|a/c|\.|\,|$))"""),
+        Regex("""(?i)\b(?:to|towards)\s+([A-Za-z0-9&._'-]+(?:\s+[A-Za-z0-9&._'-]+)?)(?:\s*(?:via|using|ref|on|a/c|upi|\.|\,|$))"""),
+        Regex("""(?i)\bfrom\s+(?!a/c|acct|account|card)([A-Za-z0-9&._'-]+(?:\s+[A-Za-z0-9&._'-]+)?)(?:\s*(?:via|using|ref|on|\.|\,|$))"""),
         Regex("""(?i)(?:towards|for|vpa)\s+([A-Za-z0-9&._'-]+)""")
     )
 
     private val fraudDetector = FraudDetector()
 
     fun parse(notification: RawNotification): ParsedTransaction? {
+        val isBankingApp = allowedPackages.contains(notification.packageName)
+        val isSmsApp = smsPackages.contains(notification.packageName)
+
         // Layer 1: Source Validation
-        if (!allowedPackages.contains(notification.packageName)) {
+        if (!isBankingApp && !isSmsApp) {
             return null
         }
 
+        val combinedText = if (notification.title.isNotBlank()) {
+            "${notification.title} ${notification.text}".trim()
+        } else {
+            notification.text.trim()
+        }
+        val textLower = combinedText.lowercase()
+
         // Layer 2: Content Classification & Discard
-        val textLower = notification.text.lowercase()
         if (isOtp(textLower) || isPromotional(textLower)) {
             return null
         }
 
+        // For SMS messaging apps: ensure this is a genuine financial alert, not a personal text
+        if (isSmsApp) {
+            val isKnownSender = TrustedSenderManager.isTrustedSender(notification.title)
+            val hasBankSignal = bankSignals.any { textLower.contains(it) }
+            if (!isKnownSender && !hasBankSignal) {
+                return null
+            }
+        }
+
         // Layer 3: Entity Extraction
-        val amount = extractAmount(notification.text) ?: return null
+        val amount = extractAmount(combinedText) ?: return null
         val txType = detectType(textLower) ?: return null
-        val merchant = extractMerchant(notification.text, notification.packageName)
-        val accountId = extractAccount(notification.text)
+        val merchant = extractMerchant(combinedText, notification.title, notification.packageName)
+        val accountId = extractAccount(combinedText)
 
         // Layer 4: Categorization
         val category = categorize(merchant, textLower)
@@ -158,7 +197,7 @@ class NotificationParser(
             merchant = merchant,
             accountId = accountId,
             sourceApp = notification.packageName,
-            rawText = notification.text,
+            rawText = combinedText,
             confidence = confidence,
             timestamp = notification.timestamp
         )
@@ -189,7 +228,7 @@ class NotificationParser(
         return null
     }
 
-    private fun extractMerchant(text: String, packageName: String): String {
+    private fun extractMerchant(text: String, title: String, packageName: String): String {
         for (pattern in merchantPatterns) {
             val match = pattern.find(text)
             if (match != null && match.groups.size > 1) {
@@ -200,11 +239,21 @@ class NotificationParser(
             }
         }
 
-        return when (packageName) {
-            "com.phonepe.app" -> "PhonePe Transfer"
-            "com.google.android.apps.nbu.paisa.user" -> "Google Pay Payment"
-            "net.one97.paytm" -> "Paytm Payment"
-            "com.dreamplug.androidapp" -> "CRED Pay"
+        val titleUpper = title.uppercase()
+        return when {
+            titleUpper.contains("HDFC") -> "HDFC Bank"
+            titleUpper.contains("ICICI") -> "ICICI Bank"
+            titleUpper.contains("SBI") -> "State Bank of India"
+            titleUpper.contains("AXIS") -> "Axis Bank"
+            titleUpper.contains("KOTAK") -> "Kotak Bank"
+            titleUpper.contains("INDUS") -> "IndusInd Bank"
+            titleUpper.contains("PNB") -> "PNB"
+            titleUpper.contains("BOI") -> "Bank of India"
+            titleUpper.contains("YES") -> "YES Bank"
+            packageName == "com.phonepe.app" -> "PhonePe Transfer"
+            packageName == "com.google.android.apps.nbu.paisa.user" -> "Google Pay Payment"
+            packageName == "net.one97.paytm" -> "Paytm Payment"
+            packageName == "com.dreamplug.androidapp" -> "CRED Pay"
             else -> "Unknown Merchant"
         }
     }

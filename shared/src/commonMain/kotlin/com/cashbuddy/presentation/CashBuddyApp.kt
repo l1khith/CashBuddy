@@ -44,6 +44,7 @@ import org.koin.core.parameter.parametersOf
 @Composable
 fun CashBuddyApp(
     initialRoute: String? = null,
+    onOpenNotificationSettings: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     CashBuddyTheme {
@@ -182,7 +183,8 @@ fun CashBuddyApp(
                     val settingsViewModel: SettingsViewModel = koinViewModel()
                     SettingsScreen(
                         viewModel = settingsViewModel,
-                        onNavigateToPersonalization = { navController.navigate(ScreenRoute.PersonalizationDashboard) }
+                        onNavigateToPersonalization = { navController.navigate(ScreenRoute.PersonalizationDashboard) },
+                        onOpenNotificationSettings = onOpenNotificationSettings
                     )
                 }
 

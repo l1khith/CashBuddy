@@ -116,6 +116,57 @@ class CoreEnginesTest {
     }
 
     @Test
+    fun testAmountInTitle() {
+        val parser = NotificationParser()
+        val raw = RawNotification(
+            packageName = "com.google.android.apps.nbu.paisa.user",
+            title = "Paid ₹1,200",
+            text = "To Zomato via UPI. Ref 9876543210. A/C XX9999 debited",
+            timestamp = 1700000000000L
+        )
+
+        val parsed = parser.parse(raw)
+        assertNotNull(parsed)
+        assertEquals(1200.0, parsed.amount)
+        assertEquals(TransactionType.DEBIT, parsed.transactionType)
+        assertEquals("Zomato", parsed.merchant)
+        assertEquals(Category.Food, parsed.category)
+        assertEquals("XX9999", parsed.accountId)
+    }
+
+    @Test
+    fun testBankSmsNotification() {
+        val parser = NotificationParser()
+        val raw = RawNotification(
+            packageName = "com.google.android.apps.messaging",
+            title = "VM-HDFCBK",
+            text = "INR 850.00 debited from a/c **4321 on 24-Sep-26 to UBER INDIA. Avl bal: INR 15,200.00",
+            timestamp = 1700000000000L
+        )
+
+        val parsed = parser.parse(raw)
+        assertNotNull(parsed)
+        assertEquals(850.0, parsed.amount)
+        assertEquals(TransactionType.DEBIT, parsed.transactionType)
+        assertEquals(Category.Transport, parsed.category)
+        assertEquals("XX4321", parsed.accountId)
+    }
+
+    @Test
+    fun testPersonalSmsDiscarded() {
+        val parser = NotificationParser()
+        val raw = RawNotification(
+            packageName = "com.google.android.apps.messaging",
+            title = "John Doe",
+            text = "Hey are we still meeting for lunch today at 1 PM?",
+            timestamp = 1700000000000L
+        )
+
+        val parsed = parser.parse(raw)
+        assertNull(parsed)
+    }
+
+    @Test
     fun testDiscardOtp() {
         val parser = NotificationParser()
         val raw = RawNotification(

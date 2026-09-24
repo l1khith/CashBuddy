@@ -12,9 +12,11 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import androidx.compose.runtime.Immutable
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.stateIn
 
+@Immutable
 data class TransactionListUiState(
     val filteredTransactions: List<Transaction> = emptyList(),
     val categories: List<Category> = emptyList(),

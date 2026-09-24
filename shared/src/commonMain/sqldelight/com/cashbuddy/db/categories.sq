@@ -32,7 +32,8 @@ INSERT INTO categories (name, type, icon, color, is_default, sort_order, created
 ('Salary', 'INCOME', 'account_balance', '#2ECC71', 1, 1, ?),
 ('Refund', 'INCOME', 'replay', '#F39C12', 1, 2, ?),
 ('Gift', 'INCOME', 'card_giftcard', '#E91E63', 1, 3, ?),
-('Investment Returns', 'INCOME', 'savings', '#9B59B6', 1, 4, ?);
+('Investment Returns', 'INCOME', 'savings', '#9B59B6', 1, 4, ?),
+('Uncategorized', 'EXPENSE', 'help_outline', '#9E9E9E', 1, 15, ?);
 
 getAll:
 SELECT * FROM categories ORDER BY type, sort_order;

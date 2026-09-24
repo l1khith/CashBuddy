@@ -12,4 +12,5 @@ interface AccountRepository {
     suspend fun updateBalance(id: Long, balance: Double)
     suspend fun update(account: Account)
     suspend fun deleteById(id: Long)
+    suspend fun seedDefaults(currentTimestamp: Long)
 }

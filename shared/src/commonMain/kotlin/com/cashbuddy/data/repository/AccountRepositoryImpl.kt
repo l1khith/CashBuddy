@@ -66,6 +66,24 @@ class AccountRepositoryImpl(
         queries.deleteById(id)
     }
 
+    override suspend fun seedDefaults(currentTimestamp: Long): Unit = withContext(dispatcher) {
+        val existing = queries.getAll(::mapAccount).executeAsList()
+        if (existing.isEmpty()) {
+            queries.insert(
+                name = "Primary Account",
+                type = "BANK",
+                number = null,
+                bank = "Primary Bank",
+                balance = 0.0,
+                currency = "INR",
+                is_active = true,
+                sort_order = 0,
+                created_at = currentTimestamp,
+                updated_at = currentTimestamp
+            )
+        }
+    }
+
     private fun mapAccount(
         id: Long,
         name: String,

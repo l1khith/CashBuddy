@@ -74,6 +74,17 @@ class KotlinNotificationParser {
             "com.fampay.in"                          // FamPay
         )
 
+        val SMS_PACKAGES = hashSetOf(
+            "com.google.android.apps.messaging",
+            "com.samsung.android.messaging",
+            "com.android.mms",
+            "com.oneplus.mms",
+            "com.oppo.mms",
+            "com.coloros.mms",
+            "com.vivo.mms",
+            "com.huawei.message"
+        )
+
         private val AMOUNT_REGEX = Regex(
             """(?:(?:₹|Rs\.?|INR)\s*([0-9]{1,3}(?:,[0-9]{3})*(?:\.[0-9]{1,2})?|[0-9]+(?:\.[0-9]{1,2})?))|(?:([0-9]{1,3}(?:,[0-9]{3})*(?:\.[0-9]{1,2})?|[0-9]+(?:\.[0-9]{1,2})?)\s*(?:₹|Rs\.?|INR))""",
             RegexOption.IGNORE_CASE
@@ -109,8 +120,9 @@ class KotlinNotificationParser {
 
     fun parse(notification: RawNotificationData): ParsedNotificationResult? {
         // Layer 1: Source Validation
-        val isAllowed = ALLOWED_PACKAGES.contains(notification.packageName)
-        if (!isAllowed) {
+        val isBanking = ALLOWED_PACKAGES.contains(notification.packageName)
+        val isSms = SMS_PACKAGES.contains(notification.packageName)
+        if (!isBanking && !isSms) {
             return null
         }
 
@@ -118,6 +130,14 @@ class KotlinNotificationParser {
         val fullText = "${notification.title} ${notification.text}".trim()
         if (DISCARD_REGEX.containsMatchIn(fullText)) {
             return null
+        }
+
+        if (isSms) {
+            val isKnownSender = com.cashbuddy.core.TrustedSenderManager.isTrustedSender(notification.title)
+            val hasBankSignal = listOf("a/c", "acct", "account", "bank", "card", "ending", "avl bal", "bal:", "balance", "upi ref", "vpa", "neft", "rtgs", "imps", "debited", "credited").any { fullText.lowercase().contains(it) }
+            if (!isKnownSender && !hasBankSignal) {
+                return null
+            }
         }
 
         // Layer 3: Entity Extraction

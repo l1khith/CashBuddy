@@ -5,10 +5,12 @@ package com.cashbuddy.core
  */
 object TrustedSenderManager {
     private val trustedSenders = mutableSetOf(
-        "HDFCBK", "ICICIB", "SBIINB", "AXISBK", "KOTAKB",
+        "HDFCBK", "ICICIB", "SBIINB", "SBICRD", "AXISBK", "KOTAKB",
         "INDUSB", "YESBNK", "PNBSMS", "CANBNK", "UNIONB",
         "IDFCFB", "BOISMS", "CBISMS", "UCOBNK", "PAYTM",
-        "GPAY", "PHONEPE", "BHIMUPI", "CRED"
+        "GPAY", "PHONEPE", "BHIMUPI", "CRED",
+        "FEDBNK", "RBLBNK", "SCISMS", "CITIBK", "HSBCIN", "AUBANK", "BANDHN",
+        "JUPITR", "FIBANK", "ONECRD", "SLICEC", "TATANEU"
     )
 
     fun learnTrustedSender(sender: String) {

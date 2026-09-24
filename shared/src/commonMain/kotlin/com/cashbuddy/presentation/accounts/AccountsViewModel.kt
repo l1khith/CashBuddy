@@ -8,8 +8,10 @@ import com.cashbuddy.domain.repository.AccountRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import androidx.compose.runtime.Immutable
 import kotlinx.coroutines.launch
 
+@Immutable
 data class AccountsUiState(
     val accounts: List<Account> = emptyList(),
     val totalBalance: Double = 0.0,

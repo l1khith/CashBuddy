@@ -1,7 +1,9 @@
 package com.cashbuddy.presentation.home
 
+import androidx.compose.runtime.Immutable
 import com.cashbuddy.domain.model.Transaction
 
+@Immutable
 data class HomeUiState(
     val isLoading: Boolean = true,
     val balance: Double = 0.0,

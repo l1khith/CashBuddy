@@ -15,9 +15,11 @@ import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
+import androidx.compose.runtime.Immutable
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
 
+@Immutable
 data class TransactionDetailUiState(
     val transaction: Transaction? = null,
     val categories: List<Category> = emptyList(),

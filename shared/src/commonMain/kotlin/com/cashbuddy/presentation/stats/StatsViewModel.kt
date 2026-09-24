@@ -9,8 +9,10 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import androidx.compose.runtime.Immutable
 import kotlinx.coroutines.launch
 
+@Immutable
 data class StatsUiState(
     val monthlySummaries: List<MonthlySummary> = emptyList(),
     val categoryBreakdowns: List<CategoryBreakdown> = emptyList(),

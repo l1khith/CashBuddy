@@ -17,9 +17,11 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import androidx.compose.runtime.Immutable
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.launch
 
+@Immutable
 data class PersonalizationUiState(
     val accuracyRate: Int = 96,
     val correctionsCount: Long = 0,

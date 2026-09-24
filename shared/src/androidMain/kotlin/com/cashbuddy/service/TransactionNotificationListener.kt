@@ -60,6 +60,19 @@ class TransactionNotificationListener : NotificationListenerService(), KoinCompo
         super.onCreate()
         createNotificationChannel()
         loadRulesIntoEngine()
+        seedDefaultsIfEmpty()
+    }
+
+    private fun seedDefaultsIfEmpty() {
+        serviceScope.launch {
+            try {
+                val now = System.currentTimeMillis()
+                categoryRepository.seedDefaults(now)
+                accountRepository.seedDefaults(now)
+            } catch (e: Throwable) {
+                Log.w(TAG, "Failed seeding defaults in listener", e)
+            }
+        }
     }
 
     private fun loadRulesIntoEngine() {
@@ -108,8 +121,10 @@ class TransactionNotificationListener : NotificationListenerService(), KoinCompo
                 // 1. Try Rust parser, fallback to Kotlin parser
                 val parsed = parseNotification(packageName, title, text, postTime)
 
-                // 2. Training Data Pipeline: Record raw notification for allowlisted banking apps
-                if (KotlinNotificationParser.ALLOWED_PACKAGES.contains(packageName)) {
+                // 2. Training Data Pipeline: Record raw notification for allowlisted banking apps (or parsed SMS)
+                val isBankingApp = notificationParser.allowedPackages.contains(packageName)
+                val isRelevantSms = notificationParser.smsPackages.contains(packageName) && parsed != null
+                if (isBankingApp || isRelevantSms) {
                     val fullRawText = if (title.isNotBlank()) "$title: $text" else text
                     try {
                         trainingDataRepository.recordRawNotification(
@@ -155,7 +170,12 @@ class TransactionNotificationListener : NotificationListenerService(), KoinCompo
                     effectiveConfidence = 0.50f
                 }
 
-                val allCategories = categoryRepository.getAll().firstOrNull() ?: emptyList()
+                var allCategories = categoryRepository.getAll().firstOrNull() ?: emptyList()
+                if (allCategories.isEmpty()) {
+                    categoryRepository.seedDefaults(postTime)
+                    allCategories = categoryRepository.getAll().firstOrNull() ?: emptyList()
+                }
+
                 val matchedCategory = allCategories.find {
                     it.name.equals(resolvedCategoryName, ignoreCase = true)
                 } ?: allCategories.find {
@@ -181,16 +201,22 @@ class TransactionNotificationListener : NotificationListenerService(), KoinCompo
                 }
 
                 // 5. Resolve Account ID
-                val allAccounts = accountRepository.getAll().firstOrNull() ?: emptyList()
+                var allAccounts = accountRepository.getAll().firstOrNull() ?: emptyList()
+                if (allAccounts.isEmpty()) {
+                    accountRepository.seedDefaults(postTime)
+                    allAccounts = accountRepository.getAll().firstOrNull() ?: emptyList()
+                }
+
                 val matchedAccount = if (!parsed.accountId.isNullOrBlank()) {
                     val last4 = parsed.accountId.takeLast(4)
                     allAccounts.find { it.number?.endsWith(last4) == true }
                 } else {
                     allAccounts.find { it.name.contains(parsed.sourceApp, ignoreCase = true) }
                 }
-                // Explicit fallback: prefer "Default" account, never pick an arbitrary one
+                // Explicit fallback: prefer "Primary" or "Default" account, never pick an arbitrary one
                 val resolvedAccount = matchedAccount
-                    ?: allAccounts.find { it.name.equals("Default", ignoreCase = true) }
+                    ?: allAccounts.find { it.name.contains("Primary", ignoreCase = true) }
+                    ?: allAccounts.find { it.name.contains("Default", ignoreCase = true) }
                     ?: allAccounts.firstOrNull()
                 val accountId = resolvedAccount?.id ?: 1L
 

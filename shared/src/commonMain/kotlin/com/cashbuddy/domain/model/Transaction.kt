@@ -1,5 +1,7 @@
 package com.cashbuddy.domain.model
 
+import androidx.compose.runtime.Immutable
+
 enum class TransactionType {
     DEBIT,
     CREDIT
@@ -12,6 +14,7 @@ enum class TransactionStatus {
     MODIFIED
 }
 
+@Immutable
 data class Transaction(
     val id: Long = 0,
     val amount: Double,

@@ -1,10 +1,13 @@
 package com.cashbuddy.domain.model
 
+import androidx.compose.runtime.Immutable
+
 enum class CategoryType {
     EXPENSE,
     INCOME
 }
 
+@Immutable
 data class Category(
     val id: Long = 0,
     val name: String,
