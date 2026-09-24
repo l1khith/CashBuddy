@@ -25,7 +25,7 @@ class HomeViewModel(
     private val _uiState = MutableStateFlow(HomeUiState())
     val uiState: StateFlow<HomeUiState> = _uiState.asStateFlow()
 
-    private val _effects = MutableSharedFlow<HomeUiEffect>()
+    private val _effects = MutableSharedFlow<HomeUiEffect>(extraBufferCapacity = 1)
     val effects: SharedFlow<HomeUiEffect> = _effects.asSharedFlow()
 
     init {

@@ -46,7 +46,7 @@ class AddTransactionViewModel(
     private val _uiState = MutableStateFlow(AddTransactionUiState())
     val uiState: StateFlow<AddTransactionUiState> = _uiState.asStateFlow()
 
-    private val _savedEffect = MutableSharedFlow<Unit>()
+    private val _savedEffect = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
     val savedEffect: SharedFlow<Unit> = _savedEffect.asSharedFlow()
 
     private var allTransactions: List<Transaction> = emptyList()

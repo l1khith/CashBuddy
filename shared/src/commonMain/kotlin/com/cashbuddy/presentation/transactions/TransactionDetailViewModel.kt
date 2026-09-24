@@ -35,7 +35,7 @@ class TransactionDetailViewModel(
     private val _uiState = MutableStateFlow(TransactionDetailUiState())
     val uiState: StateFlow<TransactionDetailUiState> = _uiState.asStateFlow()
 
-    private val _navBackEffect = MutableSharedFlow<Unit>()
+    private val _navBackEffect = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
     val navBackEffect: SharedFlow<Unit> = _navBackEffect.asSharedFlow()
 
     init {

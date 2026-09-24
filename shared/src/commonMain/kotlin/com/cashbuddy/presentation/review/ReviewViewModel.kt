@@ -28,7 +28,7 @@ class ReviewViewModel(
     private val _uiState = MutableStateFlow(ReviewState())
     val uiState: StateFlow<ReviewState> = _uiState.asStateFlow()
 
-    private val _effects = MutableSharedFlow<ReviewEffect>()
+    private val _effects = MutableSharedFlow<ReviewEffect>(extraBufferCapacity = 1)
     val effects: SharedFlow<ReviewEffect> = _effects.asSharedFlow()
 
     init {

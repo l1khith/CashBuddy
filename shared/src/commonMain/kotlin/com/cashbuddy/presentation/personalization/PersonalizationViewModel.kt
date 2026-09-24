@@ -42,7 +42,7 @@ class PersonalizationViewModel(
     private val _uiState = MutableStateFlow(PersonalizationUiState())
     val uiState: StateFlow<PersonalizationUiState> = _uiState.asStateFlow()
 
-    private val _messageEffect = MutableSharedFlow<String>()
+    private val _messageEffect = MutableSharedFlow<String>(extraBufferCapacity = 1)
     val messageEffect: SharedFlow<String> = _messageEffect.asSharedFlow()
 
     init {
