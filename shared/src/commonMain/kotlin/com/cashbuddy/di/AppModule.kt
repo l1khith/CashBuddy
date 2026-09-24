@@ -48,6 +48,11 @@ import kotlinx.coroutines.Dispatchers
 import org.koin.dsl.bind
 import org.koin.dsl.module
 
+import com.cashbuddy.data.repository.CorrectionRepositoryImpl
+import com.cashbuddy.data.repository.TrustedSenderRepositoryImpl
+import com.cashbuddy.domain.repository.CorrectionRepository
+import com.cashbuddy.domain.repository.TrustedSenderRepository
+
 val appModule = module {
     // Coroutine Dispatcher for Repositories
     single<CoroutineDispatcher> { Dispatchers.Default }
@@ -61,6 +66,8 @@ val appModule = module {
     singleOf(::SettingsRepositoryImpl) bind SettingsRepository::class
     singleOf(::MerchantRuleRepositoryImpl) bind MerchantRuleRepository::class
     singleOf(::TrainingDataRepositoryImpl) bind TrainingDataRepository::class
+    singleOf(::CorrectionRepositoryImpl) bind CorrectionRepository::class
+    singleOf(::TrustedSenderRepositoryImpl) bind TrustedSenderRepository::class
 
     // Use Cases
     factoryOf(::CalculateBalanceUseCase)

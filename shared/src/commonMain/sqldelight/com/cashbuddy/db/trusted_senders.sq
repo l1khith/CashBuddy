@@ -1,0 +1,21 @@
+CREATE TABLE trusted_senders (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    sender_id TEXT NOT NULL UNIQUE,
+    bank_name TEXT,
+    learned_at INTEGER NOT NULL
+);
+
+CREATE INDEX idx_trusted_senders_sender_id ON trusted_senders(sender_id);
+
+insertSender:
+INSERT OR REPLACE INTO trusted_senders (sender_id, bank_name, learned_at)
+VALUES (?, ?, ?);
+
+getAllSenders:
+SELECT * FROM trusted_senders ORDER BY learned_at DESC;
+
+isSenderTrusted:
+SELECT COUNT(*) FROM trusted_senders WHERE sender_id = ?;
+
+deleteSender:
+DELETE FROM trusted_senders WHERE sender_id = ?;
