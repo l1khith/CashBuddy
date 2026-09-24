@@ -94,7 +94,8 @@ class MainActivity : FragmentActivity() {
                 for (s in senders) {
                     com.cashbuddy.core.learnTrustedSender(s.senderId)
                 }
-            } catch (_: Throwable) {
+            } catch (e: Throwable) {
+                android.util.Log.e("MainActivity", "Failed to load rules/trusted senders", e)
             }
         }
 
@@ -124,13 +125,32 @@ class MainActivity : FragmentActivity() {
             }
         }
 
+        // Process screenshots with user feedback
+        var screenshotInitialRoute: String? = null
         if (cachedScreenshotFiles.isNotEmpty()) {
+            screenshotInitialRoute = "processing_screenshot"
             lifecycleScope.launch(Dispatchers.IO) {
-                screenshotHandler.processScreenshots(cachedScreenshotFiles)
+                val createdIds = screenshotHandler.processScreenshots(cachedScreenshotFiles)
+                launch(Dispatchers.Main) {
+                    if (createdIds.isNotEmpty()) {
+                        android.widget.Toast.makeText(
+                            this@MainActivity,
+                            "${createdIds.size} transaction(s) parsed from screenshot",
+                            android.widget.Toast.LENGTH_LONG
+                        ).show()
+                    } else {
+                        android.widget.Toast.makeText(
+                            this@MainActivity,
+                            "Could not recognize transaction in screenshot",
+                            android.widget.Toast.LENGTH_LONG
+                        ).show()
+                    }
+                }
             }
         }
 
-        val initialRoute = intent?.getStringExtra("EXTRA_NAVIGATE_TO")
+        val initialRoute = screenshotInitialRoute
+            ?: intent?.getStringExtra("EXTRA_NAVIGATE_TO")
 
         setContent {
             CashBuddyTheme {

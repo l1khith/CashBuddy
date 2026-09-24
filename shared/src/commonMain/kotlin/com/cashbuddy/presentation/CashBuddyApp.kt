@@ -64,6 +64,7 @@ fun CashBuddyApp(
         val startDestination = when {
             initialRoute?.contains("review", ignoreCase = true) == true -> ScreenRoute.ReviewInbox
             initialRoute?.contains("transact", ignoreCase = true) == true -> ScreenRoute.Transactions
+            initialRoute?.contains("screenshot", ignoreCase = true) == true -> ScreenRoute.Transactions
             initialRoute?.contains("stat", ignoreCase = true) == true -> ScreenRoute.Stats
             initialRoute?.contains("setting", ignoreCase = true) == true -> ScreenRoute.Settings
             else -> ScreenRoute.Home
