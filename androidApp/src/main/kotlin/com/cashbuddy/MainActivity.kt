@@ -78,7 +78,7 @@ class MainActivity : FragmentActivity() {
         lifecycleScope.launch(Dispatchers.IO) {
             try {
                 val merchantRuleRepository: com.cashbuddy.domain.repository.MerchantRuleRepository by inject()
-                val categoryEngine: com.cashbuddy.core.CategoryEngine? by inject()
+                val categoryEngine: com.cashbuddy.core.CategoryEngine by inject()
                 val rules = merchantRuleRepository.getAll().firstOrNull() ?: emptyList()
                 val entries = rules.map {
                     com.cashbuddy.core.MerchantRuleEntry(
@@ -86,7 +86,7 @@ class MainActivity : FragmentActivity() {
                         category = it.categoryName ?: "Unknown"
                     )
                 }
-                categoryEngine?.loadUserRules(entries)
+                categoryEngine.loadUserRules(entries)
 
                 // Load learned trusted bank senders into Rust core
                 val trustedSenderRepository: com.cashbuddy.domain.repository.TrustedSenderRepository by inject()

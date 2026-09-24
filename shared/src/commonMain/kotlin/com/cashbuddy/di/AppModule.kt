@@ -1,21 +1,29 @@
 package com.cashbuddy.di
 
+import com.cashbuddy.core.CategoryEngine
+import com.cashbuddy.core.NotificationParser
+import com.cashbuddy.core.ScreenshotParserEngine
 import com.cashbuddy.data.repository.AccountRepositoryImpl
 import com.cashbuddy.data.repository.BudgetRepositoryImpl
 import com.cashbuddy.data.repository.CategoryRepositoryImpl
+import com.cashbuddy.data.repository.CorrectionRepositoryImpl
 import com.cashbuddy.data.repository.GoalRepositoryImpl
 import com.cashbuddy.data.repository.MerchantRuleRepositoryImpl
 import com.cashbuddy.data.repository.SettingsRepositoryImpl
 import com.cashbuddy.data.repository.TrainingDataRepositoryImpl
 import com.cashbuddy.data.repository.TransactionRepositoryImpl
+import com.cashbuddy.data.repository.TrustedSenderRepositoryImpl
 import com.cashbuddy.domain.repository.AccountRepository
 import com.cashbuddy.domain.repository.BudgetRepository
 import com.cashbuddy.domain.repository.CategoryRepository
+import com.cashbuddy.domain.repository.CorrectionRepository
 import com.cashbuddy.domain.repository.GoalRepository
 import com.cashbuddy.domain.repository.MerchantRuleRepository
 import com.cashbuddy.domain.repository.SettingsRepository
 import com.cashbuddy.domain.repository.TrainingDataRepository
 import com.cashbuddy.domain.repository.TransactionRepository
+import com.cashbuddy.domain.repository.TrustedSenderRepository
+import com.cashbuddy.domain.usecase.BatchCategorizeUseCase
 import com.cashbuddy.domain.usecase.CalculateBalanceUseCase
 import com.cashbuddy.domain.usecase.ConfirmTransactionUseCase
 import com.cashbuddy.domain.usecase.ExportDataUseCase
@@ -26,36 +34,35 @@ import com.cashbuddy.domain.usecase.GetUnreviewedCountUseCase
 import com.cashbuddy.domain.usecase.ManualAddTransactionUseCase
 import com.cashbuddy.domain.usecase.ModifyTransactionUseCase
 import com.cashbuddy.domain.usecase.RejectTransactionUseCase
-import com.cashbuddy.domain.usecase.BatchCategorizeUseCase
+import com.cashbuddy.presentation.review.ReviewReducer
 import com.cashbuddy.presentation.accounts.AccountsViewModel
 import com.cashbuddy.presentation.addtransaction.AddTransactionViewModel
 import com.cashbuddy.presentation.budget.BudgetViewModel
 import com.cashbuddy.presentation.goals.GoalsViewModel
 import com.cashbuddy.presentation.home.HomeViewModel
 import com.cashbuddy.presentation.personalization.PersonalizationViewModel
-import com.cashbuddy.presentation.review.ReviewReducer
 import com.cashbuddy.presentation.review.ReviewViewModel
 import com.cashbuddy.presentation.settings.SettingsViewModel
 import com.cashbuddy.presentation.stats.StatsViewModel
 import com.cashbuddy.presentation.transactions.TransactionDetailViewModel
 import com.cashbuddy.presentation.transactions.TransactionListViewModel
+import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.Dispatchers
 import org.koin.core.module.dsl.factoryOf
 import org.koin.core.module.dsl.singleOf
 import org.koin.core.module.dsl.viewModel
 import org.koin.core.module.dsl.viewModelOf
-import kotlinx.coroutines.CoroutineDispatcher
-import kotlinx.coroutines.Dispatchers
 import org.koin.dsl.bind
 import org.koin.dsl.module
-
-import com.cashbuddy.data.repository.CorrectionRepositoryImpl
-import com.cashbuddy.data.repository.TrustedSenderRepositoryImpl
-import com.cashbuddy.domain.repository.CorrectionRepository
-import com.cashbuddy.domain.repository.TrustedSenderRepository
 
 val appModule = module {
     // Coroutine Dispatcher for Repositories
     single<CoroutineDispatcher> { Dispatchers.Default }
+
+    // Pure Kotlin Core Engines (Multiplatform)
+    single { CategoryEngine() }
+    single { NotificationParser(get()) }
+    single { ScreenshotParserEngine(get()) }
 
     // Repositories
     singleOf(::TransactionRepositoryImpl) bind TransactionRepository::class

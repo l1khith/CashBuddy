@@ -20,7 +20,6 @@ dependencies {
     implementation(libs.androidx.core)
     implementation(libs.koin.android)
     implementation(libs.koin.compose)
-    implementation(libs.jna)
     implementation(libs.sqlcipher)
     implementation(libs.compose.runtime)
     implementation(libs.compose.foundation)

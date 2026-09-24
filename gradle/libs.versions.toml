@@ -15,17 +15,14 @@ datetime = "0.6.1"
 sqlcipher = "4.6.1"
 biometric = "1.1.0"
 security = "1.1.0-alpha06"
-uniffi = "0.28.3"
 androidx-activity = "1.9.3"
 androidx-appcompat = "1.7.0"
 androidx-core = "1.15.0"
 junit = "4.13.2"
-jna = "5.14.0"
 serialization = "1.8.0"
 
 [libraries]
 androidx-appcompat = { module = "androidx.appcompat:appcompat", version.ref = "androidx-appcompat" }
-jna = { module = "net.java.dev.jna:jna", version.ref = "jna" }
 kotlin-test = { module = "org.jetbrains.kotlin:kotlin-test", version.ref = "kotlin" }
 kotlin-coroutines = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref = "coroutines" }
 kotlin-coroutines-android = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-android", version.ref = "coroutines" }

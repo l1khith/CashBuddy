@@ -71,7 +71,6 @@ kotlin {
             implementation(libs.androidx.biometric)
             implementation(libs.androidx.core)
             implementation(libs.sqlcipher)
-            implementation(libs.jna)
 
             implementation(libs.compose.uiToolingPreview)
             implementation(libs.compose.uiTooling)

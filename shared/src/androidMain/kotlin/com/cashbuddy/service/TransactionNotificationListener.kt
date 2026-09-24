@@ -45,8 +45,9 @@ class TransactionNotificationListener : NotificationListenerService(), KoinCompo
     private val settingsRepository: SettingsRepository by inject()
     private val trainingDataRepository: TrainingDataRepository by inject()
     private val merchantRuleRepository: MerchantRuleRepository by inject()
-    private val categoryEngine: CategoryEngine? by inject()
-    private val rustParser: NotificationParser? by inject()
+    private val categoryEngine: CategoryEngine by inject()
+    private val notificationParser: NotificationParser by inject()
+    private val kotlinParser: KotlinNotificationParser by inject()
 
     companion object {
         private const val TAG = "TxNotificationListener"
@@ -71,7 +72,7 @@ class TransactionNotificationListener : NotificationListenerService(), KoinCompo
                         category = it.categoryName ?: "Unknown"
                     )
                 }
-                categoryEngine?.loadUserRules(entries)
+                categoryEngine.loadUserRules(entries)
             } catch (e: Throwable) {
                 Log.e(TAG, "Failed to load rules into CategoryEngine", e)
             }
@@ -146,8 +147,8 @@ class TransactionNotificationListener : NotificationListenerService(), KoinCompo
                 var effectiveConfidence = parsed.confidence
 
                 // Query Rust Priority Category Engine
-                val engineMatch = categoryEngine?.getCategory(parsed.merchant)
-                if (engineMatch != null && !engineMatch.category.equals("Unknown", ignoreCase = true)) {
+                val engineMatch = categoryEngine.getCategory(parsed.merchant)
+                if (!engineMatch.category.equals("Unknown", ignoreCase = true)) {
                     resolvedCategoryName = engineMatch.category
                     effectiveConfidence = engineMatch.confidence
                 } else if (resolvedCategoryName.equals("UNKNOWN", ignoreCase = true)) {
@@ -228,41 +229,36 @@ class TransactionNotificationListener : NotificationListenerService(), KoinCompo
         text: String,
         postTime: Long
     ): ParsedNotificationResult? {
-        // Attempt native Rust engine using injected singleton
-        val parser = rustParser
-        if (parser != null) {
-            try {
-                val raw = RawNotification(
-                    packageName = packageName,
-                    title = title,
-                    text = text,
-                    timestamp = postTime
+        try {
+            val raw = RawNotification(
+                packageName = packageName,
+                title = title,
+                text = text,
+                timestamp = postTime
+            )
+            val parsed = notificationParser.parse(raw)
+            if (parsed != null) {
+                return ParsedNotificationResult(
+                    amount = parsed.amount,
+                    type = if (parsed.transactionType == com.cashbuddy.core.TransactionType.DEBIT) {
+                        TransactionType.DEBIT
+                    } else {
+                        TransactionType.CREDIT
+                    },
+                    categoryName = parsed.category.name,
+                    merchant = parsed.merchant,
+                    accountId = parsed.accountId,
+                    sourceApp = parsed.sourceApp,
+                    rawText = parsed.rawText,
+                    confidence = parsed.confidence,
+                    timestamp = parsed.timestamp
                 )
-                val parsed = parser.parse(raw)
-                if (parsed != null) {
-                    return ParsedNotificationResult(
-                        amount = parsed.amount,
-                        type = if (parsed.transactionType == com.cashbuddy.core.TransactionType.DEBIT) {
-                            TransactionType.DEBIT
-                        } else {
-                            TransactionType.CREDIT
-                        },
-                        categoryName = parsed.category.name,
-                        merchant = parsed.merchant,
-                        accountId = parsed.accountId,
-                        sourceApp = parsed.sourceApp,
-                        rawText = parsed.rawText,
-                        confidence = parsed.confidence,
-                        timestamp = parsed.timestamp
-                    )
-                }
-            } catch (e: Throwable) {
-                Log.w(TAG, "Rust parser failed for $packageName, falling back to Kotlin", e)
             }
+        } catch (e: Throwable) {
+            Log.w(TAG, "NotificationParser failed for $packageName, falling back to KotlinNotificationParser", e)
         }
 
-        // Pure Kotlin parser fallback
-        val kotlinParser = KotlinNotificationParser()
+        // Secondary fallback
         return kotlinParser.parse(
             RawNotificationData(
                 packageName = packageName,
