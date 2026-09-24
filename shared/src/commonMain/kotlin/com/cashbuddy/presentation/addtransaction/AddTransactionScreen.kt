@@ -77,10 +77,16 @@ fun AddTransactionScreen(
 
     LaunchedEffect(state.categories, state.accounts) {
         if (selectedCategoryId == null && state.categories.isNotEmpty()) {
-            selectedCategoryId = state.categories.first().id
+            selectedCategoryId = state.suggestedCategoryId ?: state.categories.first().id
         }
         if (selectedAccountId == null && state.accounts.isNotEmpty()) {
             selectedAccountId = state.accounts.first().id
+        }
+    }
+
+    LaunchedEffect(state.suggestedCategoryId) {
+        if (selectedCategoryId == null && state.suggestedCategoryId != null) {
+            selectedCategoryId = state.suggestedCategoryId
         }
     }
 
@@ -210,6 +216,34 @@ fun AddTransactionScreen(
                     }
                 }
 
+                // Frequent Amount Quick-Select Chips
+                if (state.frequentAmounts.isNotEmpty()) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .horizontalScroll(rememberScrollState()),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        state.frequentAmounts.forEach { amt ->
+                            val amtStr = if (amt % 1.0 == 0.0) amt.toLong().toString() else amt.toString()
+                            Box(
+                                modifier = Modifier
+                                    .clip(RadiusMedium)
+                                    .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f))
+                                    .clickable { amountString = amtStr }
+                                    .padding(horizontal = 12.dp, vertical = 6.dp)
+                            ) {
+                                Text(
+                                    text = "₹$amtStr",
+                                    style = CashBuddyTypography.labelMedium,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = MaterialTheme.colorScheme.primary
+                                )
+                            }
+                        }
+                    }
+                }
+
                 // Tactile Custom Numpad
                 CustomNumpad(
                     onDigitClick = { digit ->
@@ -236,12 +270,50 @@ fun AddTransactionScreen(
                 // Merchant / Description
                 OutlinedTextField(
                     value = merchant,
-                    onValueChange = { merchant = it },
+                    onValueChange = {
+                        merchant = it
+                        val suggestedId = viewModel.onMerchantChanged(it)
+                        if (suggestedId != null) {
+                            selectedCategoryId = suggestedId
+                        }
+                    },
                     label = { Text("Merchant / Description (e.g. Swiggy, Metro)") },
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true,
                     shape = RadiusMedium
                 )
+
+                // Recent Merchants Quick-Select Chips
+                if (state.recentMerchants.isNotEmpty()) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .horizontalScroll(rememberScrollState()),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        state.recentMerchants.forEach { m ->
+                            Box(
+                                modifier = Modifier
+                                    .clip(RadiusMedium)
+                                    .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+                                    .clickable {
+                                        merchant = m
+                                        val suggestedId = viewModel.onMerchantChanged(m)
+                                        if (suggestedId != null) {
+                                            selectedCategoryId = suggestedId
+                                        }
+                                    }
+                                    .padding(horizontal = 12.dp, vertical = 6.dp)
+                            ) {
+                                Text(
+                                    text = m,
+                                    style = CashBuddyTypography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+                    }
+                }
 
                 // Category Selection
                 Text(
