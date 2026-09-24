@@ -7,7 +7,7 @@ description = "High-performance Rust core library for CashBuddy KMP: parser, cry
 
 [lib]
 name = "cashbuddy_core"
-crate-type = ["staticlib", "cdylib"]
+crate-type = ["cdylib", "staticlib"]
 
 [dependencies]
 # FFI Bindings
