@@ -1,113 +1,63 @@
-# PaisaPal KMP + Rust — 5-Phase Execution Plan & Roadmap
+# CashBuddy — Architecture & Execution Plan
 
-## Phase 1: Rust Core Library (Engine, Model & Cryptography)
+## 1. System Status & Roadmap
 
-### Objectives
-Build and verify the high-performance, size-optimized Rust core library in `core-rust/`, implementing the 5-layer notification parser, DistilBERT ONNX classifier, and AES-256-GCM / Argon2id cryptography.
-
-### Tasks & Deliverables
-1. **Rust Crate Setup (`core-rust/`)**:
-   - Verify `Cargo.toml` with size optimization flags (`opt-level = "z"`, `lto = true`, `codegen-units = 1`, `strip = true`, `panic = "abort"`).
-   - Configure `uniffi.toml` and `src/paisapal.udl`.
-2. **Notification Parser Engine (`src/parser/`)**:
-   - Implement `amount_extractor.rs`, `type_detector.rs`, `merchant_extractor.rs`, `account_extractor.rs`, `fraud_detector.rs`, `engine.rs`.
-   - Implement allowlist of 50+ curated banking/payment packages.
-   - Enforce zero `unwrap()` and zero `expect()` across all production code.
-3. **DistilBERT ONNX Classifier (`src/classifier/`)**:
-   - Implement WordPiece tokenizer and 14-category label mapping.
-   - Integrate `ort` ONNX Runtime Mobile session wrapper.
-4. **Cryptographic Core (`src/crypto/`)**:
-   - Implement `cipher.rs` (AES-256-GCM) with `zeroize` memory sanitization on drop.
-   - Implement `kdf.rs` (Argon2id key derivation).
-5. **Security Validator (`src/security/`)**:
-   - Implement native root detection heuristics.
-
-### Phase 1 Acceptance Criteria
-- `cargo test --lib` passes with 100% test success.
-- Zero `unwrap()` or `expect()` in production paths.
-- Compiled binary size $< 2.0 \text{ MB}$.
+```mermaid
+gantt
+    title CashBuddy Delivery Roadmap
+    dateFormat YYYY-MM-DD
+    section Phase 1: Foundation
+    Core Database & SQLCipher Encryption    :done, 2026-08-01, 2026-08-15
+    SQLDelight Schema & Repositories        :done, 2026-08-15, 2026-08-25
+    section Phase 2: Capture Engine
+    NotificationListenerService             :done, 2026-08-25, 2026-09-05
+    Pure Kotlin 5-Layer Parser Engine       :done, 2026-09-05, 2026-09-15
+    Screenshot Share Intake (ML Kit OCR)    :done, 2026-09-15, 2026-09-24
+    Dedup & Fraud Guards                    :done, 2026-09-20, 2026-09-24
+    section Phase 3: Architecture Refactor
+    Strip Rust/UniFFI/JNA for Pure KMP Core :done, 2026-09-24, 2026-09-24
+    Fix UnsatisfiedLinkError & Native Crash :done, 2026-09-24, 2026-09-24
+    R8 Minification & Size Reduction        :done, 2026-09-24, 2026-09-24
+    section Phase 4: Polish & Production
+    Interactive Analytics & Monthly Charts  :active, 2026-09-25, 2026-10-05
+    CSV / Excel Export via Scoped Storage   :active, 2026-09-25, 2026-10-05
+    Play Store Beta Launch (0% Crash Rate)  : 2026-10-05, 2026-10-15
+```
 
 ---
 
-## Phase 2: KMP & UniFFI Integration
+## 2. Completed Milestones
 
-### Objectives
-Integrate the compiled Rust static/cdylib into the Kotlin Multiplatform build pipeline using UniFFI bindings, and configure Koin 4.0 and SQLDelight schemas.
+### ✅ Phase 1: Data & Security Foundation
+- [x] SQLDelight schema with custom column adapters.
+- [x] Hardware-backed Android Keystore key generation.
+- [x] SQLCipher AES-256 GCM full database encryption.
+- [x] Biometric prompt (`BIOMETRIC_STRONG`) with 5-minute inactivity timeout.
+- [x] Zero SMS permissions declared or requested.
+- [x] Zero network permissions (`INTERNET`) declared or requested.
 
-### Tasks & Deliverables
-1. **Gradle UniFFI Configuration**:
-   - Add `ch.ubique.uniffi` plugin and configure Android/iOS target ABIs.
-   - Auto-generate Kotlin binding files in `composeApp/src/commonMain/kotlin/com/paisapal/core/`.
-2. **SQLDelight Schema Implementation**:
-   - Implement all 7 tables in `shared/src/commonMain/sqldelight/com/paisapal/db/`.
-   - Implement SQLCipher database driver factory using keys derived from Rust `CryptoManager`.
-3. **Koin 4.0 DI Modules**:
-   - Register Rust singletons (`NotificationParser.create()`, `CryptoManager.create()`, `TransactionClassifier`).
-   - Register domain repositories and use cases.
+### ✅ Phase 2: 3-Layer Transaction Intake
+- [x] Layer 1: Passive notification listener with 50+ banking apps allowlist.
+- [x] Layer 2: Offline screenshot sharing with bundled ML Kit Text Recognition and regex entity extraction.
+- [x] Layer 3: Manual transaction entry with frequent merchant chips.
+- [x] Deduplication engine with 5-minute sliding window and paisa tolerance.
+- [x] Sliding-window fraud velocity rate limiter (5 tx/min).
 
-### Phase 2 Acceptance Criteria
-- `./gradlew :composeApp:build` compiles Rust code and generates type-safe Kotlin bindings.
-- Koin initializes without missing dependencies.
-- SQLDelight generated queries execute successfully with encrypted driver.
-
----
-
-## Phase 3: Notification Listener Service & Pipeline
-
-### Objectives
-Deploy Android's `NotificationListenerService` and connect it via UniFFI to the Rust parser and on-device ML classifier.
-
-### Tasks & Deliverables
-1. **Android Service Implementation**:
-   - `TransactionNotificationListener.kt` with `BIND_NOTIFICATION_LISTENER_SERVICE`.
-   - Forward raw notification payload to `NotificationParser.parse()`.
-2. **Parser-to-Classifier Fallback**:
-   - If parser confidence $< 0.70$ or category is `Unknown`, invoke `TransactionClassifier.classify()`.
-3. **Status Logic & Persistence**:
-   - Confidence $\ge 0.85$ AND amount $< autoConfirmThreshold$ $\to$ `CONFIRMED`.
-   - Else $\to$ `PENDING` (Review Inbox).
-   - Atomic balance updates via SQLDelight triggers.
-
-### Phase 3 Acceptance Criteria
-- 50+ real-world notification samples parse with $>90\%$ accuracy.
-- OTP and promotional alerts discarded with 0 database writes.
-- High-value alerts ($\ge ₹10,000$) unconditionally marked `PENDING`.
+### ✅ Phase 3: Pure Kotlin Multiplatform Core Migration
+- [x] Stripped out Rust crate, UniFFI bindgen, and JNA dependency.
+- [x] Eliminated native `UnsatisfiedLinkError` crashes on ColorOS/Oppo/Realme/Xiaomi devices.
+- [x] Implemented `NotificationParser.kt`, `CategoryEngine.kt`, `ScreenshotParserEngine.kt`, `DedupEngine.kt`, and `FraudDetector.kt` in `shared/commonMain`.
+- [x] Added `CoreEnginesTest.kt` unit test suite with 100% test coverage.
+- [x] Verified `assembleDebug` and `assembleRelease` builds.
 
 ---
 
-## Phase 4: UI Layer (Compose Multiplatform & MVI/MVVM)
+## 3. Next Focus Areas
 
-### Objectives
-Implement the complete declarative user interface with Material3 design tokens, type-safe Navigation 3, and MVI Review Inbox.
-
-### Tasks & Deliverables
-1. **Home Screen (MVVM)**: Balance header, monthly debit/credit delta, review banner, recent transactions.
-2. **Review Inbox (MVI)**: Swipe-to-confirm, confidence badges, category quick-chip, bulk actions.
-3. **Transactions, Stats, Accounts, Budgets, Goals, Settings**: Complete implementation of remaining screens.
-
-### Phase 4 Acceptance Criteria
-- Smooth 60fps animations on physical device.
-- Review Inbox updates database reactively.
-
----
-
-## Phase 5: Security Hardening & Play Store Release Polish
-
-### Objectives
-Harden hardware Keystore bindings, enforce BiometricPrompt, implement Scoped Storage export, and finalize Play Store compliance.
-
-### Tasks & Deliverables
-1. **Hardware Keystore & Biometrics**:
-   - Secure passphrase vault with Android Keystore (TEE/StrongBox).
-   - `BIOMETRIC_STRONG` prompt on cold launch and 5-minute background timeout.
-2. **Data Portability**:
-   - CSV and Excel export via MediaStore API.
-   - Encrypted local backup and restore.
-3. **Play Store Release**:
-   - Zero network permission audit.
-   - Closed testing rollout (20 testers $\times$ 14 days).
-
-### Phase 5 Acceptance Criteria
-- Total APK download size $< 25 \text{ MB}$.
-- Runtime memory $< 100 \text{ MB}$.
-- 100% offline data sovereignty confirmed.
+1. **Enhanced Visualizations & Reports**:
+   - Monthly category breakdown pie/bar charts.
+   - Budget progress bars with threshold alerts.
+2. **Local Data Backup & Scoped Storage Export**:
+   - Export transactions to CSV and Excel via Android's Storage Access Framework (`ACTION_CREATE_DOCUMENT`).
+3. **Personalization Learning Polish**:
+   - Expose user rules dashboard in Settings for reviewing, adding, and deleting custom merchant rules.
