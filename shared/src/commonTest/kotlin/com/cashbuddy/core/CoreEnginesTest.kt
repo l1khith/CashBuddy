@@ -139,7 +139,7 @@ class CoreEnginesTest {
         val parser = NotificationParser()
         val raw = RawNotification(
             packageName = "com.google.android.apps.messaging",
-            title = "VM-HDFCBK",
+            title = "Bank Alert",
             text = "INR 850.00 debited from a/c **4321 on 24-Sep-26 to UBER INDIA. Avl bal: INR 15,200.00",
             timestamp = 1700000000000L
         )
@@ -170,8 +170,8 @@ class CoreEnginesTest {
     fun testDiscardOtp() {
         val parser = NotificationParser()
         val raw = RawNotification(
-            packageName = "com.snapwork.hdfc",
-            title = "HDFC Alert",
+            packageName = "com.bank.app",
+            title = "Security Alert",
             text = "Your OTP for NetBanking is 492019. Do not share with anyone.",
             timestamp = 1700000000000L
         )

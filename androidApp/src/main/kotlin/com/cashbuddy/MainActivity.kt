@@ -105,14 +105,8 @@ class MainActivity : FragmentActivity() {
                     )
                 }
                 categoryEngine.loadUserRules(entries)
-
-                val trustedSenderRepository: com.cashbuddy.domain.repository.TrustedSenderRepository by inject()
-                val senders = trustedSenderRepository.getAllSenders().firstOrNull() ?: emptyList()
-                for (s in senders) {
-                    com.cashbuddy.core.learnTrustedSender(s.senderId)
-                }
             } catch (e: Throwable) {
-                android.util.Log.e("MainActivity", "Failed to seed defaults or load rules/senders", e)
+                android.util.Log.e("MainActivity", "Failed to seed defaults or load rules", e)
             }
         }
 

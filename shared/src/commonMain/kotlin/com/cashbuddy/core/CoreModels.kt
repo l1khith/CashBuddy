@@ -1,3 +1,4 @@
+// NO-NETWORK
 package com.cashbuddy.core
 
 enum class TransactionType {
@@ -47,7 +48,7 @@ data class ScreenshotTransaction(
     val merchant: String,
     val category: String,
     val utrOrRef: String?,
-    val appName: String,
+    val appName: String? = null,
     val confidence: Float,
     val rawText: String
 )

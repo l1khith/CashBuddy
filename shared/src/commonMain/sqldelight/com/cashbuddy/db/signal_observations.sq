@@ -1,0 +1,20 @@
+CREATE TABLE signal_observations (
+    signal TEXT PRIMARY KEY NOT NULL,
+    true_positives INTEGER NOT NULL DEFAULT 0,
+    false_positives INTEGER NOT NULL DEFAULT 0,
+    true_negatives INTEGER NOT NULL DEFAULT 0,
+    false_negatives INTEGER NOT NULL DEFAULT 0
+);
+
+getSignal:
+SELECT * FROM signal_observations WHERE signal = ?;
+
+getAll:
+SELECT * FROM signal_observations;
+
+upsertObservation:
+INSERT OR REPLACE INTO signal_observations (signal, true_positives, false_positives, true_negatives, false_negatives)
+VALUES (?, ?, ?, ?, ?);
+
+deleteAll:
+DELETE FROM signal_observations;

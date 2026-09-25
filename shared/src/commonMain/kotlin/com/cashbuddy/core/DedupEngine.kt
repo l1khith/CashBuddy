@@ -1,3 +1,4 @@
+// NO-NETWORK
 package com.cashbuddy.core
 
 import kotlin.math.abs

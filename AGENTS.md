@@ -1,4 +1,4 @@
-# PaisaPal KMP + Rust — AI Agent & Developer Rules
+# PaisaPal KMP — AI Agent & Developer Rules
 
 This project follows the strict architecture and development rules specified in [rules.md](file:///c:/Users/ailik/AndroidStudioProjects/CashBuddy/rules.md).
 
@@ -9,12 +9,12 @@ This project follows the strict architecture and development rules specified in 
 4. **ENCRYPTED DATABASE**: SQLCipher (AES-256 GCM) with Android Keystore.
 6. **HUMAN-IN-THE-LOOP**: Transactions with confidence < 0.85 or amount >= ₹10,000 must be marked PENDING.
 7. **BIOMETRIC LOCK**: BIOMETRIC_STRONG on app launch and 5-min timeout.
-8. **PACKAGE ALLOWLIST**: Only 50+ curated Indian banking and UPI apps are parsed.
+8. **PROBABILISTIC GATING**: 100% content-first Naive Bayes gating; zero hardcoded package or sender allowlists.
 
 Refer to:
 - High-Level Design: [docs/ARCHITECTURE_HLD.md](file:///c:/Users/ailik/AndroidStudioProjects/CashBuddy/docs/ARCHITECTURE_HLD.md)
-- Rust Core HLD: [docs/RUST_CORE_HLD.md](file:///c:/Users/ailik/AndroidStudioProjects/CashBuddy/docs/RUST_CORE_HLD.md)
-- Rust Core LLD: [docs/RUST_CORE_LLD.md](file:///c:/Users/ailik/AndroidStudioProjects/CashBuddy/docs/RUST_CORE_LLD.md)
+- KMP Core HLD: [docs/KMP_CORE_HLD.md](file:///c:/Users/ailik/AndroidStudioProjects/CashBuddy/docs/KMP_CORE_HLD.md)
+- KMP Core LLD: [docs/KMP_CORE_LLD.md](file:///c:/Users/ailik/AndroidStudioProjects/CashBuddy/docs/KMP_CORE_LLD.md)
 - Low-Level Database Design: [docs/DATABASE_LLD.md](file:///c:/Users/ailik/AndroidStudioProjects/CashBuddy/docs/DATABASE_LLD.md)
 - Notification Parser Engine: [docs/NOTIFICATION_PARSER_LLD.md](file:///c:/Users/ailik/AndroidStudioProjects/CashBuddy/docs/NOTIFICATION_PARSER_LLD.md)
 - Security Architecture: [docs/SECURITY_ARCHITECTURE.md](file:///c:/Users/ailik/AndroidStudioProjects/CashBuddy/docs/SECURITY_ARCHITECTURE.md)

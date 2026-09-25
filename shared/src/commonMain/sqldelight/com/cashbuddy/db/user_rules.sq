@@ -1,0 +1,22 @@
+CREATE TABLE user_rules (
+    merchant_normalized TEXT PRIMARY KEY NOT NULL,
+    category TEXT NOT NULL,
+    updated_at INTEGER NOT NULL,
+    source TEXT NOT NULL
+);
+
+getAll:
+SELECT * FROM user_rules;
+
+getForMerchant:
+SELECT * FROM user_rules WHERE merchant_normalized = ?;
+
+upsertRule:
+INSERT OR REPLACE INTO user_rules (merchant_normalized, category, updated_at, source)
+VALUES (?, ?, ?, ?);
+
+deleteForMerchant:
+DELETE FROM user_rules WHERE merchant_normalized = ?;
+
+deleteAll:
+DELETE FROM user_rules;

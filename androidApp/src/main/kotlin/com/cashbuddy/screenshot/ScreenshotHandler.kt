@@ -39,21 +39,32 @@ class ScreenshotHandler(private val context: Context) : KoinComponent {
      * synchronously during intent handling before content URI access expires.
      */
     fun copyUriToCache(uri: Uri): File? {
-        return try {
-            val cacheFolder = File(context.cacheDir, "screenshots").apply { mkdirs() }
-            val destFile = File(cacheFolder, "screenshot_${System.currentTimeMillis()}_${(1000..9999).random()}.jpg")
+        val cacheFolder = File(context.cacheDir, "screenshots").apply { mkdirs() }
+        val destFile = File(cacheFolder, "screenshot_${System.currentTimeMillis()}_${(1000..9999).random()}.jpg")
+        var delayMs = 150L
 
-            context.contentResolver.openInputStream(uri)?.use { input ->
-                FileOutputStream(destFile).use { output ->
-                    input.copyTo(output)
+        repeat(5) { attempt ->
+            try {
+                context.contentResolver.openInputStream(uri)?.use { input ->
+                    FileOutputStream(destFile).use { output ->
+                        input.copyTo(output)
+                    }
+                }
+                if (destFile.exists() && destFile.length() > 0) {
+                    Log.d(TAG, "Cached screenshot: ${destFile.name} (${destFile.length()} bytes)")
+                    return destFile
+                }
+            } catch (e: Throwable) {
+                if (attempt == 4) {
+                    Log.e(TAG, "Failed to cache screenshot URI: $uri", e)
                 }
             }
-            Log.d(TAG, "Cached screenshot: ${destFile.name} (${destFile.length()} bytes)")
-            destFile
-        } catch (e: Throwable) {
-            Log.e(TAG, "Failed to cache screenshot URI: $uri", e)
-            null
+            try {
+                Thread.sleep(delayMs)
+            } catch (_: InterruptedException) { }
+            delayMs *= 2
         }
+        return null
     }
 
     /**
@@ -106,7 +117,7 @@ class ScreenshotHandler(private val context: Context) : KoinComponent {
                     trainingDataRepository.recordRawNotification(
                         rawText = parsed.rawText,
                         source = "screenshot",
-                        sourceApp = parsed.appName,
+                        sourceApp = parsed.appName ?: "screenshot",
                         extractedAmount = parsed.amount,
                         extractedType = parsed.transactionType.name,
                         extractedMerchant = parsed.merchant,
@@ -132,9 +143,10 @@ class ScreenshotHandler(private val context: Context) : KoinComponent {
 
                 // Resolve account with explicit fallback
                 val allAccounts = accountRepository.getAll().firstOrNull() ?: emptyList()
-                val matchedAccount = allAccounts.find {
-                    it.name.contains(parsed.appName, ignoreCase = true)
-                }
+                val currentAppName = parsed.appName
+                val matchedAccount = if (currentAppName != null) {
+                    allAccounts.find { it.name.contains(currentAppName, ignoreCase = true) }
+                } else null
                 val resolvedAccount = matchedAccount
                     ?: allAccounts.find { it.name.equals("Default", ignoreCase = true) }
                     ?: allAccounts.firstOrNull()
@@ -162,7 +174,7 @@ class ScreenshotHandler(private val context: Context) : KoinComponent {
                     type = txType,
                     status = status,
                     rawText = parsed.rawText,
-                    sourceApp = "Screenshot: ${parsed.appName}",
+                    sourceApp = "Screenshot: ${parsed.appName ?: "UPI"}",
                     merchant = parsed.merchant,
                     confidence = parsed.confidence,
                     timestamp = timestamp,

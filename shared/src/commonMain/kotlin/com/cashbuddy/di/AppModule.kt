@@ -9,20 +9,24 @@ import com.cashbuddy.data.repository.CategoryRepositoryImpl
 import com.cashbuddy.data.repository.CorrectionRepositoryImpl
 import com.cashbuddy.data.repository.GoalRepositoryImpl
 import com.cashbuddy.data.repository.MerchantRuleRepositoryImpl
+import com.cashbuddy.data.repository.RawMessageRepositoryImpl
 import com.cashbuddy.data.repository.SettingsRepositoryImpl
+import com.cashbuddy.data.repository.SignalObservationRepositoryImpl
 import com.cashbuddy.data.repository.TrainingDataRepositoryImpl
 import com.cashbuddy.data.repository.TransactionRepositoryImpl
-import com.cashbuddy.data.repository.TrustedSenderRepositoryImpl
+import com.cashbuddy.data.repository.UserRuleRepositoryImpl
 import com.cashbuddy.domain.repository.AccountRepository
 import com.cashbuddy.domain.repository.BudgetRepository
 import com.cashbuddy.domain.repository.CategoryRepository
 import com.cashbuddy.domain.repository.CorrectionRepository
 import com.cashbuddy.domain.repository.GoalRepository
 import com.cashbuddy.domain.repository.MerchantRuleRepository
+import com.cashbuddy.domain.repository.RawMessageRepository
 import com.cashbuddy.domain.repository.SettingsRepository
+import com.cashbuddy.domain.repository.SignalObservationRepository
 import com.cashbuddy.domain.repository.TrainingDataRepository
 import com.cashbuddy.domain.repository.TransactionRepository
-import com.cashbuddy.domain.repository.TrustedSenderRepository
+import com.cashbuddy.domain.repository.UserRuleRepository
 import com.cashbuddy.domain.usecase.BatchCategorizeUseCase
 import com.cashbuddy.domain.usecase.CalculateBalanceUseCase
 import com.cashbuddy.domain.usecase.ConfirmTransactionUseCase
@@ -60,9 +64,35 @@ val appModule = module {
     single<CoroutineDispatcher> { Dispatchers.Default }
 
     // Pure Kotlin Core Engines (Multiplatform)
-    single { CategoryEngine() }
-    single { NotificationParser(get()) }
+    single { CategoryEngine(get()) }
+    single { NotificationParser(get(), get(), get(), get(), get()) }
+    single { com.cashbuddy.domain.parser.KotlinNotificationParser(get(), get(), get(), get(), get()) }
     single { ScreenshotParserEngine(get()) }
+    single { com.cashbuddy.core.prob.SourceDetector() }
+    single { com.cashbuddy.core.prob.EvidenceExtractor() }
+    single { com.cashbuddy.core.prob.FieldConfidenceEstimator() }
+    single { com.cashbuddy.core.prob.PolicyEngine() }
+    single { com.cashbuddy.core.prob.DedupEngine }
+    single { com.cashbuddy.core.prob.AccountRegistry(get()) }
+    singleOf(::SignalObservationRepositoryImpl) bind SignalObservationRepository::class
+    singleOf(::RawMessageRepositoryImpl) bind RawMessageRepository::class
+    singleOf(::UserRuleRepositoryImpl) bind UserRuleRepository::class
+    single<com.cashbuddy.core.prob.Calibrator> { com.cashbuddy.core.prob.LikelihoodCalibrator(get()) }
+    single { com.cashbuddy.core.prob.ProbabilisticClassifier(get(), get(), get()) }
+    single {
+        com.cashbuddy.core.prob.MessagePipeline(
+            sourceDetector = get(),
+            evidenceExtractor = get(),
+            classifier = get(),
+            policy = get(),
+            dedup = get(),
+            accountRegistry = get(),
+            categoryEngine = get(),
+            transactionRepo = get(),
+            rawMessageRepo = get(),
+            categoryRepo = get()
+        )
+    }
 
     // Repositories
     singleOf(::TransactionRepositoryImpl) bind TransactionRepository::class
@@ -74,7 +104,6 @@ val appModule = module {
     singleOf(::MerchantRuleRepositoryImpl) bind MerchantRuleRepository::class
     singleOf(::TrainingDataRepositoryImpl) bind TrainingDataRepository::class
     singleOf(::CorrectionRepositoryImpl) bind CorrectionRepository::class
-    singleOf(::TrustedSenderRepositoryImpl) bind TrustedSenderRepository::class
 
     // Use Cases
     factoryOf(::CalculateBalanceUseCase)

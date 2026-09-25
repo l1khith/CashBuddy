@@ -122,18 +122,26 @@ class AddTransactionViewModel(
             }
         }
 
-        // 2. Keyword matching heuristic
+        // 2. MerchantMap lookup & generic keyword matching heuristic
         val lowerMerchant = cleanMerchant.lowercase()
-        val keywordMatchedCat = categories.find { cat ->
-            val catLower = cat.name.lowercase()
-            when {
-                lowerMerchant.contains("swiggy") || lowerMerchant.contains("zomato") || lowerMerchant.contains("chai") || lowerMerchant.contains("cafe") || lowerMerchant.contains("food") -> catLower.contains("food")
-                lowerMerchant.contains("uber") || lowerMerchant.contains("ola") || lowerMerchant.contains("metro") || lowerMerchant.contains("petrol") || lowerMerchant.contains("fuel") -> catLower.contains("transport")
-                lowerMerchant.contains("blinkit") || lowerMerchant.contains("zepto") || lowerMerchant.contains("instamart") || lowerMerchant.contains("dmart") || lowerMerchant.contains("grocer") -> catLower.contains("grocer")
-                lowerMerchant.contains("amazon") || lowerMerchant.contains("flipkart") || lowerMerchant.contains("myntra") -> catLower.contains("shop")
-                lowerMerchant.contains("airtel") || lowerMerchant.contains("jio") || lowerMerchant.contains("bescom") || lowerMerchant.contains("electricity") || lowerMerchant.contains("bill") -> catLower.contains("bill") || catLower.contains("util")
-                lowerMerchant.contains("apollo") || lowerMerchant.contains("pharm") || lowerMerchant.contains("hospital") || lowerMerchant.contains("clinic") -> catLower.contains("health")
-                else -> false
+        val merchantMatch = com.cashbuddy.core.prob.MerchantMap.lookup(lowerMerchant)
+        val keywordMatchedCat = if (merchantMatch.source != com.cashbuddy.core.prob.MerchantMap.CategorySource.FALLBACK) {
+            categories.find { cat ->
+                val catLower = cat.name.lowercase()
+                val target = merchantMatch.category.lowercase()
+                catLower == target || catLower.contains(target.take(4)) || target.contains(catLower.take(4))
+            }
+        } else {
+            categories.find { cat ->
+                val catLower = cat.name.lowercase()
+                when {
+                    lowerMerchant.contains("chai") || lowerMerchant.contains("cafe") || lowerMerchant.contains("food") -> catLower.contains("food")
+                    lowerMerchant.contains("metro") || lowerMerchant.contains("petrol") || lowerMerchant.contains("fuel") -> catLower.contains("transport")
+                    lowerMerchant.contains("grocer") -> catLower.contains("grocer")
+                    lowerMerchant.contains("electricity") || lowerMerchant.contains("bill") -> catLower.contains("bill") || catLower.contains("util")
+                    lowerMerchant.contains("pharm") || lowerMerchant.contains("hospital") || lowerMerchant.contains("clinic") -> catLower.contains("health")
+                    else -> false
+                }
             }
         }
         if (keywordMatchedCat != null) {
