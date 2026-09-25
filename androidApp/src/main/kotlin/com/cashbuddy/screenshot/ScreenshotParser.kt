@@ -24,7 +24,7 @@ class ScreenshotParser(private val context: Context) {
     }
 
     /**
-     * Run ML Kit OCR on a locally cached image file and parse into structured transaction via Rust core.
+     * Run ML Kit OCR on a locally cached image file and parse into structured transaction via Kotlin engine.
      */
     suspend fun parseImageFile(file: File): ScreenshotTransaction? = withContext(Dispatchers.IO) {
         Log.d(TAG, "Starting OCR on file: ${file.name} (${file.length()} bytes)")
@@ -48,14 +48,14 @@ class ScreenshotParser(private val context: Context) {
         val result = try {
             parseScreenshotText(ocrText)
         } catch (e: Throwable) {
-            Log.e(TAG, "Rust parseScreenshotText failed", e)
+            Log.e(TAG, "parseScreenshotText failed", e)
             null
         }
 
         if (result != null) {
             Log.i(TAG, "Parsed screenshot: ₹${result.amount} ${result.transactionType} to ${result.merchant} (${result.appName}, confidence=${result.confidence})")
         } else {
-            Log.w(TAG, "Rust parser returned null for OCR text: ${ocrText.take(100)}")
+            Log.w(TAG, "Parser returned null for OCR text: ${ocrText.take(100)}")
         }
 
         result

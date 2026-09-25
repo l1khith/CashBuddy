@@ -1,4 +1,4 @@
-# PaisaPal KMP + Rust — AI Agent & Developer Rules
+# PaisaPal KMP — AI Agent & Developer Rules
 
 This project follows the strict architecture and development rules specified in [rules.md](file:///c:/Users/ailik/AndroidStudioProjects/CashBuddy/rules.md).
 
@@ -13,8 +13,8 @@ This project follows the strict architecture and development rules specified in 
 
 Refer to:
 - High-Level Design: [docs/ARCHITECTURE_HLD.md](file:///c:/Users/ailik/AndroidStudioProjects/CashBuddy/docs/ARCHITECTURE_HLD.md)
-- Rust Core HLD: [docs/RUST_CORE_HLD.md](file:///c:/Users/ailik/AndroidStudioProjects/CashBuddy/docs/RUST_CORE_HLD.md)
-- Rust Core LLD: [docs/RUST_CORE_LLD.md](file:///c:/Users/ailik/AndroidStudioProjects/CashBuddy/docs/RUST_CORE_LLD.md)
+- KMP Core HLD: [docs/KMP_CORE_HLD.md](file:///c:/Users/ailik/AndroidStudioProjects/CashBuddy/docs/KMP_CORE_HLD.md)
+- KMP Core LLD: [docs/KMP_CORE_LLD.md](file:///c:/Users/ailik/AndroidStudioProjects/CashBuddy/docs/KMP_CORE_LLD.md)
 - Low-Level Database Design: [docs/DATABASE_LLD.md](file:///c:/Users/ailik/AndroidStudioProjects/CashBuddy/docs/DATABASE_LLD.md)
 - Notification Parser Engine: [docs/NOTIFICATION_PARSER_LLD.md](file:///c:/Users/ailik/AndroidStudioProjects/CashBuddy/docs/NOTIFICATION_PARSER_LLD.md)
 - Security Architecture: [docs/SECURITY_ARCHITECTURE.md](file:///c:/Users/ailik/AndroidStudioProjects/CashBuddy/docs/SECURITY_ARCHITECTURE.md)

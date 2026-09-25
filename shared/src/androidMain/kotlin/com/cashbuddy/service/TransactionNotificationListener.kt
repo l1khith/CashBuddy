@@ -119,7 +119,7 @@ class TransactionNotificationListener : NotificationListenerService(), KoinCompo
                 val isEnabled = settingsRepository.getNotificationEnabled().firstOrNull() ?: true
                 if (!isEnabled) return@launch
 
-                // 1. Try Rust parser, fallback to Kotlin parser
+                // 1. Probabilistic notification parser
                 val parsed = parseNotification(packageName, title, text, postTime)
 
                 // 2. Training Data Pipeline: Record raw notification for allowlisted banking apps (or parsed SMS)
@@ -157,11 +157,11 @@ class TransactionNotificationListener : NotificationListenerService(), KoinCompo
                 }
                 if (isDuplicate) return@launch
 
-                // 4. Resolve Category ID (Priority: Rust CategoryEngine [UserRule -> KeywordMap] -> Parser Heuristics -> Fallback)
+                // 4. Resolve Category ID (Priority: CategoryEngine [UserRule -> MerchantMap] -> Fallback)
                 var resolvedCategoryName = parsed.categoryName
                 var effectiveConfidence = parsed.confidence
 
-                // Query Rust Priority Category Engine
+                // Query Priority Category Engine
                 val engineMatch = categoryEngine.getCategory(parsed.merchant)
                 if (!engineMatch.category.equals("Unknown", ignoreCase = true)) {
                     resolvedCategoryName = engineMatch.category

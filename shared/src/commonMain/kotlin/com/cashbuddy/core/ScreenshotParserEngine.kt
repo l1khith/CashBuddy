@@ -232,7 +232,7 @@ class ScreenshotParserEngine(
 
 private typealias bool = Boolean
 
-// Top-level convenience function matching the old Rust binding
+// Top-level convenience function
 fun parseScreenshotText(rawText: String): ScreenshotTransaction? {
     return ScreenshotParserEngine().parse(rawText)
 }

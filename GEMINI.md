@@ -1,4 +1,4 @@
-# PaisaPal KMP + Rust — Gemini Assistant Rules
+# PaisaPal KMP — Gemini Assistant Rules
 
 This project follows the strict architecture and development rules specified in [rules.md](file:///c:/Users/ailik/AndroidStudioProjects/CashBuddy/rules.md) and [AGENTS.md](file:///c:/Users/ailik/AndroidStudioProjects/CashBuddy/AGENTS.md).
 
