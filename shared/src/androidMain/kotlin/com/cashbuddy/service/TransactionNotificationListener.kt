@@ -48,6 +48,7 @@ class TransactionNotificationListener : NotificationListenerService(), KoinCompo
     private val categoryEngine: CategoryEngine by inject()
     private val notificationParser: NotificationParser by inject()
     private val kotlinParser: KotlinNotificationParser by inject()
+    private val sourceDetector: com.cashbuddy.core.prob.SourceDetector by inject()
 
     companion object {
         private const val TAG = "TxNotificationListener"
@@ -122,9 +123,8 @@ class TransactionNotificationListener : NotificationListenerService(), KoinCompo
                 val parsed = parseNotification(packageName, title, text, postTime)
 
                 // 2. Training Data Pipeline: Record raw notification for allowlisted banking apps (or parsed SMS)
-                val isBankingApp = notificationParser.allowedPackages.contains(packageName)
-                val isRelevantSms = notificationParser.smsPackages.contains(packageName) && parsed != null
-                if (isBankingApp || isRelevantSms) {
+                val source = sourceDetector.detect(packageName, if (title.isNotBlank()) "$title: $text" else text)
+                if (source != com.cashbuddy.core.prob.NotificationSource.UNKNOWN || parsed != null) {
                     val fullRawText = if (title.isNotBlank()) "$title: $text" else text
                     try {
                         trainingDataRepository.recordRawNotification(

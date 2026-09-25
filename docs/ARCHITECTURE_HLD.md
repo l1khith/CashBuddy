@@ -50,12 +50,12 @@
 │                                                                             │
 │  ┌───────────────────────────────────────────────────────────────────────┐  │
 │  │                          CORE ENGINES                                 │  │
-│  │  • NotificationParser: 5-layer intake engine with package allowlist    │  │
+│  │  • NotificationParser: 5-layer probabilistic intake engine             │  │
 │  │  • ScreenshotParserEngine: Multi-app UPI OCR regex entity extractor   │  │
 │  │  • CategoryEngine: 3-tier hybrid priority categorization engine       │  │
 │  │  • DedupEngine: 5-minute window cross-channel duplicate detector      │  │
 │  │  • FraudDetector: Velocity rate limiter & deduplication hashing       │  │
-│  │  • TrustedSenders: Learned sender allowlist manager                   │  │
+│  │  • ProbabilisticClassifier: Content-first Naive Bayes gating engine   │  │
 │  └──────────────────────────────────┬────────────────────────────────────┘  │
 │                                     │                                       │
 │                                     ▼                                       │

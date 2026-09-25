@@ -76,7 +76,7 @@ class ScreenshotParserEngine(
             lower.contains("phonepe") -> "PhonePe"
             lower.contains("paytm") -> "Paytm"
             lower.contains("bhim") -> "BHIM"
-            lower.contains("cred") -> "CRED"
+            lower.contains("cred") -> "Cred"
             lower.contains("amazon pay") -> "Amazon Pay"
             lower.contains("bmtc") -> "BMTC"
             else -> "UPI"

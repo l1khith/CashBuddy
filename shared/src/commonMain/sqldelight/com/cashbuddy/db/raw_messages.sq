@@ -1,0 +1,26 @@
+CREATE TABLE raw_messages (
+    id TEXT PRIMARY KEY NOT NULL,
+    source_type TEXT NOT NULL,
+    package_name TEXT,
+    sender_id TEXT,
+    title TEXT,
+    text TEXT NOT NULL,
+    timestamp INTEGER NOT NULL,
+    processed_at INTEGER NOT NULL,
+    resulting_tx_id TEXT
+);
+
+CREATE INDEX idx_raw_timestamp ON raw_messages(timestamp DESC);
+
+insert:
+INSERT INTO raw_messages (id, source_type, package_name, sender_id, title, text, timestamp, processed_at, resulting_tx_id)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);
+
+getRecent:
+SELECT * FROM raw_messages ORDER BY timestamp DESC LIMIT ?;
+
+getById:
+SELECT * FROM raw_messages WHERE id = ?;
+
+updateResultingTx:
+UPDATE raw_messages SET resulting_tx_id = ? WHERE id = ?;

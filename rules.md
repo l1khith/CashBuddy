@@ -31,8 +31,9 @@ These 8 constraints are strictly enforced across the entire codebase:
    - Require `BiometricPrompt` with `BIOMETRIC_STRONG` on application cold launch.
    - Automatically lock the application after 5 minutes of background inactivity (`TIMEOUT_LOCK_MS = 300_000L`).
 
-7. **STRICT PACKAGE ALLOWLIST**:
-   - Only process notifications originating from the curated allowlist of 50+ verified Indian banking, UPI, and payment apps. Discard unknown package sources immediately at Layer 1.
+7. **PROBABILISTIC GATING & ZERO HARDCODED ALLOWLISTS**:
+   - Classify all messages using content-first Naive Bayes confidence modeling (`P(transaction | evidence)`).
+   - Never gate acceptance or rejection on hardcoded bank sender IDs or package allowlists.
 
 8. **ZERO PRIVATE DATA LEAKAGE**:
    - Never log raw notification text, full account numbers, or OTP contents in production logs.

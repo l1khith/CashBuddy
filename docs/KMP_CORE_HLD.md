@@ -31,9 +31,9 @@ By implementing these engines in **Pure Kotlin Multiplatform**, CashBuddy achiev
 │ • Tier 3: Unknown / Fallback (0.50)  │ • Multi-channel collision detection  │
 │ • Lock-free Volatile copy-on-write   │ • Merchant suffix normalization      │
 ├──────────────────────────────────────┼──────────────────────────────────────┤
-│ 5. FraudDetector                     │ 6. TrustedSenderManager              │
-│ • Velocity rate limiting (5 tx/min)  │ • Bank sender allowlist tracking     │
-│ • Deduplication hash generation      │ • Dynamic sender learning            │
+│ 5. FraudDetector                     │ 6. ProbabilisticClassifier           │
+│ • Velocity rate limiting (5 tx/min)  │ • Naive Bayes log-odds inference     │
+│ • Deduplication hash generation      │ • Content-first SourceDetector       │
 └──────────────────────────────────────┴──────────────────────────────────────┘
 ```
 
@@ -43,12 +43,12 @@ By implementing these engines in **Pure Kotlin Multiplatform**, CashBuddy achiev
 
 ### 3.1. Notification Intake Workflow
 1. Android OS triggers `onNotificationPosted` in `TransactionNotificationListener`.
-2. `NotificationParser.parse(raw)` verifies the package name against the 50+ item allowlist.
-3. Content is screened for OTP / promo triggers. If detected, parsing aborts immediately.
+2. `NotificationParser.parse(raw)` processes content signals via `SourceDetector` and `EvidenceExtractor`.
+3. Content is screened for OTP / promo triggers via `ProbabilisticClassifier`.
 4. Amount, Debit/Credit type, Merchant, and Account number are extracted via compiled Regexes.
 5. `CategoryEngine.getCategory(merchant)` determines category and confidence score.
 6. `DedupEngine` checks against recent database records within the last 5 minutes.
-7. If novel, transaction is persisted with `CONFIRMED` or `PENDING` status based on thresholds.
+7. If novel, transaction is persisted with `CONFIRMED` or `PENDING` status based on policy thresholds.
 
 ### 3.2. Screenshot Intake Workflow
 1. User shares a screenshot from a payment app via Android's system share sheet (`ACTION_SEND`).

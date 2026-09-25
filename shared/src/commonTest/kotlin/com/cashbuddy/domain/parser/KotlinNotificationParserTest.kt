@@ -34,7 +34,7 @@ class KotlinNotificationParserTest {
         val raw = RawNotificationData(
             packageName = "com.phonepe.app",
             title = "Payment Successful",
-            text = "Paid ₹1,250 to Uber India via PhonePe UPI. Ref: 987654321",
+            text = "Paid ₹1,250 to Uber India via UPI. Ref: 987654321",
             timestamp = 1723700000000L
         )
         val result = parser.parse(raw)
@@ -46,10 +46,10 @@ class KotlinNotificationParserTest {
     }
 
     @Test
-    fun testHdfcBankDebitAlert() {
+    fun testBankDebitAlert() {
         val raw = RawNotificationData(
-            packageName = "com.snapwork.hdfc",
-            title = "HDFC Bank Alert",
+            packageName = "com.bank.app",
+            title = "Bank Alert",
             text = "INR 3,499.00 debited from A/c **5678 on 20-Aug towards Amazon Retail. Avl bal: INR 45,000.00",
             timestamp = 1723700000000L
         )
@@ -65,7 +65,7 @@ class KotlinNotificationParserTest {
     @Test
     fun testSalaryCreditAlert() {
         val raw = RawNotificationData(
-            packageName = "com.csam.icici.bank.imobile",
+            packageName = "com.bank.salaryapp",
             title = "Salary Credited",
             text = "Your A/c ending with 9876 has been credited with INR 85,000.00 towards monthly salary payroll.",
             timestamp = 1723700000000L
@@ -81,7 +81,7 @@ class KotlinNotificationParserTest {
     @Test
     fun testRejectionOfOtp() {
         val raw = RawNotificationData(
-            packageName = "com.snapwork.hdfc",
+            packageName = "com.bank.app",
             title = "One Time Password",
             text = "Your OTP for transaction of INR 500.00 at Swiggy is 482910. Do not share with anyone.",
             timestamp = 1723700000000L
@@ -93,7 +93,7 @@ class KotlinNotificationParserTest {
     @Test
     fun testRejectionOfPromotionalOffer() {
         val raw = RawNotificationData(
-            packageName = "com.phonepe.app",
+            packageName = "com.rewards.app",
             title = "Special Offer",
             text = "Congratulations! Get cashback up to ₹500 on your next electricity bill payment. Apply now!",
             timestamp = 1723700000000L
@@ -103,14 +103,17 @@ class KotlinNotificationParserTest {
     }
 
     @Test
-    fun testRejectionOfUntrustedPackage() {
+    fun testUnlistedBankPackageAllowedProbabilistically() {
+        // Any previously unlisted or rebranded bank app should be parsed successfully on its merits
         val raw = RawNotificationData(
-            packageName = "com.untrusted.fakebank",
-            title = "Fake Alert",
-            text = "Debited INR 500 from your account",
+            packageName = "com.newage.neobank.app",
+            title = "Alert",
+            text = "Debited INR 500.00 from A/c ending 4411 towards Coffee Day",
             timestamp = 1723700000000L
         )
         val result = parser.parse(raw)
-        assertNull(result, "Untrusted packages must be rejected with null")
+        assertNotNull(result, "Any unlisted app must be parsed on its merits, not gated by package allowlist")
+        assertEquals(500.0, result.amount)
+        assertEquals(TransactionType.DEBIT, result.type)
     }
 }
