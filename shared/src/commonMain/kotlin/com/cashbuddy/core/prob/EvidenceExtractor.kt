@@ -28,8 +28,7 @@ class EvidenceExtractor {
         val hasSuccess = Regexes.SUCCESS.containsMatchIn(tLower)
         val senderLooksBank = SenderFingerprint.isBankLike(raw.senderId ?: raw.title)
         val fromMerchantPackage = source == NotificationSource.MERCHANT_APP ||
-                (raw.packageName != null && isMerchantPackageHint(raw.packageName)) ||
-                isMerchantTextHint(tLower)
+                (raw.packageName != null && isMerchantPackageHint(raw.packageName))
 
         return Evidence(
             hasAmount = hasAmount,
@@ -53,18 +52,11 @@ class EvidenceExtractor {
     }
 
     private fun isMerchantPackageHint(pkg: String): Boolean {
-        val p = pkg.lowercase()
-        return p.contains("swiggy") || p.contains("zomato") || p.contains("uber") ||
-                p.contains("ola") || p.contains("blinkit") || p.contains("zepto") ||
-                p.contains("bigbasket") || p.contains("amazon") || p.contains("flipkart") ||
-                p.contains("smartq")
-    }
-
-    private fun isMerchantTextHint(text: String): Boolean {
-        return text.startsWith("smartq") || text.contains("smartq ·") ||
-                text.startsWith("zomato") || text.contains("zomato ·") ||
-                text.startsWith("swiggy") || text.contains("swiggy ·") ||
-                text.startsWith("uber") || text.contains("uber ·")
+        if (pkg.isBlank()) return false
+        val segments = pkg.lowercase().split('.', '_', '-')
+        return segments.any { segment ->
+            MerchantMap.lookup(segment).source != MerchantMap.CategorySource.FALLBACK
+        }
     }
 
     fun extractAmount(text: String): Double? {

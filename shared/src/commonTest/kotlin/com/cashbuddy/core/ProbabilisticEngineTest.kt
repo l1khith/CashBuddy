@@ -3,7 +3,9 @@ package com.cashbuddy.core
 
 import com.cashbuddy.core.prob.DedupEngine
 import com.cashbuddy.core.prob.EvidenceExtractor
+import com.cashbuddy.core.prob.MerchantMap
 import com.cashbuddy.core.prob.NoOpCalibrator
+import com.cashbuddy.core.prob.NotificationSource
 import com.cashbuddy.core.prob.PolicyEngine
 import com.cashbuddy.core.prob.ProbabilisticClassifier
 import com.cashbuddy.core.prob.RawMessage
@@ -12,7 +14,9 @@ import com.cashbuddy.core.prob.SourceType
 import com.cashbuddy.domain.model.TransactionType
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 class ProbabilisticEngineTest {
@@ -176,4 +180,70 @@ class ProbabilisticEngineTest {
         assertTrue(merge.upgradedFields.pTransaction > 0.95)
         assertTrue(merge.upgradedFields.clearReview)
     }
+
+    @Test
+    fun testEvidenceExtractor_MerchantPackageProducesFromMerchantPackageTrue() {
+        val raw = RawMessage(
+            id = "pkg-test-1",
+            sourceType = SourceType.NOTIFICATION,
+            packageName = "com.smartq",
+            senderId = null,
+            title = "Order Placed",
+            text = "Your order has been placed for Rs 150",
+            timestamp = 1727000000000L
+        )
+        val evidence = evidenceExtractor.extract(raw, NotificationSource.UNKNOWN)
+        assertTrue(evidence.fromMerchantPackage, "Expected fromMerchantPackage to be true for com.smartq")
+    }
+
+    @Test
+    fun testEvidenceExtractor_TextPrefixWithoutMerchantPackageProducesFromMerchantPackageFalse() {
+        val raw = RawMessage(
+            id = "pkg-test-2",
+            sourceType = SourceType.NOTIFICATION,
+            packageName = "com.android.systemui",
+            senderId = null,
+            title = "SmartQ · Now",
+            text = "Your order is ready",
+            timestamp = 1727000000000L
+        )
+        val evidence = evidenceExtractor.extract(raw, NotificationSource.UNKNOWN)
+        assertFalse(evidence.fromMerchantPackage, "Expected fromMerchantPackage to be false when package is not a merchant")
+    }
+
+    @Test
+    fun testScreenshotParserEngine_DetectsGooglePayAppName() {
+        val ocrText = """
+            Google Pay
+            Payment of ₹450 to Chai Point
+            UPI transaction ID: 123456789012
+            Completed
+        """.trimIndent()
+        val engine = ScreenshotParserEngine()
+        val result = engine.parse(ocrText)
+        assertNotNull(result)
+        assertEquals("Google Pay", result.appName)
+    }
+
+    @Test
+    fun testScreenshotParserEngine_NoAppNameProducesNull() {
+        val ocrText = """
+            Payment of ₹450 to Chai Point
+            UPI transaction ID: 123456789012
+            Completed
+        """.trimIndent()
+        val engine = ScreenshotParserEngine()
+        val result = engine.parse(ocrText)
+        assertNotNull(result)
+        assertNull(result.appName)
+    }
+
+    @Test
+    fun testMerchantMap_LookupSwiggyReturnsFoodWithHighConfidence() {
+        val match = MerchantMap.lookup("swiggy")
+        assertEquals("Food & Dining", match.category)
+        assertTrue(match.confidence >= 0.90f)
+        assertEquals(MerchantMap.CategorySource.MERCHANT_MAP, match.source)
+    }
 }
+

@@ -117,7 +117,7 @@ class ScreenshotHandler(private val context: Context) : KoinComponent {
                     trainingDataRepository.recordRawNotification(
                         rawText = parsed.rawText,
                         source = "screenshot",
-                        sourceApp = parsed.appName,
+                        sourceApp = parsed.appName ?: "screenshot",
                         extractedAmount = parsed.amount,
                         extractedType = parsed.transactionType.name,
                         extractedMerchant = parsed.merchant,
@@ -143,9 +143,10 @@ class ScreenshotHandler(private val context: Context) : KoinComponent {
 
                 // Resolve account with explicit fallback
                 val allAccounts = accountRepository.getAll().firstOrNull() ?: emptyList()
-                val matchedAccount = allAccounts.find {
-                    it.name.contains(parsed.appName, ignoreCase = true)
-                }
+                val currentAppName = parsed.appName
+                val matchedAccount = if (currentAppName != null) {
+                    allAccounts.find { it.name.contains(currentAppName, ignoreCase = true) }
+                } else null
                 val resolvedAccount = matchedAccount
                     ?: allAccounts.find { it.name.equals("Default", ignoreCase = true) }
                     ?: allAccounts.firstOrNull()
@@ -173,7 +174,7 @@ class ScreenshotHandler(private val context: Context) : KoinComponent {
                     type = txType,
                     status = status,
                     rawText = parsed.rawText,
-                    sourceApp = "Screenshot: ${parsed.appName}",
+                    sourceApp = "Screenshot: ${parsed.appName ?: "UPI"}",
                     merchant = parsed.merchant,
                     confidence = parsed.confidence,
                     timestamp = timestamp,

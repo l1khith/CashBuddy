@@ -1,9 +1,12 @@
+// NO-NETWORK
 package com.cashbuddy.core
+
+import com.cashbuddy.core.prob.AppLabelMap
+import com.cashbuddy.core.prob.MerchantMap
 
 /**
  * Screenshot Parser for CashBuddy.
- * Parses OCR text extracted from Indian UPI payment screens
- * (Google Pay, PhonePe, Paytm, BHIM, CRED, Amazon Pay, BMTC/transit).
+ * Parses OCR text extracted from Indian UPI payment screens.
  */
 class ScreenshotParserEngine(
     private val categoryEngine: CategoryEngine = CategoryEngine()
@@ -53,7 +56,7 @@ class ScreenshotParserEngine(
         // 7. Calculate Confidence
         var confidence = 0.85f
         if (utrOrRef != null) confidence += 0.05f
-        if (appName != "UPI") confidence += 0.05f
+        if (appName != null) confidence += 0.05f
         if (category != "Unknown") confidence = maxOf(confidence, 0.90f)
         confidence = minOf(confidence, 0.99f)
 
@@ -69,19 +72,7 @@ class ScreenshotParserEngine(
         )
     }
 
-    private fun detectAppName(text: String): String {
-        val lower = text.lowercase()
-        return when {
-            lower.contains("google pay") || lower.contains("gpay") -> "Google Pay"
-            lower.contains("phonepe") -> "PhonePe"
-            lower.contains("paytm") -> "Paytm"
-            lower.contains("bhim") -> "BHIM"
-            lower.contains("cred") -> "Cred"
-            lower.contains("amazon pay") -> "Amazon Pay"
-            lower.contains("bmtc") -> "BMTC"
-            else -> "UPI"
-        }
-    }
+    private fun detectAppName(text: String): String? = AppLabelMap.label(text)
 
     private fun extractAmount(text: String): Double? {
         // Strategy 1: Standard ₹ / Rs / INR symbol prefix
@@ -192,12 +183,14 @@ class ScreenshotParserEngine(
             }
         }
 
-        // Strategy 3: Check for well-known transit or merchants mentioned anywhere
-        val lowerText = text.lowercase()
-        if (lowerText.contains("bmtc")) return "BMTC"
-        if (lowerText.contains("metro")) return "Metro"
-        if (lowerText.contains("swiggy")) return "Swiggy"
-        if (lowerText.contains("zomato")) return "Zomato"
+        // Strategy 3: Check for known merchants in MerchantMap mentioned anywhere in text
+        val tokens = text.lowercase().split(Regex("[^a-z0-9]")).filter { it.length >= 3 }
+        for (token in tokens) {
+            val match = MerchantMap.lookup(token)
+            if (match.source != MerchantMap.CategorySource.FALLBACK) {
+                return token.replaceFirstChar { it.uppercase() }
+            }
+        }
 
         return "UPI Merchant"
     }
