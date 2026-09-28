@@ -27,6 +27,7 @@ class ScreenshotHandler(private val context: Context) : KoinComponent {
     private val accountRepository: AccountRepository by inject()
     private val settingsRepository: SettingsRepository by inject()
     private val trainingDataRepository: TrainingDataRepository by inject()
+    private val pipeline: com.cashbuddy.core.prob.MessagePipeline by inject()
     private val parser = ScreenshotParser(context)
 
     companion object {
@@ -84,35 +85,20 @@ class ScreenshotHandler(private val context: Context) : KoinComponent {
                     continue
                 }
 
-                Log.i(TAG, "Screenshot parsed: ₹${parsed.amount} ${parsed.transactionType} to ${parsed.merchant}")
                 val timestamp = System.currentTimeMillis()
+                val rawMessage = com.cashbuddy.core.prob.RawMessage(
+                    id = "scr_${timestamp}_${(1000..9999).random()}",
+                    sourceType = com.cashbuddy.core.prob.SourceType.SCREENSHOT,
+                    packageName = "screenshot",
+                    senderId = null,
+                    title = parsed.appName ?: "Screenshot",
+                    text = parsed.rawText,
+                    timestamp = timestamp,
+                    imagePath = file.absolutePath
+                )
 
-                // Deduplication check (5-minute window)
-                val windowMs = DEDUP_WINDOW_SECS * 1000L
-                val nearbyTransactions = transactionRepository.getByDateRange(
-                    timestamp - windowMs,
-                    timestamp + windowMs
-                ).firstOrNull() ?: emptyList()
+                val outcome = pipeline.ingest(rawMessage)
 
-                val isDuplicate = nearbyTransactions.any { existing ->
-                    isDuplicateTransaction(
-                        amount1 = parsed.amount,
-                        merchant1 = parsed.merchant,
-                        time1 = timestamp,
-                        amount2 = existing.amount,
-                        merchant2 = existing.merchant,
-                        time2 = existing.timestamp,
-                        windowSecs = DEDUP_WINDOW_SECS
-                    )
-                }
-
-                if (isDuplicate) {
-                    Log.i(TAG, "Skipping duplicate: ₹${parsed.amount} to ${parsed.merchant}")
-                    file.delete()
-                    continue
-                }
-
-                // Record raw text for transparency and learning
                 try {
                     trainingDataRepository.recordRawNotification(
                         rawText = parsed.rawText,
@@ -127,69 +113,20 @@ class ScreenshotHandler(private val context: Context) : KoinComponent {
                     Log.w(TAG, "Failed to record training data", e)
                 }
 
-                // Resolve category with explicit fallback
-                val allCategories = categoryRepository.getAll().firstOrNull() ?: emptyList()
-                val matchedCategory = allCategories.find {
-                    it.name.equals(parsed.category, ignoreCase = true)
-                } ?: allCategories.find {
-                    it.name.lowercase().startsWith(parsed.category.lowercase()) ||
-                    parsed.category.lowercase().startsWith(it.name.lowercase().substringBefore(" "))
+                when (outcome) {
+                    is com.cashbuddy.core.prob.PipelineOutcome.Logged -> {
+                        createdIds.add(outcome.txId)
+                        Log.i(TAG, "Screenshot logged: txId=${outcome.txId}")
+                    }
+                    is com.cashbuddy.core.prob.PipelineOutcome.PendingReview -> {
+                        createdIds.add(outcome.txId)
+                        Log.i(TAG, "Screenshot flagged for review: txId=${outcome.txId}")
+                    }
+                    else -> Log.i(TAG, "Screenshot outcome: $outcome")
                 }
-                val fallbackCategory = matchedCategory
-                    ?: allCategories.find { it.name.equals("Uncategorized", ignoreCase = true) }
-                    ?: allCategories.find { it.name.equals("Other", ignoreCase = true) }
-                    ?: allCategories.firstOrNull()
-                val categoryId = fallbackCategory?.id ?: 1L
-
-                // Resolve account with explicit fallback
-                val allAccounts = accountRepository.getAll().firstOrNull() ?: emptyList()
-                val currentAppName = parsed.appName
-                val matchedAccount = if (currentAppName != null) {
-                    allAccounts.find { it.name.contains(currentAppName, ignoreCase = true) }
-                } else null
-                val resolvedAccount = matchedAccount
-                    ?: allAccounts.find { it.name.equals("Default", ignoreCase = true) }
-                    ?: allAccounts.firstOrNull()
-                val accountId = resolvedAccount?.id ?: 1L
-
-                val txType = when (parsed.transactionType) {
-                    com.cashbuddy.core.TransactionType.DEBIT -> TransactionType.DEBIT
-                    com.cashbuddy.core.TransactionType.CREDIT -> TransactionType.CREDIT
-                }
-
-                val autoConfirmThreshold = settingsRepository.getAutoConfirmThreshold().firstOrNull() ?: 10000.0
-                val minConfidence = settingsRepository.getMinConfidenceThreshold().firstOrNull() ?: 0.85f
-
-                val status = if (parsed.confidence >= minConfidence && parsed.amount < autoConfirmThreshold) {
-                    TransactionStatus.CONFIRMED
-                } else {
-                    TransactionStatus.PENDING
-                }
-
-                val transaction = Transaction(
-                    id = 0L,
-                    accountId = accountId,
-                    categoryId = categoryId,
-                    amount = parsed.amount,
-                    type = txType,
-                    status = status,
-                    rawText = parsed.rawText,
-                    sourceApp = "Screenshot: ${parsed.appName ?: "UPI"}",
-                    merchant = parsed.merchant,
-                    confidence = parsed.confidence,
-                    timestamp = timestamp,
-                    createdAt = timestamp,
-                    updatedAt = timestamp
-                )
-
-                val insertedId = transactionRepository.insert(transaction)
-                createdIds.add(insertedId)
-                Log.i(TAG, "Transaction saved: id=$insertedId, ₹${parsed.amount} ${txType.name} to ${parsed.merchant} [${status.name}]")
-
-                // Clean up cached file
-                file.delete()
             } catch (e: Throwable) {
                 Log.e(TAG, "Failed to process screenshot: ${file.name}", e)
+            } finally {
                 file.delete()
             }
         }

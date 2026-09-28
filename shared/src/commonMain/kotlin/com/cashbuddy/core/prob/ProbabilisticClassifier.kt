@@ -5,11 +5,25 @@ import com.cashbuddy.domain.model.TransactionType
 import kotlin.math.exp
 import kotlin.math.ln
 
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
+
+@Serializable
 data class Contribution(
     val signal: String,
     val delta: Double,
     val lr: Double
-)
+) {
+    fun toJson(): String = jsonInstance.encodeToString(this)
+
+    companion object {
+        private val jsonInstance = Json { ignoreUnknownKeys = true; prettyPrint = false }
+        fun fromJson(json: String): Contribution = jsonInstance.decodeFromString(json)
+        fun listToJson(list: List<Contribution>): String = jsonInstance.encodeToString(list)
+        fun listFromJson(json: String): List<Contribution> = jsonInstance.decodeFromString(json)
+    }
+}
 
 data class ClassificationResult(
     val pTransaction: Double,

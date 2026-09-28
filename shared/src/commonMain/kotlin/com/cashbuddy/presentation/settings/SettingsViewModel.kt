@@ -29,6 +29,8 @@ data class SettingsUiState(
     val totalAccountsCount: Int = 0,
     val rawTrainingSamplesCount: Long = 0,
     val userCorrectionsCount: Long = 0,
+    val isDeveloperMode: Boolean = false,
+    val isDebugLogVisible: Boolean = false,
     val isLoading: Boolean = true
 )
 
@@ -38,7 +40,8 @@ class SettingsViewModel(
     private val accountRepository: AccountRepository,
     private val exportDataUseCase: ExportDataUseCase,
     private val trainingDataRepository: TrainingDataRepository,
-    private val fileExporter: FileExporter? = null
+    private val fileExporter: FileExporter? = null,
+    private val debugConfig: com.cashbuddy.debug.DebugConfig? = null
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(SettingsUiState())
@@ -47,14 +50,21 @@ class SettingsViewModel(
     private val _messageEffect = MutableSharedFlow<String>(extraBufferCapacity = 1)
     val messageEffect: SharedFlow<String> = _messageEffect.asSharedFlow()
 
+    private var versionTapCount = 0
+
     init {
         viewModelScope.launch {
             combine(
                 settingsRepository.getSettings(),
                 transactionRepository.getAll(),
                 accountRepository.getAll(),
-                trainingDataRepository.getStats()
-            ) { settings, txs, accounts, stats ->
+                trainingDataRepository.getStats(),
+                settingsRepository.getDeveloperMode()
+            ) { settings, txs, accounts, stats, devMode ->
+                if (debugConfig != null) {
+                    debugConfig.cachedDeveloperMode = devMode
+                }
+                val isDebugVisible = debugConfig?.enabled ?: devMode
                 SettingsUiState(
                     notificationEnabled = settings.notificationsEnabled,
                     autoConfirmThreshold = settings.autoConfirmThreshold,
@@ -64,10 +74,29 @@ class SettingsViewModel(
                     totalAccountsCount = accounts.size,
                     rawTrainingSamplesCount = stats.rawCount,
                     userCorrectionsCount = stats.correctionsCount,
+                    isDeveloperMode = devMode,
+                    isDebugLogVisible = isDebugVisible,
                     isLoading = false
                 )
             }.collect {
                 _uiState.value = it
+            }
+        }
+    }
+
+    fun onVersionClicked() {
+        versionTapCount++
+        if (versionTapCount >= 7) {
+            versionTapCount = 0
+            viewModelScope.launch {
+                val current = _uiState.value.isDeveloperMode
+                val newMode = !current
+                if (debugConfig != null) {
+                    debugConfig.updateDeveloperMode(newMode)
+                } else {
+                    settingsRepository.setDeveloperMode(newMode)
+                }
+                _messageEffect.emit(if (newMode) "Developer mode enabled" else "Developer mode disabled")
             }
         }
     }

@@ -1,0 +1,96 @@
+CREATE TABLE debug_log (
+    id TEXT PRIMARY KEY NOT NULL,
+    timestamp INTEGER NOT NULL,
+    source_type TEXT NOT NULL,
+    package_name TEXT,
+    sender_id TEXT,
+    raw_title TEXT,
+    raw_text TEXT NOT NULL,
+    raw_text_hash TEXT,
+
+    detected_source TEXT,
+    evidence_json TEXT,
+    p_transaction REAL,
+    contributions_json TEXT,
+    field_confidences_json TEXT,
+    policy_action TEXT,
+    pipeline_outcome TEXT,
+    resulting_tx_id TEXT,
+    merge_target_id TEXT,
+    error_message TEXT
+);
+
+CREATE INDEX idx_debug_log_timestamp ON debug_log(timestamp DESC);
+CREATE INDEX idx_debug_log_policy ON debug_log(policy_action);
+CREATE INDEX idx_debug_log_package ON debug_log(package_name);
+
+insert:
+INSERT INTO debug_log (
+    id, timestamp, source_type, package_name, sender_id, raw_title, raw_text, raw_text_hash,
+    detected_source, evidence_json, p_transaction, contributions_json, field_confidences_json,
+    policy_action, pipeline_outcome, resulting_tx_id, merge_target_id, error_message
+) VALUES (
+    :id, :timestamp, :sourceType, :packageName, :senderId, :rawTitle, :rawText, :rawTextHash,
+    :detectedSource, :evidenceJson, :pTransaction, :contributionsJson, :fieldConfidencesJson,
+    :policyAction, :pipelineOutcome, :resultingTxId, :mergeTargetId, :errorMessage
+);
+
+updateClassification:
+UPDATE debug_log
+SET detected_source = :detectedSource,
+    evidence_json = :evidenceJson,
+    p_transaction = :pTransaction,
+    contributions_json = :contributionsJson,
+    field_confidences_json = :fieldConfidencesJson
+WHERE id = :id;
+
+updatePolicy:
+UPDATE debug_log
+SET policy_action = :policyAction
+WHERE id = :id;
+
+updateOutcome:
+UPDATE debug_log
+SET policy_action = COALESCE(:policyAction, policy_action),
+    pipeline_outcome = :pipelineOutcome,
+    resulting_tx_id = :resultingTxId,
+    merge_target_id = :mergeTargetId,
+    error_message = :errorMessage
+WHERE id = :id;
+
+updateRawText:
+UPDATE debug_log
+SET raw_text = :rawText
+WHERE id = :id;
+
+count:
+SELECT COUNT(*) FROM debug_log;
+
+deleteOldest:
+DELETE FROM debug_log
+WHERE id IN (
+    SELECT id FROM debug_log
+    ORDER BY timestamp ASC
+    LIMIT :limit
+);
+
+recent:
+SELECT * FROM debug_log
+ORDER BY timestamp DESC
+LIMIT :limit;
+
+queryAll:
+SELECT * FROM debug_log
+ORDER BY timestamp DESC;
+
+filterLogs:
+SELECT * FROM debug_log
+WHERE (:sourceType IS NULL OR source_type = :sourceType)
+  AND (:policyAction IS NULL OR policy_action = :policyAction)
+  AND (:packageName IS NULL OR package_name LIKE ('%' || :packageName || '%'))
+  AND (:startTime IS NULL OR timestamp >= :startTime)
+  AND (:endTime IS NULL OR timestamp <= :endTime)
+ORDER BY timestamp DESC;
+
+clearAll:
+DELETE FROM debug_log;

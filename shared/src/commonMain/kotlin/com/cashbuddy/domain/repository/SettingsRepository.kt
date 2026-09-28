@@ -14,4 +14,6 @@ interface SettingsRepository {
     suspend fun setMinConfidenceThreshold(confidence: Float)
     fun getBiometricEnabled(): Flow<Boolean>
     suspend fun setBiometricEnabled(enabled: Boolean)
+    fun getDeveloperMode(): Flow<Boolean>
+    suspend fun setDeveloperMode(enabled: Boolean)
 }

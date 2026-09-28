@@ -49,6 +49,7 @@ class TransactionNotificationListener : NotificationListenerService(), KoinCompo
     private val notificationParser: NotificationParser by inject()
     private val kotlinParser: KotlinNotificationParser by inject()
     private val sourceDetector: com.cashbuddy.core.prob.SourceDetector by inject()
+    private val messagePipeline: com.cashbuddy.core.prob.MessagePipeline by inject()
 
     companion object {
         private const val TAG = "TxNotificationListener"
@@ -119,21 +120,39 @@ class TransactionNotificationListener : NotificationListenerService(), KoinCompo
                 val isEnabled = settingsRepository.getNotificationEnabled().firstOrNull() ?: true
                 if (!isEnabled) return@launch
 
-                // 1. Probabilistic notification parser
-                val parsed = parseNotification(packageName, title, text, postTime)
+                // 1. Ingest into MessagePipeline (captures raw, classifies, applies policy, dedups, logs debug)
+                val rawMessage = com.cashbuddy.core.prob.RawMessage(
+                    id = "notif_${postTime}_${(1000..9999).random()}",
+                    sourceType = com.cashbuddy.core.prob.SourceType.NOTIFICATION,
+                    packageName = packageName,
+                    senderId = null,
+                    title = title,
+                    text = text,
+                    timestamp = postTime
+                )
 
-                // 2. Training Data Pipeline: Record raw notification for allowlisted banking apps (or parsed SMS)
+                val outcome = messagePipeline.ingest(rawMessage)
+
+                // 2. Training Data Pipeline: Record raw notification for banking apps or parsed transactions
                 val source = sourceDetector.detect(packageName, if (title.isNotBlank()) "$title: $text" else text)
-                if (source != com.cashbuddy.core.prob.NotificationSource.UNKNOWN || parsed != null) {
+                if (source != com.cashbuddy.core.prob.NotificationSource.UNKNOWN || outcome !is com.cashbuddy.core.prob.PipelineOutcome.Ignored) {
                     val fullRawText = if (title.isNotBlank()) "$title: $text" else text
                     try {
                         trainingDataRepository.recordRawNotification(
                             rawText = fullRawText,
                             source = "notification",
                             sourceApp = packageName,
-                            extractedAmount = parsed?.amount,
-                            extractedType = parsed?.type?.name,
-                            extractedMerchant = parsed?.merchant,
+                            extractedAmount = when (outcome) {
+                                is com.cashbuddy.core.prob.PipelineOutcome.Logged -> outcome.amount
+                                is com.cashbuddy.core.prob.PipelineOutcome.PendingReview -> outcome.amount
+                                else -> null
+                            },
+                            extractedType = null,
+                            extractedMerchant = when (outcome) {
+                                is com.cashbuddy.core.prob.PipelineOutcome.Logged -> outcome.merchant
+                                is com.cashbuddy.core.prob.PipelineOutcome.PendingReview -> outcome.merchant
+                                else -> null
+                            },
                             timestamp = postTime
                         )
                     } catch (e: Throwable) {
@@ -141,107 +160,9 @@ class TransactionNotificationListener : NotificationListenerService(), KoinCompo
                     }
                 }
 
-                if (parsed == null) return@launch
-
-                // 3. Duplicate suppression (within 5-minute window)
-                val windowMs = 300_000L
-                val nearbyTransactions = transactionRepository.getByDateRange(
-                    postTime - windowMs,
-                    postTime + windowMs
-                ).firstOrNull() ?: emptyList()
-
-                val isDuplicate = nearbyTransactions.any { existing ->
-                    existing.amount == parsed.amount &&
-                    existing.merchant.equals(parsed.merchant, ignoreCase = true) &&
-                    existing.type == parsed.type
-                }
-                if (isDuplicate) return@launch
-
-                // 4. Resolve Category ID (Priority: CategoryEngine [UserRule -> MerchantMap] -> Fallback)
-                var resolvedCategoryName = parsed.categoryName
-                var effectiveConfidence = parsed.confidence
-
-                // Query Priority Category Engine
-                val engineMatch = categoryEngine.getCategory(parsed.merchant)
-                if (!engineMatch.category.equals("Unknown", ignoreCase = true)) {
-                    resolvedCategoryName = engineMatch.category
-                    effectiveConfidence = engineMatch.confidence
-                } else if (resolvedCategoryName.equals("UNKNOWN", ignoreCase = true)) {
-                    effectiveConfidence = 0.50f
-                }
-
-                var allCategories = categoryRepository.getAll().firstOrNull() ?: emptyList()
-                if (allCategories.isEmpty()) {
-                    categoryRepository.seedDefaults(postTime)
-                    allCategories = categoryRepository.getAll().firstOrNull() ?: emptyList()
-                }
-
-                val matchedCategory = allCategories.find {
-                    it.name.equals(resolvedCategoryName, ignoreCase = true)
-                } ?: allCategories.find {
-                    it.name.lowercase().startsWith(resolvedCategoryName.lowercase()) ||
-                    resolvedCategoryName.lowercase().startsWith(it.name.lowercase().substringBefore(" "))
-                }
-                // Explicit fallback: find "Uncategorized" or "Other", never pick an arbitrary category
-                val fallbackCategory = matchedCategory
-                    ?: allCategories.find { it.name.equals("Uncategorized", ignoreCase = true) }
-                    ?: allCategories.find { it.name.equals("Other", ignoreCase = true) }
-                    ?: allCategories.firstOrNull()
-                val categoryId = fallbackCategory?.id ?: 1L
-
-                // 4. Status determination: Human-in-the-loop policy
-                // Rule: Confidence >= 0.85 AND amount < autoConfirmThreshold => CONFIRMED, else PENDING
-                val autoConfirmThreshold = settingsRepository.getAutoConfirmThreshold().firstOrNull() ?: 10000.0
-                val minConfidence = settingsRepository.getMinConfidenceThreshold().firstOrNull() ?: 0.85f
-
-                val status = if (effectiveConfidence >= minConfidence && parsed.amount < autoConfirmThreshold) {
-                    TransactionStatus.CONFIRMED
-                } else {
-                    TransactionStatus.PENDING
-                }
-
-                // 5. Resolve Account ID
-                var allAccounts = accountRepository.getAll().firstOrNull() ?: emptyList()
-                if (allAccounts.isEmpty()) {
-                    accountRepository.seedDefaults(postTime)
-                    allAccounts = accountRepository.getAll().firstOrNull() ?: emptyList()
-                }
-
-                val matchedAccount = if (!parsed.accountId.isNullOrBlank()) {
-                    val last4 = parsed.accountId.takeLast(4)
-                    allAccounts.find { it.number?.endsWith(last4) == true }
-                } else {
-                    allAccounts.find { it.name.contains(parsed.sourceApp, ignoreCase = true) }
-                }
-                // Explicit fallback: prefer "Primary" or "Default" account, never pick an arbitrary one
-                val resolvedAccount = matchedAccount
-                    ?: allAccounts.find { it.name.contains("Primary", ignoreCase = true) }
-                    ?: allAccounts.find { it.name.contains("Default", ignoreCase = true) }
-                    ?: allAccounts.firstOrNull()
-                val accountId = resolvedAccount?.id ?: 1L
-
-                // 6. Persist Transaction
-                val newTransaction = Transaction(
-                    id = 0L,
-                    accountId = accountId,
-                    categoryId = categoryId,
-                    amount = parsed.amount,
-                    type = parsed.type,
-                    status = status,
-                    rawText = parsed.rawText,
-                    sourceApp = parsed.sourceApp,
-                    merchant = parsed.merchant,
-                    confidence = effectiveConfidence,
-                    timestamp = parsed.timestamp,
-                    createdAt = parsed.timestamp,
-                    updatedAt = parsed.timestamp
-                )
-
-                val insertedId = transactionRepository.insert(newTransaction)
-
-                // 7. If PENDING, show local Review Alert
-                if (status == TransactionStatus.PENDING) {
-                    showReviewAlert(insertedId, parsed.amount, parsed.merchant)
+                // 3. If PENDING, show local Review Alert
+                if (outcome is com.cashbuddy.core.prob.PipelineOutcome.PendingReview) {
+                    showReviewAlert(outcome.txId, outcome.amount, outcome.merchant)
                 }
             } catch (e: Throwable) {
                 Log.e(TAG, "Failed to process notification from ${activeSbn.packageName}", e)

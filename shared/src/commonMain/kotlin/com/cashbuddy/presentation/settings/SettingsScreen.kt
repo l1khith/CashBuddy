@@ -19,6 +19,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.BugReport
 import androidx.compose.material.icons.filled.DeleteForever
 import androidx.compose.material.icons.filled.DeleteSweep
 import androidx.compose.material.icons.filled.Download
@@ -69,6 +70,7 @@ import com.cashbuddy.presentation.theme.RadiusMedium
 fun SettingsScreen(
     viewModel: SettingsViewModel,
     onNavigateToPersonalization: () -> Unit = {},
+    onNavigateToDebugLog: () -> Unit = {},
     onOpenNotificationSettings: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
@@ -465,6 +467,71 @@ fun SettingsScreen(
                     }
                 }
 
+                // Hidden / Developer Mode: Debug Log Entry
+                if (state.isDebugLogVisible) {
+                    item {
+                        Card(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RadiusLarge)
+                                .clickable { onNavigateToDebugLog() },
+                            shape = RadiusLarge,
+                            colors = CardDefaults.cardColors(
+                                containerColor = MaterialTheme.colorScheme.surface
+                            ),
+                            elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+                        ) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(20.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    modifier = Modifier.weight(1f)
+                                ) {
+                                    Box(
+                                        modifier = Modifier
+                                            .size(40.dp)
+                                            .clip(RoundedCornerShape(10.dp))
+                                            .background(PrimaryIndigo.copy(alpha = 0.12f)),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.BugReport,
+                                            contentDescription = null,
+                                            tint = PrimaryIndigo,
+                                            modifier = Modifier.size(22.dp)
+                                        )
+                                    }
+                                    Spacer(modifier = Modifier.width(14.dp))
+                                    Column {
+                                        Text(
+                                            text = "Debug Log Viewer",
+                                            style = CashBuddyTypography.titleMedium,
+                                            fontWeight = FontWeight.Bold
+                                        )
+                                        Text(
+                                            text = "Inspect on-device parser pipeline decisions & metrics",
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                    }
+                                }
+                                Button(
+                                    onClick = onNavigateToDebugLog,
+                                    colors = ButtonDefaults.buttonColors(containerColor = PrimaryIndigo),
+                                    shape = RoundedCornerShape(8.dp)
+                                ) {
+                                    Text("Open")
+                                }
+                            }
+                        }
+                    }
+                }
+
                 // Version Footer
                 item {
                     Column(
@@ -477,8 +544,20 @@ fun SettingsScreen(
                             text = "CashBuddy v1.0.0",
                             style = MaterialTheme.typography.bodyMedium,
                             fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(8.dp))
+                                .clickable { viewModel.onVersionClicked() }
+                                .padding(horizontal = 12.dp, vertical = 6.dp)
                         )
+                        if (state.isDeveloperMode) {
+                            Text(
+                                text = "Developer Mode Active",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = PrimaryIndigo,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
                     }
                 }
             }
