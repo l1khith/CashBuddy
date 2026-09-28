@@ -114,6 +114,10 @@ class DebugLoggerTest {
             }
         }
 
+        override suspend fun getById(id: String): DebugLogEntry? = entries.find { it.id == id }
+        override suspend fun countWithFilter(filter: DebugLogFilter): Long = entries.size.toLong()
+        override suspend fun distinctPackages(): List<String> = entries.mapNotNull { it.packageName }.distinct().sorted()
+
         override suspend fun query(filter: DebugLogFilter): List<DebugLogEntry> = entries.toList()
         override suspend fun recent(limit: Int): List<DebugLogEntry> = entries.takeLast(limit).reversed()
         override suspend fun clearAll() { entries.clear() }
@@ -448,5 +452,21 @@ class DebugLoggerTest {
             val entry2 = repo.entries.last()
             assertEquals("Where are you?", entry2.rawText)
         }
+    }
+
+    @Test
+    fun testNoSourceFilesHaveTxtExtension() {
+        val rootDirs = listOf(
+            java.io.File("src"),
+            java.io.File("../shared/src"),
+            java.io.File("../androidApp/src")
+        ).filter { it.exists() }
+
+        val badFiles = rootDirs.flatMap { dir ->
+            dir.walkTopDown()
+                .filter { it.isFile && it.extension.equals("txt", ignoreCase = true) }
+                .toList()
+        }
+        assertTrue(badFiles.isEmpty(), "Found source files with .txt extension: $badFiles")
     }
 }

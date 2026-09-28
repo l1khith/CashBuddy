@@ -24,6 +24,9 @@ interface DebugLogRepository {
         errorMessage: String?
     )
     suspend fun updateRawText(id: String, rawText: String)
+    suspend fun getById(id: String): DebugLogEntry?
+    suspend fun countWithFilter(filter: DebugLogFilter): Long
+    suspend fun distinctPackages(): List<String>
     suspend fun query(filter: DebugLogFilter): List<DebugLogEntry>
     suspend fun recent(limit: Int): List<DebugLogEntry>
     suspend fun clearAll()

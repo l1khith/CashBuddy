@@ -47,7 +47,8 @@ class ProbabilisticClassifier(
     fun classify(
         evidence: Evidence,
         rawText: String = "",
-        source: NotificationSource = NotificationSource.UNKNOWN
+        source: NotificationSource = NotificationSource.UNKNOWN,
+        packageName: String? = null
     ): ClassificationResult {
         val priorLogit = ln(Priors.P_TRANSACTION / (1.0 - Priors.P_TRANSACTION))
         var logit = priorLogit
@@ -86,7 +87,7 @@ class ProbabilisticClassifier(
         val amount = evidenceExtractor.extractAmount(rawText)
         val type = evidenceExtractor.extractType(rawText)
         val accountLast4 = evidenceExtractor.extractAccountLast4(rawText)
-        val merchant = evidenceExtractor.extractMerchant(rawText)
+        val merchant = evidenceExtractor.extractMerchant(rawText, packageName)
         val bankHint = if (evidence.senderLooksBank) "Bank" else null
 
         val fieldConfidences = fieldConfidenceEstimator.estimate(
@@ -114,7 +115,8 @@ class ProbabilisticClassifier(
     suspend fun classifySuspending(
         evidence: Evidence,
         rawText: String = "",
-        source: NotificationSource = NotificationSource.UNKNOWN
+        source: NotificationSource = NotificationSource.UNKNOWN,
+        packageName: String? = null
     ): ClassificationResult {
         val priorLogit = ln(Priors.P_TRANSACTION / (1.0 - Priors.P_TRANSACTION))
         var logit = priorLogit
@@ -153,7 +155,7 @@ class ProbabilisticClassifier(
         val amount = evidenceExtractor.extractAmount(rawText)
         val type = evidenceExtractor.extractType(rawText)
         val accountLast4 = evidenceExtractor.extractAccountLast4(rawText)
-        val merchant = evidenceExtractor.extractMerchant(rawText)
+        val merchant = evidenceExtractor.extractMerchant(rawText, packageName)
         val bankHint = if (evidence.senderLooksBank) "Bank" else null
 
         val fieldConfidences = fieldConfidenceEstimator.estimate(

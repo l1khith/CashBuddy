@@ -86,13 +86,14 @@ class ScreenshotHandler(private val context: Context) : KoinComponent {
                 }
 
                 val timestamp = System.currentTimeMillis()
+                val fullStructuredText = "Paid ₹${parsed.amount} to ${parsed.merchant}. ${parsed.rawText}"
                 val rawMessage = com.cashbuddy.core.prob.RawMessage(
                     id = "scr_${timestamp}_${(1000..9999).random()}",
                     sourceType = com.cashbuddy.core.prob.SourceType.SCREENSHOT,
-                    packageName = "screenshot",
+                    packageName = parsed.appName?.lowercase()?.replace(" ", "") ?: "screenshot",
                     senderId = null,
                     title = parsed.appName ?: "Screenshot",
-                    text = parsed.rawText,
+                    text = fullStructuredText,
                     timestamp = timestamp,
                     imagePath = file.absolutePath
                 )
@@ -122,7 +123,32 @@ class ScreenshotHandler(private val context: Context) : KoinComponent {
                         createdIds.add(outcome.txId)
                         Log.i(TAG, "Screenshot flagged for review: txId=${outcome.txId}")
                     }
-                    else -> Log.i(TAG, "Screenshot outcome: $outcome")
+                    else -> {
+                        Log.i(TAG, "Screenshot outcome: $outcome. Checking fallback.")
+                        if (parsed.amount > 0.0 && parsed.merchant.isNotBlank() && parsed.merchant != "UPI Merchant") {
+                            val allCategories = categoryRepository.getAll().firstOrNull() ?: emptyList()
+                            val categoryId = allCategories.find { it.name.equals(parsed.category, ignoreCase = true) }?.id ?: 1L
+                            val domainTxType = when (parsed.transactionType) {
+                                com.cashbuddy.core.TransactionType.DEBIT -> com.cashbuddy.domain.model.TransactionType.DEBIT
+                                com.cashbuddy.core.TransactionType.CREDIT -> com.cashbuddy.domain.model.TransactionType.CREDIT
+                            }
+                            val tx = Transaction(
+                                accountId = 1L,
+                                categoryId = categoryId,
+                                amount = parsed.amount,
+                                type = domainTxType,
+                                timestamp = timestamp,
+                                merchant = parsed.merchant,
+                                notes = "Captured via Screenshot (${parsed.appName ?: "UPI"})",
+                                status = if (parsed.confidence >= 0.85f && parsed.amount < 10000.0) TransactionStatus.CONFIRMED else TransactionStatus.PENDING,
+                                confidence = parsed.confidence,
+                                sourceApp = parsed.appName ?: "screenshot",
+                                rawText = parsed.rawText
+                            )
+                            val insertedId = transactionRepository.insert(tx)
+                            createdIds.add(insertedId)
+                        }
+                    }
                 }
             } catch (e: Throwable) {
                 Log.e(TAG, "Failed to process screenshot: ${file.name}", e)

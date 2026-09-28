@@ -106,12 +106,51 @@ class TransactionNotificationListener : NotificationListenerService(), KoinCompo
         val packageName = activeSbn.packageName ?: return
         val extras = activeSbn.notification?.extras ?: return
 
-        val title = extras.getString(android.app.Notification.EXTRA_TITLE) ?: ""
-        val text = extras.getCharSequence(android.app.Notification.EXTRA_TEXT)?.toString()
-            ?: extras.getCharSequence(android.app.Notification.EXTRA_BIG_TEXT)?.toString()
+        val title = extras.getCharSequence(android.app.Notification.EXTRA_TITLE)?.toString() ?: ""
+        val subText = extras.getCharSequence(android.app.Notification.EXTRA_SUB_TEXT)?.toString()
+        val effectiveTitle = when {
+            title.isNotBlank() && !subText.isNullOrBlank() && !title.contains(subText, ignoreCase = true) -> "$subText · $title"
+            title.isBlank() && !subText.isNullOrBlank() -> subText
+            else -> title
+        }
+        var text = extras.getCharSequence(android.app.Notification.EXTRA_BIG_TEXT)?.toString()
+            ?: extras.getCharSequence(android.app.Notification.EXTRA_TEXT)?.toString()
             ?: ""
 
-        if (title.isBlank() && text.isBlank()) return
+        // Extract from InboxStyle notifications (e.g. grouped app notifications)
+        if (text.isBlank()) {
+            val lines = extras.getCharSequenceArray(android.app.Notification.EXTRA_TEXT_LINES)
+            if (!lines.isNullOrEmpty()) {
+                text = lines.filterNotNull().joinToString(" ") { it.toString() }
+            }
+        }
+
+        // Extract from MessagingStyle notifications (e.g. Google Messages, Samsung Messages)
+        var senderId: String? = null
+        val messagingStyle = androidx.core.app.NotificationCompat.MessagingStyle.extractMessagingStyleFromNotification(activeSbn.notification)
+        if (messagingStyle != null) {
+            val messages = messagingStyle.messages
+            if (messages.isNotEmpty()) {
+                val lastMessage = messages.last()
+                if (text.isBlank()) {
+                    text = lastMessage.text?.toString() ?: ""
+                }
+                val personName = lastMessage.person?.name?.toString()
+                val conversationTitle = messagingStyle.conversationTitle?.toString()
+                senderId = personName ?: conversationTitle
+            }
+        }
+
+        // Fallback: If title or subtext looks like an Indian bank sender ID (e.g., "JM-UNIONB-T")
+        if (senderId == null) {
+            if (!subText.isNullOrBlank() && (subText.contains('-') || subText.length in 3..12)) {
+                senderId = subText
+            } else if (title.contains('-') || (title.length in 3..12 && title.all { it.isLetterOrDigit() || it == '-' })) {
+                senderId = title
+            }
+        }
+
+        if (effectiveTitle.isBlank() && text.isBlank()) return
         val postTime = if (activeSbn.postTime > 0) activeSbn.postTime else System.currentTimeMillis()
 
         serviceScope.launch {
@@ -125,8 +164,8 @@ class TransactionNotificationListener : NotificationListenerService(), KoinCompo
                     id = "notif_${postTime}_${(1000..9999).random()}",
                     sourceType = com.cashbuddy.core.prob.SourceType.NOTIFICATION,
                     packageName = packageName,
-                    senderId = null,
-                    title = title,
+                    senderId = senderId,
+                    title = effectiveTitle,
                     text = text,
                     timestamp = postTime
                 )

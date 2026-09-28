@@ -74,7 +74,7 @@ class MessagePipeline(
 
             // 4. Classify
             val fullText = if (raw.title.isNotBlank()) "${raw.title} ${raw.text}" else raw.text
-            val classification = classifier.classifySuspending(evidence, fullText, source)
+            val classification = classifier.classifySuspending(evidence, fullText, source, raw.packageName)
 
             debugLogger?.recordClassification(
                 logId = logId,

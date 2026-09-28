@@ -245,5 +245,98 @@ class ProbabilisticEngineTest {
         assertTrue(match.confidence >= 0.90f)
         assertEquals(MerchantMap.CategorySource.MERCHANT_MAP, match.source)
     }
+
+    @Test
+    fun testBankDebitSmsWithColonAmountAndFvgMerchant() {
+        val text = "Bank A/c *0383 Debited Rs:60.00 on 28-09-2026 13:02:20 by Mob Bk ref no 663757559850, Fvg: BOTTLE L Avl Bal Rs:1675.08."
+        val raw = RawMessage(
+            id = "test-colon-amount",
+            sourceType = SourceType.SMS,
+            packageName = null,
+            senderId = "JM-BANK-T",
+            title = "JM-BANK-T",
+            text = text,
+            timestamp = 1727500000000L
+        )
+
+        val source = sourceDetector.detect("JM-BANK-T", text)
+        val evidence = evidenceExtractor.extract(raw, source)
+        val result = classifier.classify(evidence, text, source)
+
+        assertTrue(evidence.hasAmount, "Expected hasAmount to be true for Rs:60.00")
+        assertEquals(60.0, result.amount)
+        assertEquals(TransactionType.DEBIT, result.type)
+        assertEquals("0383", result.accountLast4)
+        assertEquals("Bottle L", result.merchant)
+        assertTrue(result.pTransaction > 0.95, "Expected p > 0.95, got ${result.pTransaction}")
+    }
+
+    @Test
+    fun testSmartQPaymentNotification() {
+        val title = "Payment Successful"
+        val text = "Your payment of ₹140.0 was successful. Thank you for ordering!"
+        val raw = RawMessage(
+            id = "test-smartq",
+            sourceType = SourceType.NOTIFICATION,
+            packageName = "com.smartq",
+            senderId = null,
+            title = title,
+            text = text,
+            timestamp = 1727500000000L
+        )
+
+        val source = sourceDetector.detect("com.smartq", "$title: $text")
+        val evidence = evidenceExtractor.extract(raw, source)
+        val result = classifier.classify(evidence, "$title $text", source, raw.packageName)
+
+        assertTrue(evidence.hasAmount)
+        assertEquals(140.0, result.amount)
+        assertEquals("Smartq", result.merchant)
+        assertTrue(result.pTransaction >= 0.65, "Expected p >= 0.65, got ${result.pTransaction}")
+    }
+
+    @Test
+    fun testScreenshotParserEngine_ParsesImage3MinimalUpiReceipt() {
+        val ocrText = """
+            ₹18
+            Paid to
+            BMTC
+            Banking name: BMTC
+            28 September 2026, 8:02 pm
+            POWERED BY UPI
+        """.trimIndent()
+
+        val engine = ScreenshotParserEngine()
+        val result = engine.parse(ocrText)
+
+        assertNotNull(result, "Expected Image 3 receipt to be parsable")
+        assertEquals(18.0, result.amount)
+        assertEquals("BMTC", result.merchant)
+        assertEquals("Transportation", result.category)
+        assertEquals("UPI", result.appName)
+        assertEquals(com.cashbuddy.core.TransactionType.DEBIT, result.transactionType)
+        assertTrue(result.confidence >= 0.85f)
+    }
+
+    @Test
+    fun testScreenshotParserEngine_ParsesImage3WhenRupeeSymbolDroppedByOcr() {
+        // ML Kit Latin sometimes misses the ₹ glyph and outputs only digits '18'
+        val ocrText = """
+            18
+            Paid to
+            BMTC
+            Banking name: BMTC
+            28 September 2026, 8:02 pm
+            POWERED BY UPI
+        """.trimIndent()
+
+        val engine = ScreenshotParserEngine()
+        val result = engine.parse(ocrText)
+
+        assertNotNull(result, "Expected Image 3 receipt with dropped ₹ to be parsable")
+        assertEquals(18.0, result.amount)
+        assertEquals("BMTC", result.merchant)
+        assertEquals("Transportation", result.category)
+    }
 }
 

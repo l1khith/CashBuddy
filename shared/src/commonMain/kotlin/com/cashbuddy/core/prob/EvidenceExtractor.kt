@@ -94,28 +94,81 @@ class EvidenceExtractor {
         return m.groups[1]?.value?.takeLast(4)
     }
 
-    fun extractMerchant(text: String): String? {
+    fun extractMerchant(text: String, packageName: String? = null): String? {
         // 1. UPI handle / VPA
         val vpa = Regexes.UPI_HANDLE.find(text)?.value
         if (vpa != null) {
             val handle = vpa.substringBefore("@").replace(".", " ").replace("-", " ").trim()
             if (handle.length >= 3) {
-                return handle.split(" ").joinToString(" ") { word ->
-                    word.replaceFirstChar { if (it.isLowerCase()) it.titlecase() else it.toString() }
+                return formatMerchant(handle)
+            }
+        }
+
+        // 2. Fvg / In favour of / Banking name (as seen in Union Bank, Indian Bank SMS, and GPay receipts)
+        val fvgRegex = Regex("""(?i)(?:fvg:?|favoring|in\s+favou?r\s+of|banking\s+name:?)\s*([A-Za-z0-9\s&'.-]{2,30}?)(?:\s+avl|\s+bal|\s+ref|\s+on|\n|\.|\z)""")
+        val mFvg = fvgRegex.find(text)
+        if (mFvg != null) {
+            val raw = mFvg.groups[1]?.value?.trim()
+            if (!raw.isNullOrBlank() && raw.length >= 2) {
+                return formatMerchant(raw)
+            }
+        }
+
+        // 3. Line-by-line structure: "Paid to\n<Merchant>"
+        val lines = text.lines().map { it.trim() }.filter { it.isNotEmpty() }
+        for (i in lines.indices) {
+            val l = lines[i].lowercase()
+            if (l == "paid to" || l == "to:" || l == "to" || l == "payment to") {
+                val next = lines.getOrNull(i + 1)?.trim()
+                if (!next.isNullOrBlank() && next.length in 2..40 &&
+                    !next.startsWith("₹") && !next.startsWith("Rs", ignoreCase = true) &&
+                    !next.lowercase().startsWith("banking name") && !next.lowercase().startsWith("receiver")
+                ) {
+                    return formatMerchant(next)
                 }
             }
         }
-        // 2. Prefix "to ...", "paid to ...", "towards ..."
-        val prefixRegex = Regex("""(?i)(?:paid\s+to|sent\s+to|transferred\s+to|towards|at|to)\s+([A-Za-z0-9\s&'-]{3,30}?)(?:\s+on|\s+ref|\s+via|\s+using|\s+bal|\s+upi|\.|\z)""")
+
+        // 4. Prefix "paid to ...", "sent to ...", "towards ..."
+        val prefixRegex = Regex("""(?i)(?:paid\s+to|sent\s+to|transferred\s+to|towards|at|to)\s+([A-Za-z0-9\s&'-]{2,30}?)(?:\s+on|\s+ref|\s+via|\s+using|\s+bal|\s+avl|\s+upi|\n|\.|\z)""")
         val m = prefixRegex.find(text)
         if (m != null) {
             val raw = m.groups[1]?.value?.trim()
             if (!raw.isNullOrBlank() && raw.length >= 2) {
-                return raw.split(" ").joinToString(" ") { word ->
-                    word.replaceFirstChar { if (it.isLowerCase()) it.titlecase() else it.toString() }
+                return formatMerchant(raw)
+            }
+        }
+
+        // 5. MerchantMap brand token scan in text (e.g. "BMTC", "SmartQ", "Swiggy", "Zomato")
+        val tokens = text.lowercase().split(Regex("[^a-z0-9]")).filter { it.length >= 3 }
+        for (token in tokens) {
+            val match = MerchantMap.lookup(token)
+            if (match.source != MerchantMap.CategorySource.FALLBACK) {
+                return token.replaceFirstChar { if (it.isLowerCase()) it.titlecase() else it.toString() }
+            }
+        }
+
+        // 6. MerchantMap brand token scan in packageName (e.g. "com.smartq" -> "Smartq")
+        if (!packageName.isNullOrBlank()) {
+            val pkgTokens = packageName.lowercase().split('.', '_', '-').filter { it.length >= 3 }
+            for (token in pkgTokens) {
+                val match = MerchantMap.lookup(token)
+                if (match.source != MerchantMap.CategorySource.FALLBACK) {
+                    return token.replaceFirstChar { if (it.isLowerCase()) it.titlecase() else it.toString() }
                 }
             }
         }
+
         return null
+    }
+
+    private fun formatMerchant(name: String): String {
+        return name.split(" ").filter { it.isNotBlank() }.joinToString(" ") { word ->
+            if (word.all { it.isLetter() && it.isUpperCase() } && word.length > 1) {
+                word.lowercase().replaceFirstChar { if (it.isLowerCase()) it.titlecase() else it.toString() }
+            } else {
+                word.replaceFirstChar { if (it.isLowerCase()) it.titlecase() else it.toString() }
+            }
+        }
     }
 }

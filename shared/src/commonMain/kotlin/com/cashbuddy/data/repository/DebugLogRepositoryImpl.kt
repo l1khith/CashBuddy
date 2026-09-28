@@ -16,29 +16,29 @@ class DebugLogRepositoryImpl(
     private val dispatcher: CoroutineDispatcher = Dispatchers.Default
 ) : DebugLogRepository {
 
-    private val queries = database.debug_logQueries
+    private val queries = database.debugLogQueries
 
     override suspend fun insert(entry: DebugLogEntry): Unit = withContext(dispatcher) {
         database.transaction {
             queries.insert(
                 id = entry.id,
                 timestamp = entry.timestamp,
-                sourceType = entry.sourceType,
-                packageName = entry.packageName,
-                senderId = entry.senderId,
-                rawTitle = entry.rawTitle,
-                rawText = entry.rawText,
-                rawTextHash = entry.rawTextHash,
-                detectedSource = entry.detectedSource,
-                evidenceJson = entry.evidenceJson,
-                pTransaction = entry.pTransaction,
-                contributionsJson = entry.contributionsJson,
-                fieldConfidencesJson = entry.fieldConfidencesJson,
-                policyAction = entry.policyAction,
-                pipelineOutcome = entry.pipelineOutcome,
-                resultingTxId = entry.resultingTxId,
-                mergeTargetId = entry.mergeTargetId,
-                errorMessage = entry.errorMessage
+                source_type = entry.sourceType,
+                package_name = entry.packageName,
+                sender_id = entry.senderId,
+                raw_title = entry.rawTitle,
+                raw_text = entry.rawText,
+                raw_text_hash = entry.rawTextHash,
+                detected_source = entry.detectedSource,
+                evidence_json = entry.evidenceJson,
+                p_transaction = entry.pTransaction,
+                contributions_json = entry.contributionsJson,
+                field_confidences_json = entry.fieldConfidencesJson,
+                policy_action = entry.policyAction,
+                pipeline_outcome = entry.pipelineOutcome,
+                resulting_tx_id = entry.resultingTxId,
+                merge_target_id = entry.mergeTargetId,
+                error_message = entry.errorMessage
             )
             val currentCount = queries.count().executeAsOne()
             if (currentCount > maxRows) {
@@ -57,18 +57,18 @@ class DebugLogRepositoryImpl(
         fieldConfidencesJson: String?
     ): Unit = withContext(dispatcher) {
         queries.updateClassification(
-            detectedSource = detectedSource,
-            evidenceJson = evidenceJson,
-            pTransaction = pTransaction,
-            contributionsJson = contributionsJson,
-            fieldConfidencesJson = fieldConfidencesJson,
+            detected_source = detectedSource,
+            evidence_json = evidenceJson,
+            p_transaction = pTransaction,
+            contributions_json = contributionsJson,
+            field_confidences_json = fieldConfidencesJson,
             id = id
         )
     }
 
     override suspend fun updatePolicy(id: String, policyAction: String?): Unit = withContext(dispatcher) {
         queries.updatePolicy(
-            policyAction = policyAction,
+            policy_action = policyAction,
             id = id
         )
     }
@@ -82,17 +82,35 @@ class DebugLogRepositoryImpl(
         errorMessage: String?
     ): Unit = withContext(dispatcher) {
         queries.updateOutcome(
-            policyAction = policyAction,
-            pipelineOutcome = pipelineOutcome,
-            resultingTxId = resultingTxId,
-            mergeTargetId = mergeTargetId,
-            errorMessage = errorMessage,
+            value = policyAction,
+            pipeline_outcome = pipelineOutcome,
+            resulting_tx_id = resultingTxId,
+            merge_target_id = mergeTargetId,
+            error_message = errorMessage,
             id = id
         )
     }
 
     override suspend fun updateRawText(id: String, rawText: String): Unit = withContext(dispatcher) {
-        queries.updateRawText(rawText = rawText, id = id)
+        queries.updateRawText(raw_text = rawText, id = id)
+    }
+
+    override suspend fun getById(id: String): DebugLogEntry? = withContext(dispatcher) {
+        queries.getById(id).executeAsOneOrNull()?.toEntry()
+    }
+
+    override suspend fun countWithFilter(filter: DebugLogFilter): Long = withContext(dispatcher) {
+        queries.countWithFilter(
+            sourceType = filter.sourceType,
+            policyAction = filter.policyAction,
+            packageName = filter.packageName,
+            startTime = filter.startTime,
+            endTime = filter.endTime
+        ).executeAsOne()
+    }
+
+    override suspend fun distinctPackages(): List<String> = withContext(dispatcher) {
+        queries.distinctPackages().executeAsList()
     }
 
     override suspend fun query(filter: DebugLogFilter): List<DebugLogEntry> = withContext(dispatcher) {
@@ -112,7 +130,7 @@ class DebugLogRepositoryImpl(
     }
 
     override suspend fun recent(limit: Int): List<DebugLogEntry> = withContext(dispatcher) {
-        queries.recent(limit = limit.toLong()).executeAsList().map { it.toEntry() }
+        queries.recent(value_ = limit.toLong()).executeAsList().map { it.toEntry() }
     }
 
     override suspend fun clearAll(): Unit = withContext(dispatcher) {
