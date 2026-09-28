@@ -118,10 +118,15 @@ class TransactionNotificationListener : NotificationListenerService(), KoinCompo
             ?: ""
 
         // Extract from InboxStyle notifications (e.g. grouped app notifications)
-        if (text.isBlank()) {
-            val lines = extras.getCharSequenceArray(android.app.Notification.EXTRA_TEXT_LINES)
-            if (!lines.isNullOrEmpty()) {
-                text = lines.filterNotNull().joinToString(" ") { it.toString() }
+        val lines = extras.getCharSequenceArray(android.app.Notification.EXTRA_TEXT_LINES)
+        if (!lines.isNullOrEmpty()) {
+            val linesJoined = lines.filterNotNull().joinToString(" ") { it.toString() }
+            text = if (text.isBlank()) {
+                linesJoined
+            } else if (!text.contains(linesJoined, ignoreCase = true)) {
+                "$text $linesJoined"
+            } else {
+                text
             }
         }
 
@@ -132,8 +137,9 @@ class TransactionNotificationListener : NotificationListenerService(), KoinCompo
             val messages = messagingStyle.messages
             if (messages.isNotEmpty()) {
                 val lastMessage = messages.last()
-                if (text.isBlank()) {
-                    text = lastMessage.text?.toString() ?: ""
+                val msgText = lastMessage.text?.toString()
+                if (!msgText.isNullOrBlank()) {
+                    text = msgText
                 }
                 val personName = lastMessage.person?.name?.toString()
                 val conversationTitle = messagingStyle.conversationTitle?.toString()
