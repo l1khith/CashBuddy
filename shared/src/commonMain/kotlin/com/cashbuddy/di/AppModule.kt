@@ -82,7 +82,7 @@ val appModule = module {
     singleOf(::SignalObservationRepositoryImpl) bind SignalObservationRepository::class
     singleOf(::RawMessageRepositoryImpl) bind RawMessageRepository::class
     singleOf(::UserRuleRepositoryImpl) bind UserRuleRepository::class
-    singleOf(::DebugLogRepositoryImpl) bind DebugLogRepository::class
+    single<DebugLogRepository> { DebugLogRepositoryImpl(database = get(), dispatcher = get()) }
     single { DebugConfig(isDebugBuild = false, settingsRepository = get()) }
     single { DebugLogger(repository = get(), config = get()) }
     single<com.cashbuddy.core.prob.Calibrator> { com.cashbuddy.core.prob.LikelihoodCalibrator(get()) }

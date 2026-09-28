@@ -12,9 +12,12 @@ import kotlinx.coroutines.withContext
 
 class DebugLogRepositoryImpl(
     private val database: AppDatabase,
-    private val maxRows: Long = 5000L,
-    private val dispatcher: CoroutineDispatcher = Dispatchers.Default
+    private val dispatcher: CoroutineDispatcher = Dispatchers.Default,
+    private val maxRows: Long = 5000L
 ) : DebugLogRepository {
+
+    constructor(database: AppDatabase) : this(database, Dispatchers.Default, 5000L)
+    constructor(database: AppDatabase, maxRows: Long) : this(database, Dispatchers.Default, maxRows)
 
     private val queries = database.debugLogQueries
 
