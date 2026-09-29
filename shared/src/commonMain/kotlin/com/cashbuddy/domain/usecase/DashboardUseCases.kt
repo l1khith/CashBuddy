@@ -1,5 +1,6 @@
 package com.cashbuddy.domain.usecase
 
+import com.cashbuddy.domain.model.DateRangeSummary
 import com.cashbuddy.domain.model.Transaction
 import com.cashbuddy.domain.repository.CategoryBreakdown
 import com.cashbuddy.domain.repository.MonthlySummary
@@ -13,7 +14,22 @@ class CalculateBalanceUseCase(private val repository: TransactionRepository) {
 
 class GetRecentTransactionsUseCase(private val repository: TransactionRepository) {
     operator fun invoke(limit: Int = 10): Flow<List<Transaction>> =
-        repository.getAll().map { list -> list.take(limit) }
+        repository.getRecent(limit.toLong())
+}
+
+class GetTransactionsByDateRangeUseCase(private val repository: TransactionRepository) {
+    operator fun invoke(start: Long, end: Long): Flow<List<Transaction>> =
+        repository.getByDateRange(start, end)
+}
+
+class GetTransactionsByDateRangeWithLimitUseCase(private val repository: TransactionRepository) {
+    operator fun invoke(start: Long, end: Long, limit: Long = 15): Flow<List<Transaction>> =
+        repository.getByDateRangeWithLimit(start, end, limit)
+}
+
+class GetDateRangeSummaryUseCase(private val repository: TransactionRepository) {
+    operator fun invoke(start: Long, end: Long): Flow<DateRangeSummary> =
+        repository.getSummaryByDateRange(start, end)
 }
 
 class GetUnreviewedCountUseCase(private val repository: TransactionRepository) {

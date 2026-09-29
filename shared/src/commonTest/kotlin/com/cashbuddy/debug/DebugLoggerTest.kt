@@ -137,7 +137,16 @@ class DebugLoggerTest {
         override fun getAll(): Flow<List<Transaction>> = flowOf(txs)
         override fun getById(id: Long): Flow<Transaction?> = flowOf(txs.find { it.id == id })
         override fun getPending(): Flow<List<Transaction>> = flowOf(txs.filter { it.status == TransactionStatus.PENDING })
+        override fun getRecent(limit: Long): Flow<List<Transaction>> = flowOf(txs.takeLast(limit.toInt()))
         override fun getByDateRange(start: Long, end: Long): Flow<List<Transaction>> = flowOf(txs.filter { it.timestamp in start..end })
+        override fun getByDateRangeWithLimit(start: Long, end: Long, limit: Long): Flow<List<Transaction>> =
+            flowOf(txs.filter { it.timestamp in start..end }.take(limit.toInt()))
+        override fun getSummaryByDateRange(start: Long, end: Long): Flow<com.cashbuddy.domain.model.DateRangeSummary> {
+            val inRange = txs.filter { it.timestamp in start..end }
+            val debit = inRange.filter { it.type == TransactionType.DEBIT && it.status == TransactionStatus.CONFIRMED }.sumOf { it.amount }
+            val credit = inRange.filter { it.type == TransactionType.CREDIT && it.status == TransactionStatus.CONFIRMED }.sumOf { it.amount }
+            return flowOf(com.cashbuddy.domain.model.DateRangeSummary(debit, credit, inRange.size.toLong()))
+        }
         override fun getByCategory(categoryId: Long): Flow<List<Transaction>> = flowOf(txs.filter { it.categoryId == categoryId })
         override fun getMonthlySummary(): Flow<List<MonthlySummary>> = flowOf(emptyList())
         override fun getCategoryBreakdown(start: Long, end: Long): Flow<List<CategoryBreakdown>> = flowOf(emptyList())

@@ -30,6 +30,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -47,6 +48,7 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.shape.CircleShape
 import com.cashbuddy.presentation.theme.AccentEmerald
 import com.cashbuddy.presentation.theme.CashBuddyEasing
+import com.cashbuddy.domain.model.TimePeriod
 import com.cashbuddy.presentation.theme.CashBuddyTypography
 import com.cashbuddy.presentation.theme.DangerRed
 import com.cashbuddy.presentation.theme.RadiusLarge
@@ -57,16 +59,11 @@ fun BalanceHeader(
     balance: Double,
     monthlyIncome: Double,
     monthlyExpense: Double,
+    selectedPeriod: TimePeriod = TimePeriod.TODAY,
+    onPeriodSelected: ((TimePeriod) -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     var isBalanceVisible by remember { mutableStateOf(true) }
-
-    // Animated balance counter with EaseOutQuart
-    val animatedBalance by animateFloatAsState(
-        targetValue = balance.toFloat(),
-        animationSpec = tween(800, easing = CashBuddyEasing.EaseOutQuart),
-        label = "balance"
-    )
 
     Card(
         modifier = modifier
@@ -126,20 +123,12 @@ fun BalanceHeader(
 
                 Spacer(modifier = Modifier.height(8.dp))
 
-                val formattedBalance = if (isBalanceVisible) {
-                    "₹" + formatCurrency(animatedBalance.toDouble())
-                } else {
-                    "₹ ••••••"
-                }
-
-                Text(
-                    text = formattedBalance,
-                    style = CashBuddyTypography.displayLarge.copy(fontSize = 38.sp),
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSurface
+                AnimatedBalanceText(
+                    balance = balance,
+                    isVisible = isBalanceVisible
                 )
 
-                Spacer(modifier = Modifier.height(20.dp))
+                Spacer(modifier = Modifier.height(18.dp))
 
                 // Income / Expense metrics row
                 Row(
@@ -148,7 +137,7 @@ fun BalanceHeader(
                 ) {
                     // Income Metric Card
                     BalanceMetricCard(
-                        label = "Income",
+                        label = "${selectedPeriod.displayName} In",
                         amount = monthlyIncome,
                         icon = Icons.Default.ArrowUpward,
                         accentColor = AccentEmerald,
@@ -157,7 +146,7 @@ fun BalanceHeader(
 
                     // Expense Metric Card
                     BalanceMetricCard(
-                        label = "Expense",
+                        label = "${selectedPeriod.displayName} Out",
                         amount = monthlyExpense,
                         icon = Icons.Default.ArrowDownward,
                         accentColor = DangerRed,
@@ -232,12 +221,43 @@ fun BalanceHeaderCard(
     totalBalance: Double,
     monthlyDebit: Double,
     monthlyCredit: Double,
+    selectedPeriod: TimePeriod = TimePeriod.TODAY,
+    onPeriodSelected: ((TimePeriod) -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     BalanceHeader(
         balance = totalBalance,
         monthlyIncome = monthlyCredit,
         monthlyExpense = monthlyDebit,
+        selectedPeriod = selectedPeriod,
+        onPeriodSelected = onPeriodSelected,
+        modifier = modifier
+    )
+}
+
+@Composable
+private fun AnimatedBalanceText(
+    balance: Double,
+    isVisible: Boolean,
+    modifier: Modifier = Modifier
+) {
+    val animatedBalance by animateFloatAsState(
+        targetValue = balance.toFloat(),
+        animationSpec = tween(800, easing = CashBuddyEasing.EaseOutQuart),
+        label = "balance"
+    )
+
+    val formattedBalance = if (isVisible) {
+        "₹" + formatCurrency(animatedBalance.toDouble())
+    } else {
+        "₹ ••••••"
+    }
+
+    Text(
+        text = formattedBalance,
+        style = CashBuddyTypography.displayLarge.copy(fontSize = 38.sp),
+        fontWeight = FontWeight.Bold,
+        color = MaterialTheme.colorScheme.onSurface,
         modifier = modifier
     )
 }

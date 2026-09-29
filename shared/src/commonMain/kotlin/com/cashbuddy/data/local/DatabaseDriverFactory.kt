@@ -9,6 +9,12 @@ expect class DatabaseDriverFactory {
 }
 
 fun createDatabase(driver: SqlDriver): AppDatabase {
+    // Enable performance optimizations for SQLite & SQLCipher
+    executeQuietly(driver, "PRAGMA journal_mode = WAL;")
+    executeQuietly(driver, "PRAGMA synchronous = NORMAL;")
+    executeQuietly(driver, "PRAGMA foreign_keys = ON;")
+    executeQuietly(driver, "PRAGMA temp_store = MEMORY;")
+    executeQuietly(driver, "PRAGMA cache_size = -8000;") // 8 MB cache
     ensureSchema(driver)
     return AppDatabase(driver)
 }
@@ -214,6 +220,7 @@ fun ensureSchema(driver: SqlDriver) {
         "CREATE INDEX IF NOT EXISTS idx_transactions_account ON transactions(account_id)",
         "CREATE INDEX IF NOT EXISTS idx_transactions_status ON transactions(status)",
         "CREATE INDEX IF NOT EXISTS idx_transactions_merchant ON transactions(merchant)",
+        "CREATE INDEX IF NOT EXISTS idx_transactions_summary ON transactions(status, type, timestamp)",
         """
         CREATE TRIGGER IF NOT EXISTS update_account_balance_debit
         AFTER INSERT ON transactions
