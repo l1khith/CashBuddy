@@ -3,12 +3,24 @@ package com.cashbuddy.core.prob
 
 import com.cashbuddy.domain.model.TransactionType
 
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
+
+@Serializable
 data class FieldConfidences(
     val amount: Double,
     val type: Double,
     val accountLast4: Double,
     val merchant: Double
-)
+) {
+    fun toJson(): String = jsonInstance.encodeToString(this)
+
+    companion object {
+        private val jsonInstance = Json { ignoreUnknownKeys = true; prettyPrint = false }
+        fun fromJson(json: String): FieldConfidences = jsonInstance.decodeFromString(json)
+    }
+}
 
 class FieldConfidenceEstimator {
     fun estimate(

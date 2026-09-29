@@ -38,4 +38,7 @@ sealed interface ScreenRoute {
 
     @Serializable
     data object DataView : ScreenRoute
+
+    @Serializable
+    data object DebugLog : ScreenRoute
 }

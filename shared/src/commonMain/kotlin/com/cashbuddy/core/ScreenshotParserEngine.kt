@@ -72,7 +72,15 @@ class ScreenshotParserEngine(
         )
     }
 
-    private fun detectAppName(text: String): String? = AppLabelMap.label(text)
+    private fun detectAppName(text: String): String? {
+        AppLabelMap.label(text)?.let { return it }
+        val lower = text.lowercase()
+        return if (lower.contains("powered by upi") || lower.contains("unified payments interface")) {
+            "UPI"
+        } else {
+            null
+        }
+    }
 
     private fun extractAmount(text: String): Double? {
         // Strategy 1: Standard ₹ / Rs / INR symbol prefix
@@ -89,23 +97,25 @@ class ScreenshotParserEngine(
             numStr.toDoubleOrNull()?.let { return it }
         }
 
-        // Strategy 3: Line starting with ₹ or Rs
+        // Strategy 3: Line containing ₹ or Rs
         for (line in text.lines()) {
             val trimmed = line.trim()
-            if (trimmed.startsWith('₹') || trimmed.startsWith("Rs", ignoreCase = true)) {
+            if (trimmed.contains('₹') || trimmed.startsWith("Rs", ignoreCase = true) || trimmed.startsWith("INR", ignoreCase = true)) {
                 val digits = trimmed.filter { it.isDigit() || it == '.' || it == ',' }.replace(",", "")
                 digits.toDoubleOrNull()?.let { if (it > 0.0) return it }
             }
         }
 
         // Strategy 4: Standalone line with just a number between 1 and 100,000 surrounded by transit/payment context
-        for (line in text.lines()) {
-            val trimmed = line.trim()
-            val num = trimmed.toDoubleOrNull()
-            if (num != null && num in 1.0..100000.0) {
-                // If the entire text contains confirmation words, accept standalone number
-                val lower = text.lowercase()
-                if (lower.contains("completed") || lower.contains("successful") || lower.contains("confirmed")) {
+        val lower = text.lowercase()
+        val hasPaymentContext = lower.contains("completed") || lower.contains("successful") ||
+                lower.contains("confirmed") || lower.contains("paid") || lower.contains("payment") ||
+                lower.contains("banking name") || lower.contains("upi")
+        if (hasPaymentContext) {
+            for (line in text.lines()) {
+                val trimmed = line.trim().removePrefix("?").removePrefix("=").removePrefix("*").trim()
+                val num = trimmed.toDoubleOrNull()
+                if (num != null && num in 1.0..100000.0) {
                     return num
                 }
             }
@@ -128,6 +138,16 @@ class ScreenshotParserEngine(
     }
 
     private fun extractMerchant(text: String): String {
+        // Strategy 0: "Banking name: BMTC" / "Merchant name: ..."
+        val bankingPattern = Regex("""(?i)(?:banking\s+name|merchant\s+name)[:\s]+([A-Za-z0-9 \t&'.-]{2,40})""")
+        val bMatch = bankingPattern.find(text)
+        if (bMatch != null) {
+            val candidate = cleanMerchantLine(bMatch.groupValues[1])
+            if (candidate.isNotEmpty() && !isSystemLabel(candidate)) {
+                return candidate
+            }
+        }
+
         val lines = text.lines().map { it.trim() }.filter { it.isNotEmpty() }
 
         // Strategy 1: Line right after or on "Paid to", "To:", "Payment to", etc.
@@ -202,10 +222,16 @@ class ScreenshotParserEngine(
 
     private fun cleanMerchantLine(line: String): String {
         var cleaned = line
+            .substringBefore('\n')
+            .substringBefore('\r')
             .replace("✓", "")
             .replace("✔", "")
             .replace("•", "")
             .trim()
+
+        if (cleaned.lowercase().startsWith("banking name:")) {
+            cleaned = cleaned.substringAfter(":").trim()
+        }
 
         while (cleaned.endsWith('.') || cleaned.endsWith(',') || cleaned.endsWith(':')) {
             cleaned = cleaned.dropLast(1).trim()
@@ -215,16 +241,19 @@ class ScreenshotParserEngine(
     }
 
     private fun isSystemLabel(s: String): bool {
-        val lower = s.lowercase()
+        val lower = s.lowercase().trim()
         return lower == "completed" ||
             lower == "successful" ||
             lower == "failed" ||
             lower == "pending" ||
+            lower == "paid to" ||
             lower == "transfer details" ||
             lower == "transaction details" ||
             lower.startsWith("upi transaction id") ||
             lower.startsWith("transaction id") ||
+            lower.startsWith("google transaction id") ||
             lower.startsWith("utr") ||
+            lower.startsWith("powered by") ||
             lower.startsWith("₹") ||
             lower.startsWith("rs")
     }

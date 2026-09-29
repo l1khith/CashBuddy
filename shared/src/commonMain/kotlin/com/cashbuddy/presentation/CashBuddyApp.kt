@@ -184,6 +184,7 @@ fun CashBuddyApp(
                     SettingsScreen(
                         viewModel = settingsViewModel,
                         onNavigateToPersonalization = { navController.navigate(ScreenRoute.PersonalizationDashboard) },
+                        onNavigateToDebugLog = { navController.navigate(ScreenRoute.DebugLog) },
                         onOpenNotificationSettings = onOpenNotificationSettings
                     )
                 }
@@ -209,6 +210,14 @@ fun CashBuddyApp(
                     val personalizationViewModel: PersonalizationViewModel = koinViewModel()
                     DataViewScreen(
                         viewModel = personalizationViewModel,
+                        onNavigateBack = { navController.popBackStack() }
+                    )
+                }
+
+                composable<ScreenRoute.DebugLog> {
+                    val debugLogViewModel: com.cashbuddy.presentation.debug.DebugLogViewModel = koinViewModel()
+                    com.cashbuddy.presentation.debug.DebugLogScreen(
+                        viewModel = debugLogViewModel,
                         onNavigateBack = { navController.popBackStack() }
                     )
                 }

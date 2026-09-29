@@ -73,4 +73,13 @@ class SettingsRepositoryImpl(
     override suspend fun setBiometricEnabled(enabled: Boolean): Unit = withContext(dispatcher) {
         queries.set("biometricEnabled", enabled.toString(), com.cashbuddy.platform.currentTimeMillis())
     }
+
+    override fun getDeveloperMode(): Flow<Boolean> =
+        queries.get("developer_mode").asFlow().mapToOneOrNull(dispatcher).map { record ->
+            record?.value_?.toBooleanStrictOrNull() ?: false
+        }
+
+    override suspend fun setDeveloperMode(enabled: Boolean): Unit = withContext(dispatcher) {
+        queries.set("developer_mode", enabled.toString(), com.cashbuddy.platform.currentTimeMillis())
+    }
 }

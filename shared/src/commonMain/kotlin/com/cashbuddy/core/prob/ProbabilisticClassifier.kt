@@ -5,11 +5,25 @@ import com.cashbuddy.domain.model.TransactionType
 import kotlin.math.exp
 import kotlin.math.ln
 
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
+
+@Serializable
 data class Contribution(
     val signal: String,
     val delta: Double,
     val lr: Double
-)
+) {
+    fun toJson(): String = jsonInstance.encodeToString(this)
+
+    companion object {
+        private val jsonInstance = Json { ignoreUnknownKeys = true; prettyPrint = false }
+        fun fromJson(json: String): Contribution = jsonInstance.decodeFromString(json)
+        fun listToJson(list: List<Contribution>): String = jsonInstance.encodeToString(list)
+        fun listFromJson(json: String): List<Contribution> = jsonInstance.decodeFromString(json)
+    }
+}
 
 data class ClassificationResult(
     val pTransaction: Double,
@@ -33,7 +47,8 @@ class ProbabilisticClassifier(
     fun classify(
         evidence: Evidence,
         rawText: String = "",
-        source: NotificationSource = NotificationSource.UNKNOWN
+        source: NotificationSource = NotificationSource.UNKNOWN,
+        packageName: String? = null
     ): ClassificationResult {
         val priorLogit = ln(Priors.P_TRANSACTION / (1.0 - Priors.P_TRANSACTION))
         var logit = priorLogit
@@ -72,7 +87,7 @@ class ProbabilisticClassifier(
         val amount = evidenceExtractor.extractAmount(rawText)
         val type = evidenceExtractor.extractType(rawText)
         val accountLast4 = evidenceExtractor.extractAccountLast4(rawText)
-        val merchant = evidenceExtractor.extractMerchant(rawText)
+        val merchant = evidenceExtractor.extractMerchant(rawText, packageName)
         val bankHint = if (evidence.senderLooksBank) "Bank" else null
 
         val fieldConfidences = fieldConfidenceEstimator.estimate(
@@ -100,7 +115,8 @@ class ProbabilisticClassifier(
     suspend fun classifySuspending(
         evidence: Evidence,
         rawText: String = "",
-        source: NotificationSource = NotificationSource.UNKNOWN
+        source: NotificationSource = NotificationSource.UNKNOWN,
+        packageName: String? = null
     ): ClassificationResult {
         val priorLogit = ln(Priors.P_TRANSACTION / (1.0 - Priors.P_TRANSACTION))
         var logit = priorLogit
@@ -139,7 +155,7 @@ class ProbabilisticClassifier(
         val amount = evidenceExtractor.extractAmount(rawText)
         val type = evidenceExtractor.extractType(rawText)
         val accountLast4 = evidenceExtractor.extractAccountLast4(rawText)
-        val merchant = evidenceExtractor.extractMerchant(rawText)
+        val merchant = evidenceExtractor.extractMerchant(rawText, packageName)
         val bankHint = if (evidence.senderLooksBank) "Bank" else null
 
         val fieldConfidences = fieldConfidenceEstimator.estimate(

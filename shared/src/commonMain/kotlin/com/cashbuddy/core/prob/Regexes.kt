@@ -2,8 +2,8 @@
 package com.cashbuddy.core.prob
 
 object Regexes {
-    val AMOUNT = Regex("""(?i)(?:₹|Rs\.?|INR)\s*(\d+(?:,\d{3})*(?:\.\d{1,2})?|\d+(?:\.\d{1,2})?)""")
-    val AMOUNT_SUFFIX = Regex("""(?i)(\d+(?:,\d{3})*(?:\.\d{1,2})?|\d+(?:\.\d{1,2})?)\s*(?:₹|Rs\.?|INR)""")
+    val AMOUNT = Regex("""(?i)(?:₹|Rs[.:]?|INR)\s*(\d+(?:,\d{3})*(?:\.\d{1,2})?|\d+(?:\.\d{1,2})?)""")
+    val AMOUNT_SUFFIX = Regex("""(?i)(\d+(?:,\d{3})*(?:\.\d{1,2})?|\d+(?:\.\d{1,2})?)\s*(?:₹|Rs[.:]?|INR)""")
     val ACCOUNT = Regex("""(?i)\b(?:a/c|acct|account|card)\s*(?:no\.?)?\s*(?:ending\s+)?(?:with\s+)?(?:[*xX]+)?(\d{3,4})\b""")
     val UTR = Regex("""(?i)(?:utr|ref|txn|rrn)\s*(?:no\.?|id)?\s*[:#]?\s*([A-Z0-9]{8,})""")
     val UPI_HANDLE = Regex("""(?i)\b[a-z0-9._-]+@[a-z]+\b""")

@@ -7,6 +7,7 @@ import com.cashbuddy.data.repository.AccountRepositoryImpl
 import com.cashbuddy.data.repository.BudgetRepositoryImpl
 import com.cashbuddy.data.repository.CategoryRepositoryImpl
 import com.cashbuddy.data.repository.CorrectionRepositoryImpl
+import com.cashbuddy.data.repository.DebugLogRepositoryImpl
 import com.cashbuddy.data.repository.GoalRepositoryImpl
 import com.cashbuddy.data.repository.MerchantRuleRepositoryImpl
 import com.cashbuddy.data.repository.RawMessageRepositoryImpl
@@ -15,10 +16,14 @@ import com.cashbuddy.data.repository.SignalObservationRepositoryImpl
 import com.cashbuddy.data.repository.TrainingDataRepositoryImpl
 import com.cashbuddy.data.repository.TransactionRepositoryImpl
 import com.cashbuddy.data.repository.UserRuleRepositoryImpl
+import com.cashbuddy.debug.DebugConfig
+import com.cashbuddy.debug.DebugLogger
 import com.cashbuddy.domain.repository.AccountRepository
 import com.cashbuddy.domain.repository.BudgetRepository
 import com.cashbuddy.domain.repository.CategoryRepository
 import com.cashbuddy.domain.repository.CorrectionRepository
+import com.cashbuddy.domain.repository.DebugLogRepository
+import com.cashbuddy.presentation.debug.DebugLogViewModel
 import com.cashbuddy.domain.repository.GoalRepository
 import com.cashbuddy.domain.repository.MerchantRuleRepository
 import com.cashbuddy.domain.repository.RawMessageRepository
@@ -77,6 +82,9 @@ val appModule = module {
     singleOf(::SignalObservationRepositoryImpl) bind SignalObservationRepository::class
     singleOf(::RawMessageRepositoryImpl) bind RawMessageRepository::class
     singleOf(::UserRuleRepositoryImpl) bind UserRuleRepository::class
+    single<DebugLogRepository> { DebugLogRepositoryImpl(database = get(), dispatcher = get()) }
+    single { DebugConfig(isDebugBuild = false, settingsRepository = get()) }
+    single { DebugLogger(repository = get(), config = get()) }
     single<com.cashbuddy.core.prob.Calibrator> { com.cashbuddy.core.prob.LikelihoodCalibrator(get()) }
     single { com.cashbuddy.core.prob.ProbabilisticClassifier(get(), get(), get()) }
     single {
@@ -90,7 +98,8 @@ val appModule = module {
             categoryEngine = get(),
             transactionRepo = get(),
             rawMessageRepo = get(),
-            categoryRepo = get()
+            categoryRepo = get(),
+            debugLogger = get()
         )
     }
 
@@ -128,7 +137,8 @@ val appModule = module {
     viewModelOf(::AccountsViewModel)
     viewModelOf(::BudgetViewModel)
     viewModelOf(::GoalsViewModel)
-    viewModel { SettingsViewModel(get(), get(), get(), get(), get(), getOrNull()) }
+    viewModel { SettingsViewModel(get(), get(), get(), get(), get(), getOrNull(), getOrNull()) }
     viewModel { PersonalizationViewModel(get(), get(), get(), get(), getOrNull()) }
     viewModelOf(::AddTransactionViewModel)
+    viewModel { DebugLogViewModel(get(), get(), getOrNull()) }
 }

@@ -1,6 +1,11 @@
 // NO-NETWORK
 package com.cashbuddy.core.prob
 
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
+
+@Serializable
 data class Evidence(
     val hasAmount: Boolean,
     val hasAccount: Boolean,
@@ -19,4 +24,11 @@ data class Evidence(
     val recentSameAmount: Boolean = false,
     val recentSameMerchant: Boolean = false,
     val velocityHigh: Boolean = false
-)
+) {
+    fun toJson(): String = jsonInstance.encodeToString(this)
+
+    companion object {
+        private val jsonInstance = Json { ignoreUnknownKeys = true; prettyPrint = false }
+        fun fromJson(json: String): Evidence = jsonInstance.decodeFromString(json)
+    }
+}
