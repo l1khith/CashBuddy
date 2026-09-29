@@ -250,6 +250,10 @@ class DebugLoggerTest {
         // 4. Release build with developer mode turned off -> disabled
         configRelease.developerModeOverride = false
         assertFalse(configRelease.enabled)
+
+        // 5. Debug build with developer mode turned off via toggle -> disabled (no logs taken)
+        configDebug.developerModeOverride = false
+        assertFalse(configDebug.enabled)
     }
 
     @Test
@@ -272,6 +276,31 @@ class DebugLoggerTest {
             val logId = logger.captureRaw(raw)
             assertEquals("", logId)
             assertEquals(0L, repo.count())
+        }
+    }
+
+    @Test
+    fun testDebugLoggerCaptureRawNoOpWhenDebugBuildDisabledByToggle() {
+        runBlocking {
+            val repo = TestDebugLogRepository()
+            val config = DebugConfig(isDebugBuild = true)
+            // User toggled debug log off
+            config.developerModeOverride = false
+            val logger = DebugLogger(repo, config)
+
+            val raw = RawMessage(
+                id = "msg-debug-off",
+                sourceType = SourceType.NOTIFICATION,
+                packageName = "com.sample.bank",
+                senderId = "SAMPLE-BANK",
+                title = "Transaction Alert",
+                text = "Rs 1500 debited from A/c XX9999",
+                timestamp = 1727000000000L
+            )
+
+            val logId = logger.captureRaw(raw)
+            assertEquals("", logId, "Should return empty log ID when debug logging is toggled OFF")
+            assertEquals(0L, repo.count(), "Zero logs must be taken when debug logging is toggled OFF")
         }
     }
 

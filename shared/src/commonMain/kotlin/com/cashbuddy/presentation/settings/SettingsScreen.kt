@@ -25,6 +25,7 @@ import androidx.compose.material.icons.filled.DeleteSweep
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.FileDownload
 import androidx.compose.material.icons.filled.Tune
+import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -467,24 +468,31 @@ fun SettingsScreen(
                     }
                 }
 
-                // Hidden / Developer Mode: Debug Log Entry
-                if (state.isDebugLogVisible) {
-                    item {
-                        Card(
+                // Developer & Diagnostics: Debug Log Viewer Toggle
+                item {
+                    Text(
+                        text = "Developer & Diagnostics",
+                        style = CashBuddyTypography.titleLarge,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+
+                item {
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RadiusLarge,
+                        colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.surface
+                        ),
+                        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+                    ) {
+                        Column(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .clip(RadiusLarge)
-                                .clickable { onNavigateToDebugLog() },
-                            shape = RadiusLarge,
-                            colors = CardDefaults.cardColors(
-                                containerColor = MaterialTheme.colorScheme.surface
-                            ),
-                            elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+                                .padding(18.dp)
                         ) {
                             Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(20.dp),
+                                modifier = Modifier.fillMaxWidth(),
                                 verticalAlignment = Alignment.CenterVertically,
                                 horizontalArrangement = Arrangement.SpaceBetween
                             ) {
@@ -494,16 +502,19 @@ fun SettingsScreen(
                                 ) {
                                     Box(
                                         modifier = Modifier
-                                            .size(40.dp)
-                                            .clip(RoundedCornerShape(10.dp))
-                                            .background(PrimaryIndigo.copy(alpha = 0.12f)),
+                                            .size(42.dp)
+                                            .clip(RoundedCornerShape(12.dp))
+                                            .background(
+                                                if (state.isDebugLogEnabled) PrimaryIndigo.copy(alpha = 0.15f)
+                                                else MaterialTheme.colorScheme.surfaceVariant
+                                            ),
                                         contentAlignment = Alignment.Center
                                     ) {
                                         Icon(
                                             imageVector = Icons.Default.BugReport,
                                             contentDescription = null,
-                                            tint = PrimaryIndigo,
-                                            modifier = Modifier.size(22.dp)
+                                            tint = if (state.isDebugLogEnabled) PrimaryIndigo else MaterialTheme.colorScheme.onSurfaceVariant,
+                                            modifier = Modifier.size(24.dp)
                                         )
                                     }
                                     Spacer(modifier = Modifier.width(14.dp))
@@ -514,19 +525,57 @@ fun SettingsScreen(
                                             fontWeight = FontWeight.Bold
                                         )
                                         Text(
-                                            text = "Inspect on-device parser pipeline decisions & metrics",
+                                            text = if (state.isDebugLogEnabled) {
+                                                "Active • Capturing pipeline logs"
+                                            } else {
+                                                "Disabled • Zero logs captured"
+                                            },
                                             style = MaterialTheme.typography.bodySmall,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                            color = if (state.isDebugLogEnabled) {
+                                                AccentEmerald
+                                            } else {
+                                                MaterialTheme.colorScheme.onSurfaceVariant
+                                            },
+                                            fontWeight = if (state.isDebugLogEnabled) FontWeight.SemiBold else FontWeight.Normal
                                         )
                                     }
                                 }
+
+                                Switch(
+                                    checked = state.isDebugLogEnabled,
+                                    onCheckedChange = { viewModel.setDebugLogEnabled(it) }
+                                )
+                            }
+
+                            if (state.isDebugLogEnabled) {
+                                Spacer(modifier = Modifier.height(14.dp))
+                                Text(
+                                    text = "Inspect on-device parser decisions, regex extractions, and classification confidence scores. All data stays 100% on-device.",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                                Spacer(modifier = Modifier.height(12.dp))
                                 Button(
                                     onClick = onNavigateToDebugLog,
+                                    modifier = Modifier.fillMaxWidth(),
                                     colors = ButtonDefaults.buttonColors(containerColor = PrimaryIndigo),
-                                    shape = RoundedCornerShape(8.dp)
+                                    shape = RoundedCornerShape(10.dp)
                                 ) {
-                                    Text("Open")
+                                    Icon(
+                                        imageVector = Icons.Default.Visibility,
+                                        contentDescription = null,
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Text("Open Log Viewer")
                                 }
+                            } else {
+                                Spacer(modifier = Modifier.height(8.dp))
+                                Text(
+                                    text = "Toggle ON to enable recording and view debug logs. When turned off, no logs are taken.",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f)
+                                )
                             }
                         }
                     }
@@ -550,9 +599,9 @@ fun SettingsScreen(
                                 .clickable { viewModel.onVersionClicked() }
                                 .padding(horizontal = 12.dp, vertical = 6.dp)
                         )
-                        if (state.isDeveloperMode) {
+                        if (state.isDebugLogEnabled) {
                             Text(
-                                text = "Developer Mode Active",
+                                text = "Debug Logging Active",
                                 style = MaterialTheme.typography.labelSmall,
                                 color = PrimaryIndigo,
                                 fontWeight = FontWeight.Bold
