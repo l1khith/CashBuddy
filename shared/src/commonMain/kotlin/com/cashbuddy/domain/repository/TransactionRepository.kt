@@ -1,5 +1,6 @@
 package com.cashbuddy.domain.repository
 
+import com.cashbuddy.domain.model.DateRangeSummary
 import com.cashbuddy.domain.model.Transaction
 import com.cashbuddy.domain.model.TransactionStatus
 import kotlinx.coroutines.flow.Flow
@@ -24,7 +25,10 @@ interface TransactionRepository {
     fun getAll(): Flow<List<Transaction>>
     fun getById(id: Long): Flow<Transaction?>
     fun getPending(): Flow<List<Transaction>>
+    fun getRecent(limit: Long = 15): Flow<List<Transaction>>
     fun getByDateRange(start: Long, end: Long): Flow<List<Transaction>>
+    fun getByDateRangeWithLimit(start: Long, end: Long, limit: Long): Flow<List<Transaction>>
+    fun getSummaryByDateRange(start: Long, end: Long): Flow<DateRangeSummary>
     fun getByCategory(categoryId: Long): Flow<List<Transaction>>
     fun getMonthlySummary(): Flow<List<MonthlySummary>>
     fun getCategoryBreakdown(start: Long, end: Long): Flow<List<CategoryBreakdown>>
@@ -34,4 +38,5 @@ interface TransactionRepository {
     suspend fun deleteById(id: Long)
     fun getBalance(): Flow<Double>
     fun getAverageAmount(): Flow<Double>
+    fun getCount(): Flow<Long>
 }

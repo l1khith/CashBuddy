@@ -22,7 +22,7 @@ class DebugLogger(
         packageName: String? = raw.packageName,
         senderId: String? = raw.senderId
     ): String {
-        if (!config.enabled && !config.isEnabled()) return ""
+        if (!config.enabled || !config.isEnabled()) return ""
 
         val logId = "dbg_${raw.id}_${currentTimeMillis()}"
         val isRecording = config.isRecordingActive()

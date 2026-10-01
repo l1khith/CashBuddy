@@ -117,8 +117,9 @@ fun HomeScreen(
                 item {
                     BalanceHeaderCard(
                         totalBalance = state.balance,
-                        monthlyDebit = state.monthlyDebit,
-                        monthlyCredit = state.monthlyCredit
+                        monthlyDebit = state.periodDebit,
+                        monthlyCredit = state.periodCredit,
+                        selectedPeriod = state.selectedPeriod
                     )
                 }
 
@@ -194,12 +195,19 @@ fun HomeScreen(
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text(
-                            text = "Recent Activity",
-                            style = MaterialTheme.typography.titleLarge,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onBackground
-                        )
+                        Column {
+                            Text(
+                                text = "Today's Activity",
+                                style = MaterialTheme.typography.titleLarge,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onBackground
+                            )
+                            Text(
+                                text = "${state.periodTransactionCount} transactions today",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
                         Text(
                             text = "See All",
                             style = MaterialTheme.typography.labelLarge,
@@ -217,7 +225,7 @@ fun HomeScreen(
                     item {
                         EmptyStateView(
                             imageVector = Icons.AutoMirrored.Filled.ReceiptLong,
-                            title = "No activity recorded yet",
+                            title = "No activity for ${state.selectedPeriod.displayName.lowercase()}",
                             subtitle = "Transactions from bank and UPI notifications will appear here automatically.",
                             actionButtonText = "Add First Transaction",
                             onActionClick = { viewModel.onAddTransactionClicked() }

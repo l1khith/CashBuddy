@@ -38,3 +38,7 @@ UPDATE accounts SET name = ?, type = ?, number = ?, bank = ?, is_active = ?, sor
 
 deleteById:
 DELETE FROM accounts WHERE id = ?;
+
+getCount:
+SELECT COUNT(*) FROM accounts WHERE is_active = 1;
+

@@ -80,6 +80,19 @@ class SettingsRepositoryImpl(
         }
 
     override suspend fun setDeveloperMode(enabled: Boolean): Unit = withContext(dispatcher) {
-        queries.set("developer_mode", enabled.toString(), com.cashbuddy.platform.currentTimeMillis())
+        val now = com.cashbuddy.platform.currentTimeMillis()
+        queries.set("developer_mode", enabled.toString(), now)
+        queries.set("debug_log_viewer_enabled", enabled.toString(), now)
+    }
+
+    override fun getDebugLogEnabled(): Flow<Boolean> =
+        queries.get("debug_log_viewer_enabled").asFlow().mapToOneOrNull(dispatcher).map { record ->
+            record?.value_?.toBooleanStrictOrNull() ?: false
+        }
+
+    override suspend fun setDebugLogEnabled(enabled: Boolean): Unit = withContext(dispatcher) {
+        val now = com.cashbuddy.platform.currentTimeMillis()
+        queries.set("debug_log_viewer_enabled", enabled.toString(), now)
+        queries.set("developer_mode", enabled.toString(), now)
     }
 }

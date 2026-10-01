@@ -16,4 +16,6 @@ interface SettingsRepository {
     suspend fun setBiometricEnabled(enabled: Boolean)
     fun getDeveloperMode(): Flow<Boolean>
     suspend fun setDeveloperMode(enabled: Boolean)
+    fun getDebugLogEnabled(): Flow<Boolean>
+    suspend fun setDebugLogEnabled(enabled: Boolean)
 }

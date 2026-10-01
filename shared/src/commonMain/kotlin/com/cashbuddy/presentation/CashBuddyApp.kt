@@ -53,7 +53,7 @@ fun CashBuddyApp(
         val currentDestination = navBackStackEntry?.destination
 
         val homeViewModel: HomeViewModel = koinViewModel()
-        val homeState by homeViewModel.uiState.collectAsStateWithLifecycle()
+        val unreviewedCount by homeViewModel.unreviewedCount.collectAsStateWithLifecycle()
 
         val topLevelRoutes = listOf("Home", "Transactions", "Stats", "Settings")
 
@@ -109,7 +109,7 @@ fun CashBuddyApp(
                         onAddClick = {
                             navController.navigate(ScreenRoute.AddTransaction())
                         },
-                        unreviewedCount = homeState.unreviewedCount,
+                        unreviewedCount = unreviewedCount,
                         onNavigateToReview = {
                             navController.navigate(ScreenRoute.ReviewInbox)
                         }

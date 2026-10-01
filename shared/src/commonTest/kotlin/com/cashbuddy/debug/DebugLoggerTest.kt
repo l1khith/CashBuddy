@@ -137,7 +137,16 @@ class DebugLoggerTest {
         override fun getAll(): Flow<List<Transaction>> = flowOf(txs)
         override fun getById(id: Long): Flow<Transaction?> = flowOf(txs.find { it.id == id })
         override fun getPending(): Flow<List<Transaction>> = flowOf(txs.filter { it.status == TransactionStatus.PENDING })
+        override fun getRecent(limit: Long): Flow<List<Transaction>> = flowOf(txs.takeLast(limit.toInt()))
         override fun getByDateRange(start: Long, end: Long): Flow<List<Transaction>> = flowOf(txs.filter { it.timestamp in start..end })
+        override fun getByDateRangeWithLimit(start: Long, end: Long, limit: Long): Flow<List<Transaction>> =
+            flowOf(txs.filter { it.timestamp in start..end }.take(limit.toInt()))
+        override fun getSummaryByDateRange(start: Long, end: Long): Flow<com.cashbuddy.domain.model.DateRangeSummary> {
+            val inRange = txs.filter { it.timestamp in start..end }
+            val debit = inRange.filter { it.type == TransactionType.DEBIT && it.status == TransactionStatus.CONFIRMED }.sumOf { it.amount }
+            val credit = inRange.filter { it.type == TransactionType.CREDIT && it.status == TransactionStatus.CONFIRMED }.sumOf { it.amount }
+            return flowOf(com.cashbuddy.domain.model.DateRangeSummary(debit, credit, inRange.size.toLong()))
+        }
         override fun getByCategory(categoryId: Long): Flow<List<Transaction>> = flowOf(txs.filter { it.categoryId == categoryId })
         override fun getMonthlySummary(): Flow<List<MonthlySummary>> = flowOf(emptyList())
         override fun getCategoryBreakdown(start: Long, end: Long): Flow<List<CategoryBreakdown>> = flowOf(emptyList())
@@ -151,6 +160,7 @@ class DebugLoggerTest {
         override suspend fun deleteById(id: Long) {}
         override fun getBalance(): Flow<Double> = flowOf(0.0)
         override fun getAverageAmount(): Flow<Double> = flowOf(0.0)
+        override fun getCount(): Flow<Long> = flowOf(txs.size.toLong())
     }
 
     private class TestCategoryRepository : CategoryRepository {
@@ -171,6 +181,7 @@ class DebugLoggerTest {
         override suspend fun updateBalance(id: Long, balance: Double) {}
         override suspend fun deleteById(id: Long) {}
         override suspend fun seedDefaults(currentTimestamp: Long) {}
+        override fun getCount(): Flow<Long> = flowOf(accounts.size.toLong())
     }
 
     @Test
@@ -241,6 +252,10 @@ class DebugLoggerTest {
         // 4. Release build with developer mode turned off -> disabled
         configRelease.developerModeOverride = false
         assertFalse(configRelease.enabled)
+
+        // 5. Debug build with developer mode turned off via toggle -> disabled (no logs taken)
+        configDebug.developerModeOverride = false
+        assertFalse(configDebug.enabled)
     }
 
     @Test
@@ -263,6 +278,31 @@ class DebugLoggerTest {
             val logId = logger.captureRaw(raw)
             assertEquals("", logId)
             assertEquals(0L, repo.count())
+        }
+    }
+
+    @Test
+    fun testDebugLoggerCaptureRawNoOpWhenDebugBuildDisabledByToggle() {
+        runBlocking {
+            val repo = TestDebugLogRepository()
+            val config = DebugConfig(isDebugBuild = true)
+            // User toggled debug log off
+            config.developerModeOverride = false
+            val logger = DebugLogger(repo, config)
+
+            val raw = RawMessage(
+                id = "msg-debug-off",
+                sourceType = SourceType.NOTIFICATION,
+                packageName = "com.sample.bank",
+                senderId = "SAMPLE-BANK",
+                title = "Transaction Alert",
+                text = "Rs 1500 debited from A/c XX9999",
+                timestamp = 1727000000000L
+            )
+
+            val logId = logger.captureRaw(raw)
+            assertEquals("", logId, "Should return empty log ID when debug logging is toggled OFF")
+            assertEquals(0L, repo.count(), "Zero logs must be taken when debug logging is toggled OFF")
         }
     }
 

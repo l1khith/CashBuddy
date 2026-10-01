@@ -17,6 +17,7 @@ import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import androidx.compose.runtime.Immutable
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
 @Immutable
@@ -30,7 +31,8 @@ data class SettingsUiState(
     val rawTrainingSamplesCount: Long = 0,
     val userCorrectionsCount: Long = 0,
     val isDeveloperMode: Boolean = false,
-    val isDebugLogVisible: Boolean = false,
+    val isDebugLogEnabled: Boolean = false,
+    val isDebugLogVisible: Boolean = true,
     val isLoading: Boolean = true
 )
 
@@ -56,26 +58,26 @@ class SettingsViewModel(
         viewModelScope.launch {
             combine(
                 settingsRepository.getSettings(),
-                transactionRepository.getAll(),
-                accountRepository.getAll(),
+                transactionRepository.getCount(),
+                accountRepository.getCount(),
                 trainingDataRepository.getStats(),
-                settingsRepository.getDeveloperMode()
-            ) { settings, txs, accounts, stats, devMode ->
+                settingsRepository.getDebugLogEnabled()
+            ) { settings, txCount, accCount, stats, debugLogEnabled ->
                 if (debugConfig != null) {
-                    debugConfig.cachedDeveloperMode = devMode
+                    debugConfig.cachedDeveloperMode = debugLogEnabled
                 }
-                val isDebugVisible = debugConfig?.enabled ?: devMode
                 SettingsUiState(
                     notificationEnabled = settings.notificationsEnabled,
                     autoConfirmThreshold = settings.autoConfirmThreshold,
                     autoConfirmMinConfidence = settings.minConfidenceThreshold,
                     biometricLockEnabled = settings.biometricEnabled,
-                    totalTransactionsCount = txs.size,
-                    totalAccountsCount = accounts.size,
+                    totalTransactionsCount = txCount.toInt(),
+                    totalAccountsCount = accCount.toInt(),
                     rawTrainingSamplesCount = stats.rawCount,
                     userCorrectionsCount = stats.correctionsCount,
-                    isDeveloperMode = devMode,
-                    isDebugLogVisible = isDebugVisible,
+                    isDeveloperMode = debugLogEnabled,
+                    isDebugLogEnabled = debugLogEnabled,
+                    isDebugLogVisible = true,
                     isLoading = false
                 )
             }.collect {
@@ -88,16 +90,22 @@ class SettingsViewModel(
         versionTapCount++
         if (versionTapCount >= 7) {
             versionTapCount = 0
-            viewModelScope.launch {
-                val current = _uiState.value.isDeveloperMode
-                val newMode = !current
-                if (debugConfig != null) {
-                    debugConfig.updateDeveloperMode(newMode)
-                } else {
-                    settingsRepository.setDeveloperMode(newMode)
-                }
-                _messageEffect.emit(if (newMode) "Developer mode enabled" else "Developer mode disabled")
+            val newMode = !_uiState.value.isDebugLogEnabled
+            setDebugLogEnabled(newMode)
+        }
+    }
+
+    fun setDebugLogEnabled(enabled: Boolean) {
+        viewModelScope.launch {
+            if (debugConfig != null) {
+                debugConfig.updateDeveloperMode(enabled)
+            } else {
+                settingsRepository.setDebugLogEnabled(enabled)
             }
+            _messageEffect.emit(
+                if (enabled) "Debug logging enabled • Capturing parser logs"
+                else "Debug logging disabled • Zero logs recorded"
+            )
         }
     }
 
@@ -177,10 +185,9 @@ class SettingsViewModel(
     fun clearAllData() {
         viewModelScope.launch {
             val allTxs = _uiState.value.totalTransactionsCount
-            transactionRepository.getAll().collect { list ->
-                list.forEach { tx ->
-                    transactionRepository.deleteById(tx.id)
-                }
+            val list = transactionRepository.getAll().first()
+            list.forEach { tx ->
+                transactionRepository.deleteById(tx.id)
             }
             _messageEffect.emit("All data deleted ($allTxs transactions)")
         }

@@ -58,10 +58,10 @@ class PersonalizationViewModel(
                 trainingDataRepository.getAllCorrections(),
                 trainingDataRepository.getAllRaw(),
                 merchantRuleRepository.getAll(),
-                transactionRepository.getAll()
-            ) { stats, corrections, rawSamples, rules, txs ->
+                transactionRepository.getCount()
+            ) { stats, corrections, rawSamples, rules, txCount ->
                 // Calculate empirical accuracy
-                val total = txs.size
+                val total = txCount.toInt()
                 val numCorrections = corrections.size
                 val accuracy = if (total > 0) {
                     val acc = ((total - numCorrections).toDouble() / total * 100).toInt()

@@ -5,6 +5,7 @@ import app.cash.sqldelight.coroutines.mapToList
 import app.cash.sqldelight.coroutines.mapToOne
 import app.cash.sqldelight.coroutines.mapToOneOrNull
 import com.cashbuddy.db.AppDatabase
+import com.cashbuddy.domain.model.DateRangeSummary
 import com.cashbuddy.domain.model.Transaction
 import com.cashbuddy.domain.model.TransactionStatus
 import com.cashbuddy.domain.model.TransactionType
@@ -14,6 +15,7 @@ import com.cashbuddy.domain.repository.TransactionRepository
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.withContext
 
 class TransactionRepositoryImpl(
@@ -24,59 +26,34 @@ class TransactionRepositoryImpl(
     private val queries = db.transactionsQueries
 
     override fun getAll(): Flow<List<Transaction>> =
-        queries.getAll(::mapTransaction).asFlow().mapToList(dispatcher)
+        queries.getAll(::mapTransaction).asFlow().mapToList(dispatcher).distinctUntilChanged()
 
     override fun getById(id: Long): Flow<Transaction?> =
-        queries.getById(id, ::mapTransaction).asFlow().mapToOneOrNull(dispatcher)
+        queries.getById(id, ::mapTransaction).asFlow().mapToOneOrNull(dispatcher).distinctUntilChanged()
 
     override fun getPending(): Flow<List<Transaction>> =
-        queries.getPending(::mapTransaction).asFlow().mapToList(dispatcher)
+        queries.getPending(::mapTransaction).asFlow().mapToList(dispatcher).distinctUntilChanged()
+
+    override fun getRecent(limit: Long): Flow<List<Transaction>> =
+        queries.getRecent(limit, ::mapTransaction).asFlow().mapToList(dispatcher).distinctUntilChanged()
 
     override fun getByDateRange(start: Long, end: Long): Flow<List<Transaction>> =
-        queries.getByDateRange(start, end) { id, amount, type, currency, merchant, categoryId, accountId, sourceApp, rawText, confidence, status, notes, timestamp, createdAt, updatedAt, categoryName, categoryColor ->
-            Transaction(
-                id = id,
-                amount = amount,
-                type = TransactionType.valueOf(type),
-                currency = currency,
-                merchant = merchant,
-                categoryId = categoryId,
-                accountId = accountId,
-                sourceApp = sourceApp,
-                rawText = rawText,
-                confidence = confidence.toFloat(),
-                status = TransactionStatus.valueOf(status),
-                notes = notes,
-                timestamp = timestamp,
-                createdAt = createdAt,
-                updatedAt = updatedAt,
-                categoryName = categoryName,
-                categoryColor = categoryColor
+        queries.getByDateRange(start, end, ::mapTransaction).asFlow().mapToList(dispatcher).distinctUntilChanged()
+
+    override fun getByDateRangeWithLimit(start: Long, end: Long, limit: Long): Flow<List<Transaction>> =
+        queries.getByDateRangeWithLimit(start, end, limit, ::mapTransaction).asFlow().mapToList(dispatcher).distinctUntilChanged()
+
+    override fun getSummaryByDateRange(start: Long, end: Long): Flow<DateRangeSummary> =
+        queries.getSummaryByDateRange(start, end) { totalDebit, totalCredit, count ->
+            DateRangeSummary(
+                totalDebit = totalDebit,
+                totalCredit = totalCredit,
+                transactionCount = count
             )
-        }.asFlow().mapToList(dispatcher)
+        }.asFlow().mapToOne(dispatcher).distinctUntilChanged()
 
     override fun getByCategory(categoryId: Long): Flow<List<Transaction>> =
-        queries.getByCategory(categoryId) { id, amount, type, currency, merchant, categoryId, accountId, sourceApp, rawText, confidence, status, notes, timestamp, createdAt, updatedAt, categoryName, categoryColor ->
-            Transaction(
-                id = id,
-                amount = amount,
-                type = TransactionType.valueOf(type),
-                currency = currency,
-                merchant = merchant,
-                categoryId = categoryId,
-                accountId = accountId,
-                sourceApp = sourceApp,
-                rawText = rawText,
-                confidence = confidence.toFloat(),
-                status = TransactionStatus.valueOf(status),
-                notes = notes,
-                timestamp = timestamp,
-                createdAt = createdAt,
-                updatedAt = updatedAt,
-                categoryName = categoryName,
-                categoryColor = categoryColor
-            )
-        }.asFlow().mapToList(dispatcher)
+        queries.getByCategory(categoryId, ::mapTransaction).asFlow().mapToList(dispatcher).distinctUntilChanged()
 
     override fun getMonthlySummary(): Flow<List<MonthlySummary>> =
         queries.getMonthlySummary { month, totalDebit, totalCredit, transactionCount ->
@@ -143,6 +120,9 @@ class TransactionRepositoryImpl(
 
     override fun getBalance(): Flow<Double> =
         queries.getBalance().asFlow().mapToOne(dispatcher)
+
+    override fun getCount(): Flow<Long> =
+        queries.getCount().asFlow().mapToOne(dispatcher).distinctUntilChanged()
 
     override fun getAverageAmount(): Flow<Double> =
         queries.getAll(::mapTransaction).asFlow().mapToList(dispatcher).let { flow ->

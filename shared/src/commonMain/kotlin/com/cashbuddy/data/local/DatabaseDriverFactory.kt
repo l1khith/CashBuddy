@@ -1,6 +1,7 @@
 // NO-NETWORK
 package com.cashbuddy.data.local
 
+import app.cash.sqldelight.db.QueryResult
 import app.cash.sqldelight.db.SqlDriver
 import com.cashbuddy.db.AppDatabase
 
@@ -9,6 +10,12 @@ expect class DatabaseDriverFactory {
 }
 
 fun createDatabase(driver: SqlDriver): AppDatabase {
+    // Enable performance optimizations for SQLite & SQLCipher
+    executeQuietly(driver, "PRAGMA journal_mode = WAL;")
+    executeQuietly(driver, "PRAGMA synchronous = NORMAL;")
+    executeQuietly(driver, "PRAGMA foreign_keys = ON;")
+    executeQuietly(driver, "PRAGMA temp_store = MEMORY;")
+    executeQuietly(driver, "PRAGMA cache_size = -8000;") // 8 MB cache
     ensureSchema(driver)
     return AppDatabase(driver)
 }
@@ -22,6 +29,24 @@ private fun executeQuietly(driver: SqlDriver, sql: String) {
 }
 
 fun ensureSchema(driver: SqlDriver) {
+    // Fast path: if critical tables are already present, avoid re-executing 24 DDL operations
+    val alreadyCreated = try {
+        driver.executeQuery(
+            identifier = null,
+            sql = "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name IN ('transactions', 'debug_log');",
+            mapper = { cursor ->
+                val count = if (cursor.next().value) cursor.getLong(0) ?: 0L else 0L
+                QueryResult.Value(count >= 2L)
+            },
+            parameters = 0
+        ).value
+    } catch (_: Throwable) {
+        false
+    }
+
+    if (alreadyCreated) {
+        return
+    }
     val statements = listOf(
         """
         CREATE TABLE IF NOT EXISTS debug_log (
@@ -214,6 +239,7 @@ fun ensureSchema(driver: SqlDriver) {
         "CREATE INDEX IF NOT EXISTS idx_transactions_account ON transactions(account_id)",
         "CREATE INDEX IF NOT EXISTS idx_transactions_status ON transactions(status)",
         "CREATE INDEX IF NOT EXISTS idx_transactions_merchant ON transactions(merchant)",
+        "CREATE INDEX IF NOT EXISTS idx_transactions_summary ON transactions(status, type, timestamp)",
         """
         CREATE TRIGGER IF NOT EXISTS update_account_balance_debit
         AFTER INSERT ON transactions

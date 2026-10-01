@@ -56,7 +56,7 @@ import com.cashbuddy.presentation.theme.IncomeEmerald
 import androidx.compose.foundation.border
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
-import androidx.compose.ui.draw.scale
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.style.TextOverflow
 import com.cashbuddy.presentation.theme.AccentEmerald
 import com.cashbuddy.presentation.theme.CashBuddyTypography
@@ -80,7 +80,6 @@ fun TransactionCard(
     
     val interactionSource = remember { MutableInteractionSource() }
     val isPressed by interactionSource.collectIsPressedAsState()
-    val scale = if (isPressed) 0.98f else 1.0f
 
     val borderModifier = if (isPending) {
         Modifier.border(
@@ -98,7 +97,11 @@ fun TransactionCard(
         modifier = modifier
             .fillMaxWidth()
             .height(72.dp)
-            .scale(scale)
+            .graphicsLayer {
+                val s = if (isPressed) 0.98f else 1.0f
+                scaleX = s
+                scaleY = s
+            }
             .then(borderModifier),
         shape = RadiusLarge,
         colors = CardDefaults.cardColors(
