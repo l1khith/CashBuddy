@@ -17,6 +17,7 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
@@ -29,6 +30,14 @@ class HomeViewModel(
     private val getDateRangeSummaryUseCase: GetDateRangeSummaryUseCase,
     private val getTransactionsByDateRangeWithLimitUseCase: GetTransactionsByDateRangeWithLimitUseCase
 ) : ViewModel() {
+
+    val unreviewedCount: StateFlow<Int> = getUnreviewedCountUseCase()
+        .distinctUntilChanged()
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = 0
+        )
 
     private val _selectedPeriod = MutableStateFlow(TimePeriod.TODAY)
 

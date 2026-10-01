@@ -38,4 +38,5 @@ interface TransactionRepository {
     suspend fun deleteById(id: Long)
     fun getBalance(): Flow<Double>
     fun getAverageAmount(): Flow<Double>
+    fun getCount(): Flow<Long>
 }

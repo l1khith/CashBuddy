@@ -13,4 +13,5 @@ interface AccountRepository {
     suspend fun update(account: Account)
     suspend fun deleteById(id: Long)
     suspend fun seedDefaults(currentTimestamp: Long)
+    fun getCount(): Flow<Long>
 }

@@ -18,6 +18,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.stateIn
@@ -52,13 +53,14 @@ class TransactionListViewModel(
     // Reactively executes SQL query according to selected date range filter
     private val transactionsFlow = combine(_selectedPeriod, _customDateRange) { period, customRange ->
         DateRangeHelper.calculateDateRange(period, customRange?.startTimestamp, customRange?.endTimestamp) to period
-    }.flatMapLatest { (range, period) ->
+    }.distinctUntilChanged()
+    .flatMapLatest { (range, period) ->
         if (period == TimePeriod.ALL_TIME) {
             transactionRepository.getAll()
         } else {
             transactionRepository.getByDateRange(range.startTimestamp, range.endTimestamp)
         }
-    }
+    }.distinctUntilChanged()
 
     private data class FilterCriteria(
         val query: String,
@@ -76,11 +78,11 @@ class TransactionListViewModel(
         _customDateRange
     ) { query, type, catId, period, customRange ->
         FilterCriteria(query, type, catId, period, customRange)
-    }
+    }.distinctUntilChanged()
 
     val uiState: StateFlow<TransactionListUiState> = combine(
         transactionsFlow,
-        categoryRepository.getAll(),
+        categoryRepository.getAll().distinctUntilChanged(),
         filterCriteriaFlow
     ) { allTxs, allCats, criteria ->
         val trimmedQuery = criteria.query.trim()

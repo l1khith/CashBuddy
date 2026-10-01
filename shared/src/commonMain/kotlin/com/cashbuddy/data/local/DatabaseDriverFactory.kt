@@ -1,6 +1,7 @@
 // NO-NETWORK
 package com.cashbuddy.data.local
 
+import app.cash.sqldelight.db.QueryResult
 import app.cash.sqldelight.db.SqlDriver
 import com.cashbuddy.db.AppDatabase
 
@@ -28,6 +29,24 @@ private fun executeQuietly(driver: SqlDriver, sql: String) {
 }
 
 fun ensureSchema(driver: SqlDriver) {
+    // Fast path: if critical tables are already present, avoid re-executing 24 DDL operations
+    val alreadyCreated = try {
+        driver.executeQuery(
+            identifier = null,
+            sql = "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name IN ('transactions', 'debug_log');",
+            mapper = { cursor ->
+                val count = if (cursor.next().value) cursor.getLong(0) ?: 0L else 0L
+                QueryResult.Value(count >= 2L)
+            },
+            parameters = 0
+        ).value
+    } catch (_: Throwable) {
+        false
+    }
+
+    if (alreadyCreated) {
+        return
+    }
     val statements = listOf(
         """
         CREATE TABLE IF NOT EXISTS debug_log (

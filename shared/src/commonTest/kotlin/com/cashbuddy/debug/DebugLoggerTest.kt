@@ -160,6 +160,7 @@ class DebugLoggerTest {
         override suspend fun deleteById(id: Long) {}
         override fun getBalance(): Flow<Double> = flowOf(0.0)
         override fun getAverageAmount(): Flow<Double> = flowOf(0.0)
+        override fun getCount(): Flow<Long> = flowOf(txs.size.toLong())
     }
 
     private class TestCategoryRepository : CategoryRepository {
@@ -180,6 +181,7 @@ class DebugLoggerTest {
         override suspend fun updateBalance(id: Long, balance: Double) {}
         override suspend fun deleteById(id: Long) {}
         override suspend fun seedDefaults(currentTimestamp: Long) {}
+        override fun getCount(): Flow<Long> = flowOf(accounts.size.toLong())
     }
 
     @Test

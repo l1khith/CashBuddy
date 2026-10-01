@@ -187,3 +187,7 @@ FROM transactions;
 
 lastInsertRowId:
 SELECT last_insert_rowid();
+
+getCount:
+SELECT COUNT(*) FROM transactions;
+

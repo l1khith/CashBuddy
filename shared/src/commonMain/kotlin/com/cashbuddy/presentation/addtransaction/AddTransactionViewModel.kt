@@ -58,7 +58,7 @@ class AddTransactionViewModel(
             combine(
                 categoryRepository.getAll(),
                 accountRepository.getAll(),
-                transactionRepository.getAll()
+                transactionRepository.getRecent(limit = 50)
             ) { cats, accs, txs ->
                 allTransactions = txs
 

@@ -121,6 +121,9 @@ class TransactionRepositoryImpl(
     override fun getBalance(): Flow<Double> =
         queries.getBalance().asFlow().mapToOne(dispatcher)
 
+    override fun getCount(): Flow<Long> =
+        queries.getCount().asFlow().mapToOne(dispatcher).distinctUntilChanged()
+
     override fun getAverageAmount(): Flow<Double> =
         queries.getAll(::mapTransaction).asFlow().mapToList(dispatcher).let { flow ->
             kotlinx.coroutines.flow.flow {
