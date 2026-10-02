@@ -243,14 +243,16 @@ private fun AnimatedBalanceText(
 ) {
     val animatedBalance by animateFloatAsState(
         targetValue = balance.toFloat(),
-        animationSpec = tween(800, easing = CashBuddyEasing.EaseOutQuart),
+        animationSpec = tween(600, easing = CashBuddyEasing.EaseOutQuart),
         label = "balance"
     )
 
-    val formattedBalance = if (isVisible) {
-        "₹" + formatCurrency(animatedBalance.toDouble())
-    } else {
-        "₹ ••••••"
+    val formattedBalance = remember(animatedBalance, isVisible) {
+        if (isVisible) {
+            "₹${formatCurrency(animatedBalance.toDouble())}"
+        } else {
+            "₹ ••••••"
+        }
     }
 
     Text(

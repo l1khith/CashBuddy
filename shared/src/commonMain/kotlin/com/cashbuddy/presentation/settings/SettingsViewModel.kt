@@ -32,6 +32,7 @@ data class SettingsUiState(
     val isDeveloperMode: Boolean = false,
     val isDebugLogEnabled: Boolean = false,
     val isDebugLogVisible: Boolean = true,
+    val preferredCurrency: String = "INR",
     val isLoading: Boolean = true
 )
 
@@ -76,6 +77,7 @@ class SettingsViewModel(
                     isDeveloperMode = debugLogEnabled,
                     isDebugLogEnabled = debugLogEnabled,
                     isDebugLogVisible = true,
+                    preferredCurrency = settings.preferredCurrency,
                     isLoading = false
                 )
             }.collect {
@@ -116,6 +118,12 @@ class SettingsViewModel(
     fun setAutoConfirmThreshold(threshold: Double) {
         viewModelScope.launch {
             settingsRepository.setAutoConfirmThreshold(threshold)
+        }
+    }
+
+    fun setPreferredCurrency(currencyCode: String) {
+        viewModelScope.launch {
+            settingsRepository.setPreferredCurrency(currencyCode)
         }
     }
 

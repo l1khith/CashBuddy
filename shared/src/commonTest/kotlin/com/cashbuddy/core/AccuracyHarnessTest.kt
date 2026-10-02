@@ -8,7 +8,6 @@ import com.cashbuddy.core.prob.ProbabilisticClassifier
 import com.cashbuddy.core.prob.RawMessage
 import com.cashbuddy.core.prob.SourceDetector
 import com.cashbuddy.core.prob.SourceType
-import java.io.File
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
@@ -31,14 +30,7 @@ class AccuracyHarnessTest {
     private val policy = PolicyEngine()
 
     private fun loadDataset(): List<LabeledSample> {
-        var current = File(".").canonicalFile
-        while (current.parentFile != null && !File(current, "settings.gradle.kts").exists()) {
-            current = current.parentFile!!
-        }
-        val csvFile = File(current, "docs/accuracy/labelled_v1.csv")
-        assertTrue(csvFile.exists(), "labelled_v1.csv must exist at ${csvFile.path}")
-
-        val lines = csvFile.readLines().drop(1).filter { it.isNotBlank() }
+        val lines = LABELLED_V1_CSV.lines().drop(1).filter { it.isNotBlank() }
         val samples = mutableListOf<LabeledSample>()
 
         for (line in lines) {

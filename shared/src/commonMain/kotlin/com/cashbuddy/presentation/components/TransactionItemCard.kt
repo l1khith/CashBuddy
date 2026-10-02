@@ -54,9 +54,6 @@ import com.cashbuddy.presentation.theme.ExpenseCrimson
 import com.cashbuddy.presentation.theme.IncomeEmerald
 
 import androidx.compose.foundation.border
-import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.interaction.collectIsPressedAsState
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.style.TextOverflow
 import com.cashbuddy.presentation.theme.AccentEmerald
 import com.cashbuddy.presentation.theme.CashBuddyTypography
@@ -77,9 +74,6 @@ fun TransactionCard(
     val categoryColor = getCategoryColor(categoryName)
     val isDebit = transaction.type == TransactionType.DEBIT
     val isPending = transaction.status == TransactionStatus.PENDING
-    
-    val interactionSource = remember { MutableInteractionSource() }
-    val isPressed by interactionSource.collectIsPressedAsState()
 
     val borderModifier = if (isPending) {
         Modifier.border(
@@ -93,15 +87,9 @@ fun TransactionCard(
 
     Card(
         onClick = onClick,
-        interactionSource = interactionSource,
         modifier = modifier
             .fillMaxWidth()
             .height(72.dp)
-            .graphicsLayer {
-                val s = if (isPressed) 0.98f else 1.0f
-                scaleX = s
-                scaleY = s
-            }
             .then(borderModifier),
         shape = RadiusLarge,
         colors = CardDefaults.cardColors(
@@ -158,15 +146,15 @@ fun TransactionCard(
 
             // Amount & Status Badge
             val amountColor = if (isDebit) MaterialTheme.colorScheme.onSurface else AccentEmerald
-            val prefix = if (isDebit) "-₹" else "+₹"
-            val formattedAmount = formatCurrency(transaction.amount)
+            val sign = if (isDebit) "-" else "+"
+            val formattedAmount = formatCurrency(transaction.amount, transaction.currency, includeSymbol = true)
 
             Column(
                 horizontalAlignment = Alignment.End,
                 verticalArrangement = Arrangement.Center
             ) {
                 Text(
-                    text = "$prefix$formattedAmount",
+                    text = "$sign$formattedAmount",
                     style = CashBuddyTypography.titleLarge,
                     color = amountColor,
                     fontWeight = FontWeight.SemiBold
@@ -196,45 +184,49 @@ fun TransactionItemCard(
 }
 
 private fun getCategoryIcon(categoryName: String, isDebit: Boolean): ImageVector {
-    val lower = categoryName.lowercase()
-    return when {
-        lower.contains("food") || lower.contains("dining") || lower.contains("restaurant") -> Icons.Default.Restaurant
-        lower.contains("transport") || lower.contains("car") || lower.contains("auto") -> Icons.Default.DirectionsCar
-        lower.contains("shopping") || lower.contains("store") -> Icons.Default.ShoppingBag
-        lower.contains("bill") || lower.contains("utilit") || lower.contains("recharge") -> Icons.Default.Receipt
-        lower.contains("entertainment") || lower.contains("movie") || lower.contains("ott") -> Icons.Default.Movie
-        lower.contains("health") || lower.contains("medical") || lower.contains("pharm") -> Icons.Default.LocalHospital
-        lower.contains("education") || lower.contains("course") || lower.contains("fee") -> Icons.Default.School
-        lower.contains("housing") || lower.contains("rent") -> Icons.Default.Home
-        lower.contains("insurance") -> Icons.Default.Security
-        lower.contains("invest") -> Icons.AutoMirrored.Filled.TrendingUp
-        lower.contains("salary") -> Icons.Default.AccountBalance
-        lower.contains("refund") -> Icons.Default.Replay
-        lower.contains("gift") -> Icons.Default.CardGiftcard
-        isDebit -> Icons.Default.ArrowDownward
-        else -> Icons.Default.ArrowUpward
+    return when (categoryName) {
+        "Food", "Food & Dining", "Dining", "Restaurant" -> Icons.Default.Restaurant
+        "Transport", "Transportation", "Travel", "Cab", "Fuel" -> Icons.Default.DirectionsCar
+        "Shopping", "Groceries", "Retail" -> Icons.Default.ShoppingBag
+        "Bills", "Bills & Utilities", "Utilities", "Recharge" -> Icons.Default.Receipt
+        "Entertainment", "Movies", "OTT" -> Icons.Default.Movie
+        "Health", "Healthcare", "Medical", "Pharmacy" -> Icons.Default.LocalHospital
+        "Education", "Learning", "Courses" -> Icons.Default.School
+        "Housing", "Rent", "Housing & Rent" -> Icons.Default.Home
+        "Insurance" -> Icons.Default.Security
+        "Investments", "Investment", "Stocks", "Mutual Funds" -> Icons.AutoMirrored.Filled.TrendingUp
+        "Salary" -> Icons.Default.AccountBalance
+        "Refund" -> Icons.Default.Replay
+        "Gift" -> Icons.Default.CardGiftcard
+        else -> {
+            val lower = categoryName.lowercase()
+            when {
+                lower.contains("food") || lower.contains("dining") || lower.contains("restaurant") -> Icons.Default.Restaurant
+                lower.contains("transport") || lower.contains("car") || lower.contains("auto") -> Icons.Default.DirectionsCar
+                lower.contains("shopping") || lower.contains("store") -> Icons.Default.ShoppingBag
+                lower.contains("bill") || lower.contains("utilit") || lower.contains("recharge") -> Icons.Default.Receipt
+                lower.contains("entertainment") || lower.contains("movie") || lower.contains("ott") -> Icons.Default.Movie
+                lower.contains("health") || lower.contains("medical") || lower.contains("pharm") -> Icons.Default.LocalHospital
+                lower.contains("education") || lower.contains("course") || lower.contains("fee") -> Icons.Default.School
+                lower.contains("housing") || lower.contains("rent") -> Icons.Default.Home
+                lower.contains("insurance") -> Icons.Default.Security
+                lower.contains("invest") -> Icons.AutoMirrored.Filled.TrendingUp
+                lower.contains("salary") -> Icons.Default.AccountBalance
+                lower.contains("refund") -> Icons.Default.Replay
+                lower.contains("gift") -> Icons.Default.CardGiftcard
+                isDebit -> Icons.Default.ArrowDownward
+                else -> Icons.Default.ArrowUpward
+            }
+        }
     }
 }
 
-fun formatCurrency(amount: Double): String {
-    val absAmount = kotlin.math.abs(amount)
-    return if (absAmount == absAmount.toLong().toDouble()) {
-        val longVal = absAmount.toLong()
-        val str = longVal.toString()
-        // Format Indian number system (e.g. 1,24,500)
-        if (str.length > 3) {
-            val lastThree = str.substring(str.length - 3)
-            val rest = str.substring(0, str.length - 3)
-            val restFormatted = rest.reversed().chunked(2).joinToString(",").reversed()
-            "$restFormatted,$lastThree"
-        } else {
-            str
-        }
-    } else {
-        val cents = ((absAmount * 100).toLong() % 100).toString().padStart(2, '0')
-        val whole = formatCurrency(absAmount.toLong().toDouble())
-        "$whole.$cents"
-    }
+fun formatCurrency(
+    amount: Double,
+    currencyCode: String? = null,
+    includeSymbol: Boolean = false
+): String {
+    return com.cashbuddy.domain.model.CurrencyRegistry.format(amount, currencyCode, includeSymbol)
 }
 
 fun formatTimestamp(timestamp: Long): String {

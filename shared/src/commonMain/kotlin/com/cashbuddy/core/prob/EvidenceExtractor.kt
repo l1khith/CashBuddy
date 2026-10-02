@@ -11,22 +11,24 @@ class EvidenceExtractor(
         private val CREDIT_VERBS = Regex("""(?i)\b(credited|deposited|received|refunded)\b""")
         private val TRANSACTION_VERBS = Regex("""(?i)\b(debited|withdrawn|spent|paid|sent|deducted|transferred|charged|credited|deposited|received|refunded|payment|txn|transaction)\b""")
 
+        private const val CURR = """(?:₹|Rs[.:]?|INR|[$€£¥]|USD|EUR|GBP|CAD|AUD|AED|SGD|JPY)"""
+
         private val FORBIDDEN_SHAPES = listOf(
-            // "₹600 off", "Rs.500 OFF", "Rs 500 off"
-            Regex("""(?:₹|Rs[.:]?|INR)\s*\d[\d,.]*[kKlL]?\s*off\b""", RegexOption.IGNORE_CASE),
-            // "up to ₹600", "upto Rs.500"
-            Regex("""\b(?:up\s*to|upto)\s*(?:₹|Rs[.:]?|INR)\s*\d""", RegexOption.IGNORE_CASE),
+            // "₹600 off", "$600 off", "Rs.500 OFF", "Rs 500 off"
+            Regex("""$CURR\s*\d[\d,.]*[kKlL]?\s*off\b""", RegexOption.IGNORE_CASE),
+            // "up to ₹600", "up to $600", "upto Rs.500"
+            Regex("""\b(?:up\s*to|upto)\s*$CURR\s*\d""", RegexOption.IGNORE_CASE),
             // "₹500 off 20%" or "20% off" or "₹500 %"
-            Regex("""(?:₹|Rs[.:]?|INR)\s*\d[\d,.]*[kKlL]?\s*%"""),
-            // "₹24.60 LPA", "₹3L CTC", "₹50k pm", "₹40k/pm", "₹20 LPA", "₹25,000/month", "₹3,750/pm"
-            Regex("""(?:₹|Rs[.:]?|INR)\s*\d[\d,.]*[kKlL]?\s*(?:[/]\s*)?(?:LPA|CTC|P\.?A\.?|P\.?M\.?|pm|pa|month|annum|year)\b""", RegexOption.IGNORE_CASE),
-            // "₹3L - ₹7L", "₹500 – ₹1000", "Rs 500 - Rs 1000"
-            Regex("""(?:₹|Rs[.:]?|INR)\s*\d[\d,.]*[kKlL]?\s*[-–]\s*(?:₹|Rs[.:]?|INR)?\s*\d""", RegexOption.IGNORE_CASE),
+            Regex("""$CURR\s*\d[\d,.]*[kKlL]?\s*%"""),
+            // "₹24.60 LPA", "₹3L CTC", "₹50k pm", "₹40k/pm", "₹20 LPA", "₹25,000/month", "$5,000/month"
+            Regex("""$CURR\s*\d[\d,.]*[kKlL]?\s*(?:[/]\s*)?(?:LPA|CTC|P\.?A\.?|P\.?M\.?|pm|pa|month|annum|year)\b""", RegexOption.IGNORE_CASE),
+            // "₹3L - ₹7L", "$500 - $1000", "Rs 500 - Rs 1000"
+            Regex("""$CURR\s*\d[\d,.]*[kKlL]?\s*[-–]\s*(?:$CURR)?\s*\d""", RegexOption.IGNORE_CASE),
             // "₹5 lakh", "₹2 crore", "Rs 5 lakhs"
-            Regex("""(?:₹|Rs[.:]?|INR)\s*\d[\d,.]*\s*(?:lakh|lakhs|crore|crores|lac|lacs)\b""", RegexOption.IGNORE_CASE),
+            Regex("""$CURR\s*\d[\d,.]*\s*(?:lakh|lakhs|crore|crores|lac|lacs)\b""", RegexOption.IGNORE_CASE),
             // Salary / stipend phrases near amount
-            Regex("""(?:₹|Rs[.:]?|INR)\s*\d[\d,.]*[kKlL]?\s*(?:per\s+(?:annum|month|year)|a\s+year|annually|salary|stipend)\b""", RegexOption.IGNORE_CASE),
-            Regex("""\b(?:stipend|salary)\s+(?:up\s*to\s+)?(?:₹|Rs[.:]?|INR)\s*\d""", RegexOption.IGNORE_CASE)
+            Regex("""$CURR\s*\d[\d,.]*[kKlL]?\s*(?:per\s+(?:annum|month|year)|a\s+year|annually|salary|stipend)\b""", RegexOption.IGNORE_CASE),
+            Regex("""\b(?:stipend|salary)\s+(?:up\s*to\s+)?$CURR\s*\d""", RegexOption.IGNORE_CASE)
         )
 
         private val JOB_PAID_MARKER = Regex("""(?i)\b(?:intern(?:ship)?\s*\(\s*paid\s*\)|\(\s*paid\s*(?:intern(?:ship)?)?\s*\)|paid\s+intern(?:ship)?|(?:engineer|developer|role|position)\s*\(\s*paid\s*\))\b""")

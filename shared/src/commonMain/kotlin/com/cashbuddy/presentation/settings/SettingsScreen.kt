@@ -60,6 +60,7 @@ import com.cashbuddy.presentation.theme.TealMintSecondary
 import com.cashbuddy.presentation.theme.TrustBluePrimary
 import kotlinx.coroutines.flow.collectLatest
 
+import com.cashbuddy.domain.model.CurrencyRegistry
 import com.cashbuddy.presentation.theme.AccentEmerald
 import com.cashbuddy.presentation.theme.CashBuddyTypography
 import com.cashbuddy.presentation.theme.DangerRed
@@ -205,12 +206,70 @@ fun SettingsScreen(
                                                 .padding(horizontal = 12.dp, vertical = 6.dp)
                                         ) {
                                             Text(
-                                                text = "₹${t.toLong()}",
+                                                text = CurrencyRegistry.format(t, state.preferredCurrency),
                                                 color = if (isSelected) Color.White else MaterialTheme.colorScheme.onSurface,
                                                 style = MaterialTheme.typography.bodySmall,
                                                 fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
                                             )
                                         }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // Currency & Regional Format Section
+                item {
+                    Text(
+                        text = "Currency & Display",
+                        style = CashBuddyTypography.titleLarge,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+
+                item {
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RadiusLarge,
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+                    ) {
+                        Column(
+                            modifier = Modifier.padding(18.dp),
+                            verticalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            Text(
+                                text = "Default Currency",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                            Text(
+                                text = "Used for transactions, balance displays, and auto-confirm formatting.",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .horizontalScroll(rememberScrollState()),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                CurrencyRegistry.currencies.forEach { curr ->
+                                    val isSelected = state.preferredCurrency.equals(curr.code, ignoreCase = true)
+                                    Box(
+                                        modifier = Modifier
+                                            .clip(RoundedCornerShape(8.dp))
+                                            .background(if (isSelected) TrustBluePrimary else MaterialTheme.colorScheme.surfaceVariant)
+                                            .clickable { viewModel.setPreferredCurrency(curr.code) }
+                                            .padding(horizontal = 12.dp, vertical = 8.dp)
+                                    ) {
+                                        Text(
+                                            text = "${curr.symbol} ${curr.code}",
+                                            color = if (isSelected) Color.White else MaterialTheme.colorScheme.onSurface,
+                                            style = MaterialTheme.typography.bodySmall,
+                                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
+                                        )
                                     }
                                 }
                             }

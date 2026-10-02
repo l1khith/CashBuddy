@@ -26,7 +26,8 @@ class SettingsRepositoryImpl(
                 autoConfirmThreshold = map["autoConfirmThreshold"]?.toDoubleOrNull() ?: 10000.0,
                 minConfidenceThreshold = map["minConfidenceThreshold"]?.toFloatOrNull() ?: 0.85f,
                 notificationsEnabled = map["notificationsEnabled"]?.toBooleanStrictOrNull() ?: true,
-                biometricEnabled = map["biometricEnabled"]?.toBooleanStrictOrNull() ?: false
+                biometricEnabled = map["biometricEnabled"]?.toBooleanStrictOrNull() ?: false,
+                preferredCurrency = map["preferredCurrency"] ?: "INR"
             )
         }
 
@@ -36,6 +37,7 @@ class SettingsRepositoryImpl(
         queries.set("minConfidenceThreshold", settings.minConfidenceThreshold.toString(), now)
         queries.set("notificationsEnabled", settings.notificationsEnabled.toString(), now)
         queries.set("biometricEnabled", settings.biometricEnabled.toString(), now)
+        queries.set("preferredCurrency", settings.preferredCurrency, now)
     }
 
     override fun getNotificationEnabled(): Flow<Boolean> =
@@ -94,5 +96,14 @@ class SettingsRepositoryImpl(
         val now = com.cashbuddy.platform.currentTimeMillis()
         queries.set("debug_log_viewer_enabled", enabled.toString(), now)
         queries.set("developer_mode", enabled.toString(), now)
+    }
+
+    override fun getPreferredCurrency(): Flow<String> =
+        queries.get("preferredCurrency").asFlow().mapToOneOrNull(dispatcher).map { record ->
+            record?.value_ ?: "INR"
+        }
+
+    override suspend fun setPreferredCurrency(currencyCode: String): Unit = withContext(dispatcher) {
+        queries.set("preferredCurrency", currencyCode, com.cashbuddy.platform.currentTimeMillis())
     }
 }
