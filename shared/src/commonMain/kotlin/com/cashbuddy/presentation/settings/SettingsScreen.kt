@@ -214,41 +214,6 @@ fun SettingsScreen(
                                     }
                                 }
                             }
-
-                            // Auto-Confirm Min Confidence Score
-                            Column {
-                                Text(
-                                    text = "Minimum Confidence for Auto-Confirm",
-                                    style = MaterialTheme.typography.titleSmall,
-                                    fontWeight = FontWeight.SemiBold
-                                )
-                                Spacer(modifier = Modifier.height(8.dp))
-                                val confidences = listOf(0.75f, 0.80f, 0.85f, 0.90f, 0.95f)
-                                Row(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .horizontalScroll(rememberScrollState()),
-                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                                ) {
-                                    confidences.forEach { c ->
-                                        val isSelected = (state.autoConfirmMinConfidence * 100).toInt() == (c * 100).toInt()
-                                        Box(
-                                            modifier = Modifier
-                                                .clip(RoundedCornerShape(8.dp))
-                                                .background(if (isSelected) TrustBluePrimary else MaterialTheme.colorScheme.surfaceVariant)
-                                                .clickable { viewModel.setAutoConfirmMinConfidence(c) }
-                                                .padding(horizontal = 12.dp, vertical = 6.dp)
-                                        ) {
-                                            Text(
-                                                text = "${(c * 100).toInt()}%",
-                                                color = if (isSelected) Color.White else MaterialTheme.colorScheme.onSurface,
-                                                style = MaterialTheme.typography.bodySmall,
-                                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
-                                            )
-                                        }
-                                    }
-                                }
-                            }
                         }
                     }
                 }

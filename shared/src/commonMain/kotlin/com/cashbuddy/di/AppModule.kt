@@ -104,7 +104,8 @@ val appModule = module {
             rawMessageRepo = get(),
             categoryRepo = get(),
             debugLogger = get(),
-            recentStateRepository = get()
+            recentStateRepository = get(),
+            settingsRepo = get()
         )
     }
 

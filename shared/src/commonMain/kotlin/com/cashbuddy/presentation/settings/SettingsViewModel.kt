@@ -24,7 +24,6 @@ import kotlinx.coroutines.launch
 data class SettingsUiState(
     val notificationEnabled: Boolean = true,
     val autoConfirmThreshold: Double = 10000.0,
-    val autoConfirmMinConfidence: Float = 0.85f,
     val biometricLockEnabled: Boolean = false,
     val totalTransactionsCount: Int = 0,
     val totalAccountsCount: Int = 0,
@@ -69,7 +68,6 @@ class SettingsViewModel(
                 SettingsUiState(
                     notificationEnabled = settings.notificationsEnabled,
                     autoConfirmThreshold = settings.autoConfirmThreshold,
-                    autoConfirmMinConfidence = settings.minConfidenceThreshold,
                     biometricLockEnabled = settings.biometricEnabled,
                     totalTransactionsCount = txCount.toInt(),
                     totalAccountsCount = accCount.toInt(),
@@ -118,12 +116,6 @@ class SettingsViewModel(
     fun setAutoConfirmThreshold(threshold: Double) {
         viewModelScope.launch {
             settingsRepository.setAutoConfirmThreshold(threshold)
-        }
-    }
-
-    fun setAutoConfirmMinConfidence(confidence: Float) {
-        viewModelScope.launch {
-            settingsRepository.setMinConfidenceThreshold(confidence)
         }
     }
 

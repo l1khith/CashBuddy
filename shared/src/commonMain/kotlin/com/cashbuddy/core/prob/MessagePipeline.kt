@@ -9,6 +9,7 @@ import com.cashbuddy.domain.model.TransactionType
 import com.cashbuddy.domain.repository.AccountRepository
 import com.cashbuddy.domain.repository.CategoryRepository
 import com.cashbuddy.domain.repository.RawMessageRepository
+import com.cashbuddy.domain.repository.SettingsRepository
 import com.cashbuddy.domain.repository.TransactionRepository
 import kotlinx.coroutines.flow.firstOrNull
 
@@ -59,7 +60,8 @@ class MessagePipeline(
     private val rawMessageRepo: RawMessageRepository,
     private val categoryRepo: CategoryRepository,
     private val debugLogger: DebugLogger? = null,
-    private val recentStateRepository: RecentStateRepository? = null
+    private val recentStateRepository: RecentStateRepository? = null,
+    private val settingsRepo: SettingsRepository? = null
 ) {
     suspend fun ingest(raw: RawMessage): PipelineOutcome {
         recentStateRepository?.recordRaw(raw.timestamp, raw.packageName)
@@ -88,10 +90,12 @@ class MessagePipeline(
             )
 
             // 5. Policy decision
+            val maxAutoConfirm = settingsRepo?.getAutoConfirmThreshold()?.firstOrNull() ?: 10000.0
             val action = policy.action(
                 p = classification.pTransaction,
                 hasAccount = classification.accountLast4 != null,
-                amount = classification.amount ?: 0.0
+                amount = classification.amount ?: 0.0,
+                maxAutoConfirmAmount = maxAutoConfirm
             )
             debugLogger?.recordPolicy(logId, action.name)
 
