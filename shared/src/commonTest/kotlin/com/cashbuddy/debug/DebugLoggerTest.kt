@@ -190,20 +190,21 @@ class DebugLoggerTest {
             hasAmount = true,
             hasAccount = true,
             hasUtr = true,
-            hasDebit = true,
-            hasCredit = false,
             hasOtp = false,
             hasPromo = false,
             hasOffer = false,
             hasUpiHandle = true,
             hasBalanceMention = true,
-            hasTransactionVerb = true,
             hasSuccessWord = true,
             senderLooksBank = true,
             fromMerchantPackage = false,
-            recentSameAmount = false,
+            amountInTransactionContext = true,
+            amountAndDebitSameSentence = true,
+            amountAndCreditSameSentence = false,
+            amountHasForbiddenShape = false,
+            recentSimilarAmount = false,
             recentSameMerchant = false,
-            velocityHigh = false
+            burstDetected = false
         )
 
         val json = evidence.toJson()

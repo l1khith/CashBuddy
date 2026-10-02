@@ -104,6 +104,7 @@ class TransactionNotificationListener : NotificationListenerService(), KoinCompo
         if (activeSbn.isOngoing) return
 
         val packageName = activeSbn.packageName ?: return
+        if (packageName == applicationContext.packageName) return
         val extras = activeSbn.notification?.extras ?: return
 
         val title = extras.getCharSequence(android.app.Notification.EXTRA_TITLE)?.toString() ?: ""

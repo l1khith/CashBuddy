@@ -77,7 +77,8 @@ val appModule = module {
     single { com.cashbuddy.domain.parser.KotlinNotificationParser(get(), get(), get(), get(), get()) }
     single { ScreenshotParserEngine(get()) }
     single { com.cashbuddy.core.prob.SourceDetector() }
-    single { com.cashbuddy.core.prob.EvidenceExtractor() }
+    single { com.cashbuddy.core.prob.RecentStateRepository() }
+    single { com.cashbuddy.core.prob.EvidenceExtractor(recentStateRepository = get()) }
     single { com.cashbuddy.core.prob.FieldConfidenceEstimator() }
     single { com.cashbuddy.core.prob.PolicyEngine() }
     single { com.cashbuddy.core.prob.DedupEngine }
@@ -102,7 +103,8 @@ val appModule = module {
             transactionRepo = get(),
             rawMessageRepo = get(),
             categoryRepo = get(),
-            debugLogger = get()
+            debugLogger = get(),
+            recentStateRepository = get()
         )
     }
 

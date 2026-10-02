@@ -58,9 +58,11 @@ class MessagePipeline(
     private val transactionRepo: TransactionRepository,
     private val rawMessageRepo: RawMessageRepository,
     private val categoryRepo: CategoryRepository,
-    private val debugLogger: DebugLogger? = null
+    private val debugLogger: DebugLogger? = null,
+    private val recentStateRepository: RecentStateRepository? = null
 ) {
     suspend fun ingest(raw: RawMessage): PipelineOutcome {
+        recentStateRepository?.recordRaw(raw.timestamp, raw.packageName)
         val logId = debugLogger?.captureRaw(raw, raw.sourceType.name, raw.packageName, raw.senderId) ?: ""
         try {
             // 1. Audit trail
@@ -86,7 +88,11 @@ class MessagePipeline(
             )
 
             // 5. Policy decision
-            val action = policy.action(classification.pTransaction)
+            val action = policy.action(
+                p = classification.pTransaction,
+                hasAccount = classification.accountLast4 != null,
+                amount = classification.amount ?: 0.0
+            )
             debugLogger?.recordPolicy(logId, action.name)
 
             val outcome: PipelineOutcome = when (action) {
@@ -164,6 +170,14 @@ class MessagePipeline(
                                 )
 
                                 val insertedId = transactionRepo.insert(tx)
+                                recentStateRepository?.record(
+                                    RecentTx(
+                                        amount = amount,
+                                        merchant = tx.merchant,
+                                        sourcePackage = raw.packageName,
+                                        timestamp = raw.timestamp
+                                    )
+                                )
                                 rawMessageRepo.updateResultingTx(raw.id, insertedId.toString())
 
                                 if (status == TransactionStatus.CONFIRMED) {
@@ -181,7 +195,19 @@ class MessagePipeline(
                                     } else {
                                         existing.status
                                     }
-                                    transactionRepo.updateStatus(dedupDecision.existingId, newStatus)
+                                    val upgradedAccount = classification.accountLast4?.let {
+                                        accountRegistry.findOrCreate(it, classification.bankHint)
+                                    }
+                                    if (upgradedAccount != null && upgradedAccount != existing.accountId) {
+                                        transactionRepo.update(existing.copy(
+                                            accountId = upgradedAccount,
+                                            status = newStatus,
+                                            confidence = maxOf(existing.confidence, classification.pTransaction.toFloat()),
+                                            updatedAt = raw.timestamp
+                                        ))
+                                    } else {
+                                        transactionRepo.updateStatus(dedupDecision.existingId, newStatus)
+                                    }
                                     rawMessageRepo.updateResultingTx(raw.id, dedupDecision.existingId.toString())
                                 }
                                 PipelineOutcome.Merged(dedupDecision.existingId, classification.pTransaction)

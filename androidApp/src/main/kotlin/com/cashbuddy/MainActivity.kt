@@ -67,11 +67,8 @@ class MainActivity : FragmentActivity() {
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
 
-        // Enforce FLAG_SECURE: Prevents screenshots and task manager leakage of sensitive finances
-        window.setFlags(
-            WindowManager.LayoutParams.FLAG_SECURE,
-            WindowManager.LayoutParams.FLAG_SECURE
-        )
+        // FLAG_SECURE temporarily disabled to allow device mirroring/scrcpy on laptop
+        window.clearFlags(WindowManager.LayoutParams.FLAG_SECURE)
 
         checkAndPromptNotificationPermissions()
 
