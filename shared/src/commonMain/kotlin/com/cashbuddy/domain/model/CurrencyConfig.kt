@@ -48,12 +48,16 @@ object CurrencyRegistry {
      */
     fun format(amount: Double, currencyCode: String? = null, includeSymbol: Boolean = true): String {
         val config = getCurrency(currencyCode)
+        val isNegative = amount < 0.0
         val absAmount = kotlin.math.abs(amount)
         val longVal = absAmount.toLong()
         val str = longVal.toString()
         val len = str.length
 
-        val sb = StringBuilder(len + (len / 2) + 8)
+        val sb = StringBuilder(len + (len / 2) + 10)
+        if (isNegative) {
+            sb.append('-')
+        }
         if (includeSymbol) {
             sb.append(config.symbol)
             if (config.symbol.length > 1 && !config.symbol.endsWith("$")) {

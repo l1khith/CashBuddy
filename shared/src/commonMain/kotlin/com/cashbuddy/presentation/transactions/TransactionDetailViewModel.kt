@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.cashbuddy.domain.model.Category
 import com.cashbuddy.domain.model.Transaction
+import com.cashbuddy.domain.model.TransactionType
 import com.cashbuddy.domain.repository.CategoryRepository
 import com.cashbuddy.domain.repository.MerchantRuleRepository
 import com.cashbuddy.domain.repository.TrainingDataRepository
@@ -83,6 +84,46 @@ class TransactionDetailViewModel(
                 merchantRuleRepository.learnRule(
                     merchant = tx.merchant,
                     categoryId = newCategoryId,
+                    priority = 100L
+                )
+            }
+        }
+    }
+
+    fun onUpdateTransaction(
+        amount: Double,
+        type: TransactionType,
+        merchant: String,
+        categoryId: Long
+    ) {
+        viewModelScope.launch {
+            val tx = _uiState.value.transaction ?: return@launch
+            val oldCategoryName = tx.categoryName
+            val newCategory = _uiState.value.categories.find { it.id == categoryId }
+            val updated = tx.copy(
+                amount = amount,
+                type = type,
+                merchant = merchant.trim().ifBlank { "Unknown Merchant" },
+                categoryId = categoryId,
+                categoryName = newCategory?.name,
+                categoryColor = newCategory?.color
+            )
+            transactionRepository.update(updated)
+            _uiState.value = _uiState.value.copy(transaction = updated)
+
+            val targetLabel = newCategory?.name
+            if (targetLabel != null && !targetLabel.equals(oldCategoryName, ignoreCase = true)) {
+                trainingDataRepository.recordCorrection(
+                    merchant = updated.merchant,
+                    sourceApp = tx.sourceApp,
+                    rawText = tx.rawText,
+                    oldCategory = oldCategoryName,
+                    newCategory = targetLabel,
+                    timestamp = currentTimeMillis()
+                )
+                merchantRuleRepository.learnRule(
+                    merchant = updated.merchant,
+                    categoryId = categoryId,
                     priority = 100L
                 )
             }

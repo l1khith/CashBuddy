@@ -2,6 +2,8 @@ package com.cashbuddy.presentation.review
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.cashbuddy.domain.model.TransactionStatus
+import com.cashbuddy.domain.model.TransactionType
 import com.cashbuddy.domain.repository.CategoryRepository
 import com.cashbuddy.domain.repository.TransactionRepository
 import com.cashbuddy.domain.usecase.ConfirmTransactionUseCase
@@ -43,6 +45,12 @@ class ReviewViewModel(
             is ReviewIntent.ModifyCategory -> modifyCategory(intent.transactionId, intent.newCategoryId)
             is ReviewIntent.FilterByConfidence -> filterConfidence(intent.minConfidence)
             is ReviewIntent.ConfirmAllHighConfidence -> confirmAllHighConfidence()
+            is ReviewIntent.UpdatePendingTransaction -> updatePendingTransaction(
+                intent.transactionId, intent.amount, intent.type, intent.merchant, intent.categoryId
+            )
+            is ReviewIntent.UpdateAndConfirmTransaction -> updateAndConfirmTransaction(
+                intent.transactionId, intent.amount, intent.type, intent.merchant, intent.categoryId
+            )
         }
     }
 
@@ -106,6 +114,66 @@ class ReviewViewModel(
             }
             _uiState.value = reducer.reduce(_uiState.value, ReviewResult.AllHighConfidenceConfirmed)
             _effects.emit(ReviewEffect.ShowSnackbar("Confirmed ${highConfidence.size} high-confidence transactions"))
+        }
+    }
+
+    private fun updatePendingTransaction(
+        transactionId: Long,
+        amount: Double,
+        type: TransactionType,
+        merchant: String,
+        categoryId: Long
+    ) {
+        viewModelScope.launch {
+            val tx = _uiState.value.transactions.find { it.id == transactionId } ?: return@launch
+            val oldCategoryName = tx.categoryName
+            val newCategory = _uiState.value.allCategories.find { it.id == categoryId }
+            val updatedTx = tx.copy(
+                amount = amount,
+                type = type,
+                merchant = merchant.trim().ifBlank { "Unknown Merchant" },
+                categoryId = categoryId,
+                categoryName = newCategory?.name,
+                categoryColor = newCategory?.color,
+                status = TransactionStatus.PENDING
+            )
+            modifyTransactionUseCase(
+                transaction = updatedTx,
+                oldCategoryName = oldCategoryName,
+                newCategoryName = newCategory?.name
+            )
+            _uiState.value = reducer.reduce(_uiState.value, ReviewResult.TransactionUpdated(updatedTx))
+            _effects.emit(ReviewEffect.ShowSnackbar("Pending transaction updated"))
+        }
+    }
+
+    private fun updateAndConfirmTransaction(
+        transactionId: Long,
+        amount: Double,
+        type: TransactionType,
+        merchant: String,
+        categoryId: Long
+    ) {
+        viewModelScope.launch {
+            val tx = _uiState.value.transactions.find { it.id == transactionId } ?: return@launch
+            val oldCategoryName = tx.categoryName
+            val newCategory = _uiState.value.allCategories.find { it.id == categoryId }
+            val updatedTx = tx.copy(
+                amount = amount,
+                type = type,
+                merchant = merchant.trim().ifBlank { "Unknown Merchant" },
+                categoryId = categoryId,
+                categoryName = newCategory?.name,
+                categoryColor = newCategory?.color,
+                status = TransactionStatus.CONFIRMED
+            )
+            modifyTransactionUseCase(
+                transaction = updatedTx,
+                oldCategoryName = oldCategoryName,
+                newCategoryName = newCategory?.name
+            )
+            _uiState.value = reducer.reduce(_uiState.value, ReviewResult.TransactionConfirmed(transactionId))
+            _effects.emit(ReviewEffect.ShowSnackbar("Transaction updated and confirmed"))
         }
     }
 }

@@ -235,4 +235,50 @@ class CoreEnginesTest {
         assertEquals("Transportation", tx.category)
         assertTrue(tx.confidence >= 0.85f)
     }
+
+    @Test
+    fun testNegativeCurrencyFormatting() {
+        val positive = com.cashbuddy.domain.model.CurrencyRegistry.format(5000.0)
+        assertEquals("₹5,000", positive)
+
+        val negative = com.cashbuddy.domain.model.CurrencyRegistry.format(-2000.0)
+        assertEquals("-₹2,000", negative)
+
+        val negativeNoSymbol = com.cashbuddy.domain.model.CurrencyRegistry.format(-2000.0, includeSymbol = false)
+        assertEquals("-2,000", negativeNoSymbol)
+    }
+
+    @Test
+    fun testReviewReducerUpdateTransaction() {
+        val reducer = com.cashbuddy.presentation.review.ReviewReducer()
+        val initialTx = com.cashbuddy.domain.model.Transaction(
+            id = 101L,
+            amount = 5000.0,
+            type = com.cashbuddy.domain.model.TransactionType.DEBIT,
+            merchant = "Unknown",
+            categoryId = 1L,
+            sourceApp = "com.google.android.apps.nbu.paisa.user",
+            rawText = "Paid 5000",
+            confidence = 0.9f,
+            status = com.cashbuddy.domain.model.TransactionStatus.PENDING,
+            timestamp = 1000L
+        )
+        val state = com.cashbuddy.presentation.review.ReviewState(
+            transactions = listOf(initialTx),
+            isLoading = false
+        )
+
+        // User edits transaction to CREDIT, 5000.0, Merchant "Likhith"
+        val updatedTx = initialTx.copy(
+            type = com.cashbuddy.domain.model.TransactionType.CREDIT,
+            merchant = "Likhith",
+            categoryId = 2L
+        )
+        val nextState = reducer.reduce(state, com.cashbuddy.presentation.review.ReviewResult.TransactionUpdated(updatedTx))
+
+        assertEquals(1, nextState.transactions.size)
+        assertEquals(com.cashbuddy.domain.model.TransactionType.CREDIT, nextState.transactions[0].type)
+        assertEquals("Likhith", nextState.transactions[0].merchant)
+        assertEquals(2L, nextState.transactions[0].categoryId)
+    }
 }

@@ -44,8 +44,7 @@ class ModifyTransactionUseCase(
         oldCategoryName: String? = null,
         newCategoryName: String? = null
     ) {
-        val modifiedTx = transaction.copy(status = TransactionStatus.MODIFIED)
-        repository.update(modifiedTx)
+        repository.update(transaction)
 
         val targetLabel = newCategoryName ?: transaction.categoryName ?: return
         if (!targetLabel.equals(oldCategoryName, ignoreCase = true)) {

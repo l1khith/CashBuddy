@@ -24,6 +24,7 @@ import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.DoneAll
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -41,7 +42,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -51,6 +54,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.cashbuddy.domain.model.Transaction
 import com.cashbuddy.presentation.components.ConfidenceIndicator
+import com.cashbuddy.presentation.components.EditTransactionDialog
 import com.cashbuddy.presentation.components.formatCurrency
 import com.cashbuddy.presentation.theme.AccentEmerald
 import com.cashbuddy.presentation.theme.CashBuddyTypography
@@ -75,6 +79,7 @@ fun ReviewScreen(
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
+    var editingTransaction by remember { mutableStateOf<Transaction?>(null) }
 
     LaunchedEffect(Unit) {
         viewModel.effects.collectLatest { effect ->
@@ -211,6 +216,7 @@ fun ReviewScreen(
                             allCategories = state.allCategories,
                             onConfirm = { viewModel.processIntent(ReviewIntent.ConfirmTransaction(tx.id)) },
                             onReject = { viewModel.processIntent(ReviewIntent.RejectTransaction(tx.id)) },
+                            onEdit = { editingTransaction = tx },
                             onCategoryChange = { newCatId ->
                                 viewModel.processIntent(ReviewIntent.ModifyCategory(tx.id, newCatId))
                             }
@@ -218,6 +224,45 @@ fun ReviewScreen(
                     }
                 }
             }
+        }
+
+        if (editingTransaction != null) {
+            val txToEdit = editingTransaction!!
+            EditTransactionDialog(
+                initialAmount = txToEdit.amount,
+                initialType = txToEdit.type,
+                initialMerchant = txToEdit.merchant,
+                initialCategoryId = txToEdit.categoryId,
+                categories = state.allCategories,
+                title = "Edit & Review Transaction",
+                confirmButtonText = "Save Changes",
+                actionButtonText = "Save & Confirm",
+                onAction = { amount, type, merchant, categoryId ->
+                    viewModel.processIntent(
+                        ReviewIntent.UpdateAndConfirmTransaction(
+                            transactionId = txToEdit.id,
+                            amount = amount,
+                            type = type,
+                            merchant = merchant,
+                            categoryId = categoryId
+                        )
+                    )
+                    editingTransaction = null
+                },
+                onDismiss = { editingTransaction = null },
+                onConfirm = { amount, type, merchant, categoryId ->
+                    viewModel.processIntent(
+                        ReviewIntent.UpdatePendingTransaction(
+                            transactionId = txToEdit.id,
+                            amount = amount,
+                            type = type,
+                            merchant = merchant,
+                            categoryId = categoryId
+                        )
+                    )
+                    editingTransaction = null
+                }
+            )
         }
     }
 }
@@ -228,6 +273,7 @@ private fun PendingReviewCard(
     allCategories: List<com.cashbuddy.domain.model.Category>,
     onConfirm: () -> Unit,
     onReject: () -> Unit,
+    onEdit: () -> Unit,
     onCategoryChange: (Long) -> Unit
 ) {
     val isDebit = transaction.type == TransactionType.DEBIT
@@ -335,10 +381,10 @@ private fun PendingReviewCard(
 
             Spacer(modifier = Modifier.height(18.dp))
 
-            // Action Buttons (Confirm & Discard)
+            // Action Buttons (Discard, Edit, Confirm)
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(10.dp)
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 OutlinedButton(
                     onClick = onReject,
@@ -352,13 +398,29 @@ private fun PendingReviewCard(
                         modifier = Modifier.size(16.dp),
                         tint = DangerRed
                     )
-                    Spacer(modifier = Modifier.width(6.dp))
+                    Spacer(modifier = Modifier.width(4.dp))
                     Text(text = "Discard", style = CashBuddyTypography.labelLarge, color = DangerRed)
+                }
+
+                OutlinedButton(
+                    onClick = onEdit,
+                    modifier = Modifier.weight(1f),
+                    colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.primary),
+                    shape = RadiusMedium
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Edit,
+                        contentDescription = null,
+                        modifier = Modifier.size(16.dp),
+                        tint = MaterialTheme.colorScheme.primary
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text(text = "Edit", style = CashBuddyTypography.labelLarge, color = MaterialTheme.colorScheme.primary)
                 }
 
                 Button(
                     onClick = onConfirm,
-                    modifier = Modifier.weight(1.5f),
+                    modifier = Modifier.weight(1.3f),
                     colors = ButtonDefaults.buttonColors(containerColor = AccentEmerald),
                     shape = RadiusMedium
                 ) {
@@ -368,7 +430,7 @@ private fun PendingReviewCard(
                         modifier = Modifier.size(16.dp),
                         tint = Color.White
                     )
-                    Spacer(modifier = Modifier.width(6.dp))
+                    Spacer(modifier = Modifier.width(4.dp))
                     Text(text = "Confirm", style = CashBuddyTypography.labelLarge, color = Color.White)
                 }
             }

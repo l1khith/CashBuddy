@@ -127,8 +127,8 @@ LIMIT ?;
 
 getSummaryByDateRange:
 SELECT 
-    COALESCE(SUM(CASE WHEN t.type = 'DEBIT' AND t.status = 'CONFIRMED' THEN t.amount ELSE 0.0 END), 0.0) AS total_debit,
-    COALESCE(SUM(CASE WHEN t.type = 'CREDIT' AND t.status = 'CONFIRMED' THEN t.amount ELSE 0.0 END), 0.0) AS total_credit,
+    COALESCE(SUM(CASE WHEN t.type = 'DEBIT' AND t.status IN ('CONFIRMED', 'MODIFIED') THEN t.amount ELSE 0.0 END), 0.0) AS total_debit,
+    COALESCE(SUM(CASE WHEN t.type = 'CREDIT' AND t.status IN ('CONFIRMED', 'MODIFIED') THEN t.amount ELSE 0.0 END), 0.0) AS total_credit,
     COUNT(*) AS transaction_count
 FROM transactions t
 WHERE t.timestamp BETWEEN ? AND ?;
@@ -145,8 +145,8 @@ ORDER BY t.timestamp DESC;
 getMonthlySummary:
 SELECT 
     strftime('%Y-%m', datetime(t.timestamp/1000, 'unixepoch')) AS month,
-    SUM(CASE WHEN t.type = 'DEBIT' AND t.status = 'CONFIRMED' THEN t.amount ELSE 0.0 END) AS total_debit,
-    SUM(CASE WHEN t.type = 'CREDIT' AND t.status = 'CONFIRMED' THEN t.amount ELSE 0.0 END) AS total_credit,
+    SUM(CASE WHEN t.type = 'DEBIT' AND t.status IN ('CONFIRMED', 'MODIFIED') THEN t.amount ELSE 0.0 END) AS total_debit,
+    SUM(CASE WHEN t.type = 'CREDIT' AND t.status IN ('CONFIRMED', 'MODIFIED') THEN t.amount ELSE 0.0 END) AS total_credit,
     COUNT(*) AS transaction_count
 FROM transactions t
 GROUP BY month
@@ -162,7 +162,7 @@ SELECT
     AVG(t.amount) AS average_amount
 FROM transactions t
 JOIN categories c ON t.category_id = c.id
-WHERE t.type = 'DEBIT' AND t.status = 'CONFIRMED' AND t.timestamp BETWEEN ? AND ?
+WHERE t.type = 'DEBIT' AND t.status IN ('CONFIRMED', 'MODIFIED') AND t.timestamp BETWEEN ? AND ?
 GROUP BY c.id
 ORDER BY total_amount DESC;
 
@@ -181,8 +181,8 @@ DELETE FROM transactions WHERE id = ?;
 
 getBalance:
 SELECT 
-    COALESCE(SUM(CASE WHEN type = 'CREDIT' AND status = 'CONFIRMED' THEN amount ELSE 0.0 END), 0.0) -
-    COALESCE(SUM(CASE WHEN type = 'DEBIT' AND status = 'CONFIRMED' THEN amount ELSE 0.0 END), 0.0)
+    COALESCE(SUM(CASE WHEN type = 'CREDIT' AND status IN ('CONFIRMED', 'MODIFIED') THEN amount ELSE 0.0 END), 0.0) -
+    COALESCE(SUM(CASE WHEN type = 'DEBIT' AND status IN ('CONFIRMED', 'MODIFIED') THEN amount ELSE 0.0 END), 0.0)
 FROM transactions;
 
 lastInsertRowId:

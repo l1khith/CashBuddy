@@ -20,6 +20,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -35,6 +36,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -50,6 +54,7 @@ import com.cashbuddy.presentation.theme.TrustBluePrimary
 import kotlinx.coroutines.flow.collectLatest
 
 import com.cashbuddy.presentation.components.ConfidenceIndicator
+import com.cashbuddy.presentation.components.EditTransactionDialog
 import com.cashbuddy.presentation.components.StatusBadge
 import com.cashbuddy.presentation.components.formatCurrency
 import com.cashbuddy.presentation.theme.AccentEmerald
@@ -67,6 +72,7 @@ fun TransactionDetailScreen(
     modifier: Modifier = Modifier
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
+    var showEditDialog by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {
         viewModel.navBackEffect.collectLatest {
@@ -99,7 +105,7 @@ fun TransactionDetailScreen(
                     .verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                // Back Button & Title
+                // Back Button & Title & Edit Action
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
@@ -117,7 +123,13 @@ fun TransactionDetailScreen(
                         style = CashBuddyTypography.titleLarge,
                         fontWeight = FontWeight.Bold
                     )
-                    Spacer(modifier = Modifier.width(48.dp))
+                    IconButton(onClick = { showEditDialog = true }) {
+                        Icon(
+                            imageVector = Icons.Default.Edit,
+                            contentDescription = "Edit Transaction",
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+                    }
                 }
 
                 // Amount Header Card
@@ -237,6 +249,27 @@ fun TransactionDetailScreen(
 
                 Spacer(modifier = Modifier.height(8.dp))
 
+                // Edit Button
+                Button(
+                    onClick = { showEditDialog = true },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(48.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
+                    shape = RadiusMedium
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            imageVector = Icons.Default.Edit,
+                            contentDescription = null,
+                            tint = Color.White,
+                            modifier = Modifier.size(18.dp)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(text = "Edit Transaction", style = CashBuddyTypography.labelLarge, color = Color.White)
+                    }
+                }
+
                 // Delete Button
                 OutlinedButton(
                     onClick = { viewModel.onDeleteClicked() },
@@ -260,6 +293,23 @@ fun TransactionDetailScreen(
 
                 Spacer(modifier = Modifier.height(16.dp))
             }
+        }
+
+        if (showEditDialog && state.transaction != null) {
+            val currentTx = state.transaction!!
+            EditTransactionDialog(
+                initialAmount = currentTx.amount,
+                initialType = currentTx.type,
+                initialMerchant = currentTx.merchant,
+                initialCategoryId = currentTx.categoryId,
+                categories = state.categories,
+                title = "Edit Transaction",
+                confirmButtonText = "Save Changes",
+                onDismiss = { showEditDialog = false },
+                onConfirm = { amount, type, merchant, categoryId ->
+                    viewModel.onUpdateTransaction(amount, type, merchant, categoryId)
+                }
+            )
         }
     }
 }
