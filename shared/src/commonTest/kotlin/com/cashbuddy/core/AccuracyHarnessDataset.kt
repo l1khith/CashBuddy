@@ -1,0 +1,116 @@
+// NO-NETWORK
+package com.cashbuddy.core
+
+val LABELLED_V1_CSV: String = """
+id,source_type,package_name,sender_id,text,ground_truth_action,expected_amount,expected_type,expected_merchant,expected_account
+1,SMS,,HDFCBK,"Dear Customer, Rs.450.00 debited from A/c XX1234 on 01-10-2026 to VPA swiggy@axis. Avl Bal: Rs.12450.50",AUTO_LOG,450.0,DEBIT,Swiggy,1234
+2,SMS,,SBIINB,"Your A/C 9876 debited by Rs 1,250.00 on 01-10-2026 by transfer to UPI/62910481920/Zomato. Bal Rs 45,210.00",AUTO_LOG,1250.0,DEBIT,Zomato,9876
+3,SMS,,ICICIB,"Acct XX4321 debited with INR 89.00 on 01-Oct-26. Info: UPI/uber@icici/Uber India. Available Balance INR 3,450.00",AUTO_LOG,89.0,DEBIT,Uber,4321
+4,SMS,,AXISBK,"INR 350.00 debited from Axis Bank A/c no. XX5678 on 01-10-2026 12:30:15 IST by UPI to rapido@kotak. Avl Bal INR 8,920.00",AUTO_LOG,350.0,DEBIT,Rapido,5678
+5,SMS,,UB-UNIONB,"Dear Customer, INR 250.00 debited from A/c XX0383 on 01-10-2026 14:15:00 at Swiggy UPI Ref 4293810294. Bal: INR 3500.00",AUTO_LOG,250.0,DEBIT,Swiggy,0383
+6,SMS,,JM-BANK-T,"Bank A/c *0383 Debited Rs:60.00 on 28-09-2026 13:02:20 by Mob Bk ref no 663757559850, Fvg: BOTTLE L Avl Bal Rs:1675.08.",AUTO_LOG,60.0,DEBIT,Bottle L,0383
+7,SMS,,KOTAKB,"Sent Rs.150.00 from Kotak Bank AC 7890 to starbucks@icici on 01-10-2026. Ref no 582910394. Balance: Rs.6,700.00",AUTO_LOG,150.0,DEBIT,Starbucks,7890
+8,SMS,,PNBSMS,"A/C 3456 Debited INR 500.00 on 01-10-2026 16:40:11 thru UPI txn to chai@paytm. Avail Bal: INR 2,100.00",AUTO_LOG,500.0,DEBIT,Chai,3456
+9,SMS,,CANBNK,"Canara Bank: Rs 200.00 debited from A/C 2233 on 01-10-2026 via UPI to smartq@hdfc. Bal Rs 1,450.00",AUTO_LOG,200.0,DEBIT,Smartq,2233
+10,SMS,,BOBTXN,"A/c ...5566 debited by Rs.75.00 on 01-10-2026 11:20:00 via UPI. Ref 102938475. Total Avl Bal: Rs.5,600.00",AUTO_LOG,75.0,DEBIT,,5566
+11,SMS,,INDBNK,"Rs 990.00 debited from IndusInd Bank A/c XX8899 on 01-10-2026 to AMAZON PAY. UPI ref: 483920194. Bal Rs 12,300.00",AUTO_LOG,990.0,DEBIT,Amazon Pay,8899
+12,SMS,,IDFCFB,"Paid Rs.340.00 from IDFC FIRST Bank A/c 1122 to BLINKIT via UPI on 01-10-2026. Avl Bal: Rs.14,200.00",AUTO_LOG,340.0,DEBIT,Blinkit,1122
+13,SMS,,YESBNK,"INR 650.00 spent on YES Bank Card ending 6677 at BOOKMYSHOW on 01-10-2026. Avl Limit: INR 85,000.00",AUTO_LOG,650.0,DEBIT,Bookmyshow,6677
+14,SMS,,RBLBNK,"Rs 180.00 debited from RBL Bank A/c XX9900 on 01-10-2026 towards METRO TICKET. Avl Bal Rs 3,400.00",AUTO_LOG,180.0,DEBIT,Metro Ticket,9900
+15,SMS,,FEDBNK,"Federal Bank: Rs.55.00 debited from A/c XX3344 on 01-10-2026. UPI Ref 392019284. Balance: Rs.7,800.00",AUTO_LOG,55.0,DEBIT,,3344
+16,SMS,,HDFCBK,"Rs 1,499.00 debited from HDFC Bank A/c 1234 on 01-10-2026 for FLIPKART INDIA. Avl Bal: Rs.10,951.50",AUTO_LOG,1499.0,DEBIT,Flipkart India,1234
+17,SMS,,SBIINB,"A/C 9876 debited by Rs 80.00 on 01-10-2026 transfer to milk@sbi. Clear Bal Rs 45,130.00",AUTO_LOG,80.0,DEBIT,Milk,9876
+18,SMS,,ICICIB,"INR 2,400.00 spent on your ICICI Bank Credit Card ending 5432 at RELIANCE DIGITAL on 01-Oct-2026.",AUTO_LOG,2400.0,DEBIT,Reliance Digital,5432
+19,SMS,,AXISBK,"Axis Bank: Rs.45.00 debited from A/c XX5678 on 01-10-2026. UPI ref 938201928. Avl Bal: Rs.8,875.00",AUTO_LOG,45.0,DEBIT,,5678
+20,SMS,,UB-UNIONB,"Union Bank: INR 320.00 debited from A/c XX0383 on 01-10-2026 to ZEPTO. Avl Bal INR 3180.00",AUTO_LOG,320.0,DEBIT,Zepto,0383
+21,SMS,,KOTAKB,"Rs.520.00 debited from Kotak A/c 7890 on 01-10-2026. Transfer to MCDONALDS. Bal Rs.6,180.00",AUTO_LOG,520.0,DEBIT,Mcdonalds,7890
+22,SMS,,PNBSMS,"PNB: INR 120.00 debited from A/c 3456 on 01-10-2026 to Dominos Pizza. Avl Bal INR 1,980.00",AUTO_LOG,120.0,DEBIT,Dominos Pizza,3456
+23,SMS,,CANBNK,"Rs.850.00 debited from Canara Bank A/c 2233 on 01-10-2026 towards PETROL PUMP. Bal Rs 600.00",AUTO_LOG,850.0,DEBIT,Petrol Pump,2233
+24,SMS,,BOBTXN,"BOB Alert: Rs.2,100.00 debited from A/c 5566 on 01-10-2026 at APOLLO PHARMACY. Bal: Rs.3,500.00",AUTO_LOG,2100.0,DEBIT,Apollo Pharmacy,5566
+25,SMS,,INDBNK,"INR 40.00 debited from A/c XX8899 on 01-10-2026 for TEA STALL. UPI ref 492019284. Bal INR 12,260.00",AUTO_LOG,40.0,DEBIT,Tea Stall,8899
+26,SMS,,IDFCFB,"IDFC Bank: Rs.160.00 debited from A/c 1122 on 01-10-2026 at SUBWAY. Avl Bal Rs.14,040.00",AUTO_LOG,160.0,DEBIT,Subway,1122
+27,SMS,,YESBNK,"Rs.95.00 debited from YES Bank A/c 6677 on 01-10-2026 via UPI to kfc@yesbank. Bal: Rs.84,905.00",AUTO_LOG,95.0,DEBIT,Kfc,6677
+28,SMS,,RBLBNK,"INR 620.00 debited from RBL A/c XX9900 on 01-10-2026 at GROCERY STORE. Bal INR 2,780.00",AUTO_LOG,620.0,DEBIT,Grocery Store,9900
+29,SMS,,FEDBNK,"Rs.310.00 debited from Federal A/c XX3344 on 01-10-2026 to PIZZA HUT. Bal Rs.7,490.00",AUTO_LOG,310.0,DEBIT,Pizza Hut,3344
+30,SMS,,HDFCBK,"Rs.720.00 debited from A/c XX1234 on 01-10-2026 by UPI to uber@hdfcbank. Avl Bal: Rs.10,231.50",AUTO_LOG,720.0,DEBIT,Uber,1234
+31,SMS,,HDFCBK,"INR 5,000.00 credited to HDFC Bank A/c XX1234 on 01-10-2026 by UPI from rahul@icici. Avl Bal: INR 15,231.50",AUTO_LOG,5000.0,CREDIT,Rahul,1234
+32,SMS,,SBIINB,"Your A/C 9876 credited by Rs 2,500.00 on 01-10-2026 by UPI/392019482/Refund from Amazon. Bal Rs 47,630.00",AUTO_LOG,2500.0,CREDIT,Refund From Amazon,9876
+33,SMS,,ICICIB,"INR 1,200.00 credited to A/c 5678 on 01-Oct-26. Info: UPI/cashback@icici. Available Balance INR 4,650.00",AUTO_LOG,1200.0,CREDIT,,5678
+34,SMS,,AXISBK,"Axis Bank: Rs.850.00 credited to A/c XX5678 on 01-10-2026 via IMPS from SISTER. Avl Bal: Rs.9,725.00",AUTO_LOG,850.0,CREDIT,Sister,5678
+35,SMS,,UB-UNIONB,"INR 3,000.00 credited to Union Bank A/c XX0383 on 01-10-2026 by UPI ref 492019482. Bal INR 6,180.00",AUTO_LOG,3000.0,CREDIT,,0383
+36,SMS,,KOTAKB,"Cashback of Rs.50.00 credited to Kotak Bank A/c 7890 on 01-10-2026. Avl Bal Rs.6,230.00",AUTO_LOG,50.0,CREDIT,,7890
+37,SMS,,PNBSMS,"PNB Alert: Rs.1,500.00 credited to A/c 3456 on 01-10-2026 by NEFT. Avail Bal INR 3,480.00",AUTO_LOG,1500.0,CREDIT,,3456
+38,SMS,,CANBNK,"Rs.400.00 deposited into Canara Bank A/c 2233 on 01-10-2026 via UPI. Bal Rs 1,000.00",AUTO_LOG,400.0,CREDIT,,2233
+39,SMS,,BOBTXN,"Rs.250.00 refunded to BOB A/c 5566 on 01-10-2026 from SWIGGY. Total Avl Bal: Rs.3,750.00",AUTO_LOG,250.0,CREDIT,Swiggy,5566
+40,SMS,,INDBNK,"INR 800.00 credited to IndusInd A/c XX8899 on 01-10-2026 from FRIEND. Avl Bal INR 13,060.00",AUTO_LOG,800.0,CREDIT,Friend,8899
+41,SMS,,IDFCFB,"Rs.150.00 cashback received in IDFC FIRST Bank A/c 1122 on 01-10-2026. Bal: Rs.14,190.00",AUTO_LOG,150.0,CREDIT,,1122
+42,SMS,,YESBNK,"INR 1,000.00 credited to YES Bank A/c 6677 on 01-10-2026. UPI Ref 392019481. Bal: Rs.85,905.00",AUTO_LOG,1000.0,CREDIT,,6677
+43,SMS,,RBLBNK,"Rs.350.00 credited to RBL Bank A/c XX9900 on 01-10-2026. Bal Rs.3,130.00",AUTO_LOG,350.0,CREDIT,,9900
+44,SMS,,FEDBNK,"Federal Bank: Rs.600.00 credited to A/c XX3344 on 01-10-2026 via UPI. Bal Rs.8,090.00",AUTO_LOG,600.0,CREDIT,,3344
+45,SMS,,HDFCBK,"INR 4,200.00 credited to A/c XX1234 on 01-10-2026 by NEFT from EMPLOYER REIMBURSEMENT. Bal INR 19,431.50",AUTO_LOG,4200.0,CREDIT,Employer Reimbursement,1234
+46,SMS,,HDFCBK,"INR 25,000.00 debited from A/c XX1234 on 01-10-2026 for HOUSE RENT. Avl Bal: INR 50,000.00",LOG_AND_FLAG,25000.0,DEBIT,House Rent,1234
+47,SMS,,SBIINB,"A/C 9876 debited by Rs 15,000.00 on 01-10-2026 to COLLEGE FEES. Bal Rs 30,130.00",LOG_AND_FLAG,15000.0,DEBIT,College Fees,9876
+48,SMS,,ICICIB,"Acct XX4321 debited with INR 45,000.00 on 01-Oct-26 at TATA MOTORS. Bal INR 1,20,000.00",LOG_AND_FLAG,45000.0,DEBIT,Tata Motors,4321
+49,SMS,,AXISBK,"Axis Bank: Rs 50,000.00 credited to A/c XX5678 on 01-10-2026 by SALARY. Avl Bal: Rs 59,725.00",LOG_AND_FLAG,50000.0,CREDIT,Salary,5678
+50,SMS,,UB-UNIONB,"INR 18,500.00 debited from Union Bank A/c XX0383 on 01-10-2026. Bal INR 20,000.00",LOG_AND_FLAG,18500.0,DEBIT,,0383
+51,NOTIFICATION,com.smartq,,"SmartQ · Payment Successful · Your payment of ₹100.0 was successful.",LOG_AND_FLAG,100.0,DEBIT,Smartq,
+52,NOTIFICATION,com.smartq,,"Payment Successful: Your payment of ₹140.0 was successful. Thank you for ordering!",LOG_AND_FLAG,140.0,DEBIT,Smartq,
+53,NOTIFICATION,in.swiggy.android,,"Order Delivered! Your payment of ₹349.00 via UPI has been confirmed.",LOG_AND_FLAG,349.0,DEBIT,Swiggy,
+54,NOTIFICATION,com.application.zomato,,"Order Placed! ₹485.00 paid successfully. Delicious food is on the way!",LOG_AND_FLAG,485.0,DEBIT,Zomato,
+55,NOTIFICATION,com.ubercab,,"Trip Completed! ₹210.00 paid via Paytm Wallet. Hope you had a great ride.",LOG_AND_FLAG,210.0,DEBIT,Uber,
+56,NOTIFICATION,com.rapido.passenger,,"Ride Completed! Payment of ₹65.00 received. Thank you for riding Rapido!",LOG_AND_FLAG,65.0,DEBIT,Rapido,
+57,NOTIFICATION,net.one97.paytm,,"Payment Successful! ₹120.00 paid to Sharma General Store.",LOG_AND_FLAG,120.0,DEBIT,Sharma General Store,
+58,NOTIFICATION,com.phonepe.app,,"Paid ₹350.00 to Chai Point successfully. Transaction ID: T2610011234.",LOG_AND_FLAG,350.0,DEBIT,Chai Point,
+59,NOTIFICATION,com.google.android.apps.nbu.paisa.user,,"Paid ₹200.00 to Ramesh Kumar via UPI.",LOG_AND_FLAG,200.0,DEBIT,Ramesh Kumar,
+60,NOTIFICATION,com.amazon.mShop.android.shopping,,"Order Confirmed: Payment of ₹899.00 received for your Amazon order.",LOG_AND_FLAG,899.0,DEBIT,Amazon,
+61,NOTIFICATION,com.flipkart.android,,"Payment Successful! ₹1249.00 paid for Flipkart order #OD392019482.",LOG_AND_FLAG,1249.0,DEBIT,Flipkart,
+62,NOTIFICATION,com.grofers.customerapp,,"Blinkit: Order Placed! Payment of ₹420.00 confirmed.",LOG_AND_FLAG,420.0,DEBIT,Blinkit,
+63,NOTIFICATION,com.zeptonow.android,,"Zepto: Order Placed! ₹280.00 paid successfully. Delivery in 10 mins!",LOG_AND_FLAG,280.0,DEBIT,Zepto,
+64,NOTIFICATION,com.bigbasket.mobileapp,,"BigBasket: Payment of ₹760.00 received for order #BB4920194.",LOG_AND_FLAG,760.0,DEBIT,Bigbasket,
+65,NOTIFICATION,olacabs.android,,"Ola Ride Completed: ₹175.00 paid via Ola Money.",LOG_AND_FLAG,175.0,DEBIT,Ola,
+66,NOTIFICATION,com.jio.myjio,,"8 brands, 1 Mega Sale — Up to ₹600 off BGMI UC. 1-4 Oct",IGNORE,,,,
+67,NOTIFICATION,in.swiggy.android,,"Hungry? Get 50% off up to ₹100 on your favorite meals! Use code SWIGGYIT",IGNORE,,,,
+68,NOTIFICATION,com.application.zomato,,"Flat ₹150 off on biryani orders above ₹399! Order now on Zomato",IGNORE,,,,
+69,NOTIFICATION,com.myntra.android,,"Mega Fashion Days: Up to ₹1000 off on top brands! Shop now.",IGNORE,,,,
+70,NOTIFICATION,com.flipkart.android,,"Big Billion Days! Grab electronic deals from ₹499 to ₹999.",IGNORE,,,,
+71,SMS,,HDFCBK,"Pre-approved personal loan of ₹5,00,000 at low interest. Apply now in NetBanking!",IGNORE,,,,
+72,SMS,,SBIINB,"Instant loan of Rs 2,00,000 in 2 mins with zero paperwork. Click to avail now.",IGNORE,,,,
+73,NOTIFICATION,com.airtel.thanks,,"Recharge now with ₹299 and get 1.5GB/day + unlimited 5G data.",IGNORE,,,,
+74,NOTIFICATION,com.jio.myjio,,"Special Offer: Recharge with ₹349 pack and get ₹50 off coupon.",IGNORE,,,,
+75,NOTIFICATION,com.amazon.mShop.android.shopping,,"Great Indian Festival! Up to 80% off + extra ₹500 off on card payments.",IGNORE,,,,
+76,SMS,,ICICIB,"Exclusive Credit Card offer: Get 20% off up to ₹1,500 on flights this weekend!",IGNORE,,,,
+77,SMS,,AXISBK,"Apply for Axis Bank Credit Card and earn ₹1,000 cashback on your first transaction!",IGNORE,,,,
+78,NOTIFICATION,com.phonepe.app,,"Win rewards up to ₹500! Send money to friends and scratch cards now.",IGNORE,,,,
+79,NOTIFICATION,net.one97.paytm,,"Save up to ₹200 on movie tickets! Book 2 tickets with code MOVIE200.",IGNORE,,,,
+80,NOTIFICATION,com.dream11.app,,"Mega Contest: ₹1 Crore prize pool today! Join contest for ₹49.",IGNORE,,,,
+81,SMS,,HDFCBK,"Your loan approval status: Pre-qualified for ₹10,00,000 at 10.5% p.a.",IGNORE,,,,
+82,NOTIFICATION,in.swiggy.android,,"Instamart: Get flat ₹75 off on fresh grocery orders above ₹299.",IGNORE,,,,
+83,NOTIFICATION,com.application.zomato,,"Zomato Gold: Up to 40% off on dining out at partner restaurants.",IGNORE,,,,
+84,NOTIFICATION,com.myntra.android,,"Clearance Sale: Footwear starting from ₹399 - ₹899 today only!",IGNORE,,,,
+85,SMS,,KOTAKB,"Get 10% off up to Rs 750 on electronics with Kotak Debit Card. Shop now!",IGNORE,,,,
+86,NOTIFICATION,com.google.android.gm,,"🔔 A I LIKHITH, check out jobs applied by your peers QA Intern ... Mean Stack Developer Intern (Paid) ... ₹3L - ₹7L a year",IGNORE,,,,
+87,NOTIFICATION,com.google.android.gm,,"LinkedIn Job Alert: Full Stack Developer (Paid Internship) ₹25,000/month in Bengaluru",IGNORE,,,,
+88,NOTIFICATION,com.google.android.gm,,"Indeed Jobs: Urgent hiring for Flutter Developer Intern (Paid) - ₹15k to ₹25k pm",IGNORE,,,,
+89,NOTIFICATION,com.google.android.gm,,"Internshala: Apply to 10+ Python Internships (Paid) with stipend up to ₹30,000/month",IGNORE,,,,
+90,NOTIFICATION,com.google.android.gm,,"Naukri Job Alert: Frontend Engineer (Paid) - ₹6 LPA to ₹12 LPA in Pune",IGNORE,,,,
+91,NOTIFICATION,com.google.android.gm,,"Glassdoor: Backend Intern (Paid) ₹20,000 - ₹35,000 stipend a month",IGNORE,,,,
+92,NOTIFICATION,com.google.android.gm,,"Job Alert: React Native Developer (Paid) ₹4L - ₹8L a year at TechCorp",IGNORE,,,,
+93,NOTIFICATION,com.google.android.gm,,"Internshala: Summer Research Intern (Paid) with stipend ₹15,000 per month",IGNORE,,,,
+94,NOTIFICATION,com.google.android.gm,,"AngelList Talent: Founding Engineer (Paid) ₹15L - ₹25L CTC + ESOPs",IGNORE,,,,
+95,NOTIFICATION,com.google.android.gm,,"Wellfound: AI Engineer Intern (Paid) ₹40k pm stipend in Bangalore",IGNORE,,,,
+96,NOTIFICATION,com.google.android.gm,,"Update: Your Application for NMAT 2026 ... Career outcomes ₹24.60 LPA Average CTC ₹41.28 LPA Highest CTC ₹31.25 LPA Top 10%",IGNORE,,,,
+97,NOTIFICATION,com.google.android.gm,,"IIM Placement Report: Average CTC ₹28.5 LPA, Highest CTC ₹64.0 LPA, Top 25% ₹38.2 LPA",IGNORE,,,,
+98,NOTIFICATION,com.google.android.gm,,"B.Tech Admissions 2026: Merit scholarships up to ₹2,00,000 for top rankers. Apply today!",IGNORE,,,,
+99,NOTIFICATION,com.google.android.gm,,"MBA Entrance Update: CAT 2026 aspirants average salary outcomes ₹20.5 LPA - ₹35 LPA",IGNORE,,,,
+100,NOTIFICATION,com.google.android.gm,,"Learn Data Science: Complete Masterclass Course Fee ₹45,000 (EMI options from ₹3,750/pm)",IGNORE,,,,
+101,SMS,,HDFCBK,"Your OTP is 482910 for login to HDFC Bank NetBanking. Valid for 3 mins. Do not share with anyone.",IGNORE,,,,
+102,SMS,,SBIINB,"582910 is your OTP for SBI online transaction authentication. Do not share OTP with anybody.",IGNORE,,,,
+103,SMS,,ICICIB,"Your OTP for ICICI Bank authentication is 193847. OTP valid for 5 mins. Never disclose OTP to anyone.",IGNORE,,,,
+104,SMS,,AXISBK,"OTP 938201 is your verification code for Axis Bank Mobile App login. Valid for 3 minutes.",IGNORE,,,,
+105,SMS,,UB-UNIONB,"Union Bank: 772910 is your OTP for transaction authorization of INR 500.00. Never share OTP.",IGNORE,,,,
+106,SMS,,KOTAKB,"Kotak Bank: Do not share this OTP 392817 with anyone. Valid for 10 minutes.",IGNORE,,,,
+107,NOTIFICATION,in.swiggy.android,,"Use OTP 382910 to verify your mobile number on Swiggy. Valid for 5 minutes.",IGNORE,,,,
+108,NOTIFICATION,com.application.zomato,,"Your Zomato verification code is 492019. Please do not share it with anyone.",IGNORE,,,,
+109,NOTIFICATION,com.phonepe.app,,"294819 is your secret OTP for PhonePe account login. PhonePe never asks for OTP.",IGNORE,,,,
+110,NOTIFICATION,net.one97.paytm,,"Paytm: 839201 is your one time password to proceed. Keep it confidential.",IGNORE,,,,
+""".trimIndent()

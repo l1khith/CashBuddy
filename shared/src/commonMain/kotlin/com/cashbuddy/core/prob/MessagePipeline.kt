@@ -3,12 +3,14 @@ package com.cashbuddy.core.prob
 
 import com.cashbuddy.core.CategoryEngine
 import com.cashbuddy.debug.DebugLogger
+import com.cashbuddy.domain.model.CategoryType
 import com.cashbuddy.domain.model.Transaction
 import com.cashbuddy.domain.model.TransactionStatus
 import com.cashbuddy.domain.model.TransactionType
 import com.cashbuddy.domain.repository.AccountRepository
 import com.cashbuddy.domain.repository.CategoryRepository
 import com.cashbuddy.domain.repository.RawMessageRepository
+import com.cashbuddy.domain.repository.SettingsRepository
 import com.cashbuddy.domain.repository.TransactionRepository
 import kotlinx.coroutines.flow.firstOrNull
 
@@ -58,9 +60,12 @@ class MessagePipeline(
     private val transactionRepo: TransactionRepository,
     private val rawMessageRepo: RawMessageRepository,
     private val categoryRepo: CategoryRepository,
-    private val debugLogger: DebugLogger? = null
+    private val debugLogger: DebugLogger? = null,
+    private val recentStateRepository: RecentStateRepository? = null,
+    private val settingsRepo: SettingsRepository? = null
 ) {
     suspend fun ingest(raw: RawMessage): PipelineOutcome {
+        recentStateRepository?.recordRaw(raw.timestamp, raw.packageName)
         val logId = debugLogger?.captureRaw(raw, raw.sourceType.name, raw.packageName, raw.senderId) ?: ""
         try {
             // 1. Audit trail
@@ -86,7 +91,13 @@ class MessagePipeline(
             )
 
             // 5. Policy decision
-            val action = policy.action(classification.pTransaction)
+            val maxAutoConfirm = settingsRepo?.getAutoConfirmThreshold()?.firstOrNull() ?: 10000.0
+            val action = policy.action(
+                p = classification.pTransaction,
+                hasAccount = classification.accountLast4 != null,
+                amount = classification.amount ?: 0.0,
+                maxAutoConfirmAmount = maxAutoConfirm
+            )
             debugLogger?.recordPolicy(logId, action.name)
 
             val outcome: PipelineOutcome = when (action) {
@@ -138,7 +149,15 @@ class MessagePipeline(
                                 val allCategories = categoryRepo.getAll().firstOrNull() ?: emptyList()
                                 val matchedCategory = allCategories.find {
                                     it.name.equals(categoryMatch.category, ignoreCase = true)
-                                } ?: allCategories.firstOrNull()
+                                } ?: if (classification.type == TransactionType.CREDIT) {
+                                    allCategories.find { it.name.equals("Other Income", ignoreCase = true) }
+                                        ?: allCategories.find { it.name.equals("Uncategorized", ignoreCase = true) }
+                                        ?: allCategories.find { it.type == CategoryType.INCOME }
+                                        ?: allCategories.firstOrNull()
+                                } else {
+                                    allCategories.find { it.name.equals("Uncategorized", ignoreCase = true) }
+                                        ?: allCategories.firstOrNull()
+                                }
                                 val categoryId = matchedCategory?.id ?: 1L
 
                                 val status = if (action == PolicyEngine.Action.AUTO_LOG) {
@@ -164,6 +183,14 @@ class MessagePipeline(
                                 )
 
                                 val insertedId = transactionRepo.insert(tx)
+                                recentStateRepository?.record(
+                                    RecentTx(
+                                        amount = amount,
+                                        merchant = tx.merchant,
+                                        sourcePackage = raw.packageName,
+                                        timestamp = raw.timestamp
+                                    )
+                                )
                                 rawMessageRepo.updateResultingTx(raw.id, insertedId.toString())
 
                                 if (status == TransactionStatus.CONFIRMED) {
@@ -181,7 +208,19 @@ class MessagePipeline(
                                     } else {
                                         existing.status
                                     }
-                                    transactionRepo.updateStatus(dedupDecision.existingId, newStatus)
+                                    val upgradedAccount = classification.accountLast4?.let {
+                                        accountRegistry.findOrCreate(it, classification.bankHint)
+                                    }
+                                    if (upgradedAccount != null && upgradedAccount != existing.accountId) {
+                                        transactionRepo.update(existing.copy(
+                                            accountId = upgradedAccount,
+                                            status = newStatus,
+                                            confidence = maxOf(existing.confidence, classification.pTransaction.toFloat()),
+                                            updatedAt = raw.timestamp
+                                        ))
+                                    } else {
+                                        transactionRepo.updateStatus(dedupDecision.existingId, newStatus)
+                                    }
                                     rawMessageRepo.updateResultingTx(raw.id, dedupDecision.existingId.toString())
                                 }
                                 PipelineOutcome.Merged(dedupDecision.existingId, classification.pTransaction)

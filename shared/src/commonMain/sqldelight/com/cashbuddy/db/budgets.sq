@@ -20,7 +20,7 @@ FROM budgets b
 LEFT JOIN categories c ON b.category_id = c.id
 LEFT JOIN transactions t ON b.category_id = t.category_id 
     AND t.type = 'DEBIT' 
-    AND t.status = 'CONFIRMED'
+    AND t.status IN ('CONFIRMED', 'MODIFIED')
     AND t.timestamp BETWEEN b.start_date AND COALESCE(b.end_date, ?)
 WHERE b.is_active = 1
 GROUP BY b.id;

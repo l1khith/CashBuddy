@@ -11,8 +11,19 @@ actual class ConcurrentHashMap<K : Any, V : Any> : MutableMap<K, V> {
     override fun containsValue(value: V): Boolean = ref.value.containsValue(value)
     override fun get(key: K): V? = ref.value[key]
     override fun isEmpty(): Boolean = ref.value.isEmpty()
+    private class ConcurrentEntry<K, V>(
+        override val key: K,
+        override var value: V
+    ) : MutableMap.MutableEntry<K, V> {
+        override fun setValue(newValue: V): V {
+            val old = value
+            value = newValue
+            return old
+        }
+    }
+
     override val entries: MutableSet<MutableMap.MutableEntry<K, V>>
-        get() = ref.value.entries.toMutableSet()
+        get() = ref.value.entries.mapTo(mutableSetOf()) { (k, v) -> ConcurrentEntry(k, v) }
     override val keys: MutableSet<K> get() = ref.value.keys.toMutableSet()
     override val values: MutableCollection<V> get() = ref.value.values.toMutableList()
 

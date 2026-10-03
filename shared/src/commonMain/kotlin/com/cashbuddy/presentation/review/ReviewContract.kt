@@ -3,6 +3,7 @@ package com.cashbuddy.presentation.review
 import androidx.compose.runtime.Immutable
 import com.cashbuddy.domain.model.Category
 import com.cashbuddy.domain.model.Transaction
+import com.cashbuddy.domain.model.TransactionType
 
 sealed interface ReviewIntent {
     data object LoadPending : ReviewIntent
@@ -11,6 +12,20 @@ sealed interface ReviewIntent {
     data class ModifyCategory(val transactionId: Long, val newCategoryId: Long) : ReviewIntent
     data class FilterByConfidence(val minConfidence: Float) : ReviewIntent
     data object ConfirmAllHighConfidence : ReviewIntent
+    data class UpdatePendingTransaction(
+        val transactionId: Long,
+        val amount: Double,
+        val type: TransactionType,
+        val merchant: String,
+        val categoryId: Long
+    ) : ReviewIntent
+    data class UpdateAndConfirmTransaction(
+        val transactionId: Long,
+        val amount: Double,
+        val type: TransactionType,
+        val merchant: String,
+        val categoryId: Long
+    ) : ReviewIntent
 }
 
 @Immutable

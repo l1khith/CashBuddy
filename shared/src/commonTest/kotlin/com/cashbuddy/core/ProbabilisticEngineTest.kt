@@ -338,5 +338,218 @@ class ProbabilisticEngineTest {
         assertEquals("BMTC", result.merchant)
         assertEquals("Transportation", result.category)
     }
+
+    @Test
+    fun testFailure1_JobEmailPaidKeywordIgnored() {
+        val text = "🔔 A I LIKHITH, check out jobs applied by your peers QA Intern ... Mean Stack Developer Intern (Paid) ... ₹3L - ₹7L a year"
+        val raw = RawMessage(
+            id = "job-email-1",
+            sourceType = SourceType.NOTIFICATION,
+            packageName = "com.google.android.gm",
+            senderId = null,
+            title = "Job Alert",
+            text = text,
+            timestamp = 1727600000000L
+        )
+
+        val source = sourceDetector.detect("com.google.android.gm", text)
+        val evidence = evidenceExtractor.extract(raw, source)
+        val result = classifier.classify(evidence, text, source)
+
+        assertTrue(evidence.amountHasForbiddenShape, "Expected forbidden shape (range / a year) to be detected")
+        assertFalse(evidence.amountAndDebitSameSentence, "Paid in job title must not match debit in same sentence as amount")
+        assertTrue(result.pTransaction < 0.20, "Expected p < 0.20 for job email, got ${result.pTransaction}")
+        assertEquals(PolicyEngine.Action.IGNORE, policy.action(result.pTransaction))
+    }
+
+    @Test
+    fun testFailure2_NmatSalaryLpaEmailIgnored() {
+        val text = "Update: Your Application for NMAT 2026 ... Career outcomes ₹24.60 LPA Average CTC ₹41.28 LPA Highest CTC ₹31.25 LPA Top 10%"
+        val raw = RawMessage(
+            id = "nmat-email-1",
+            sourceType = SourceType.NOTIFICATION,
+            packageName = "com.google.android.gm",
+            senderId = null,
+            title = "NMAT 2026",
+            text = text,
+            timestamp = 1727600000000L
+        )
+
+        val source = sourceDetector.detect("com.google.android.gm", text)
+        val evidence = evidenceExtractor.extract(raw, source)
+        val result = classifier.classify(evidence, text, source)
+
+        assertTrue(evidence.amountHasForbiddenShape, "Expected forbidden shape (LPA / CTC) to be detected")
+        assertFalse(evidence.amountInTransactionContext, "Salary figures must not have transaction context")
+        assertTrue(result.pTransaction < 0.10, "Expected p < 0.10 for NMAT salary email, got ${result.pTransaction}")
+        assertEquals(PolicyEngine.Action.IGNORE, policy.action(result.pTransaction))
+    }
+
+    @Test
+    fun testFailure3_JioDiscountPromoIgnored() {
+        val text = "8 brands, 1 Mega Sale — Up to ₹600 off BGMI UC. 1-4 Oct"
+        val raw = RawMessage(
+            id = "jio-promo-1",
+            sourceType = SourceType.NOTIFICATION,
+            packageName = "com.jio.myjio",
+            senderId = null,
+            title = "Mega Sale",
+            text = text,
+            timestamp = 1727600000000L
+        )
+
+        val source = sourceDetector.detect("com.jio.myjio", text)
+        val evidence = evidenceExtractor.extract(raw, source)
+        val result = classifier.classify(evidence, text, source)
+
+        assertTrue(evidence.amountHasForbiddenShape, "Expected forbidden shape (up to / off) to be detected")
+        assertTrue(result.pTransaction < 0.10, "Expected p < 0.10 for Jio promo discount, got ${result.pTransaction}")
+        assertEquals(PolicyEngine.Action.IGNORE, policy.action(result.pTransaction))
+    }
+
+    @Test
+    fun testRealUnionBankDebitSmsAutoLogged() {
+        val text = "Dear Customer, INR 250.00 debited from A/c XX0383 on 01-10-2026 14:15:00 at Swiggy UPI Ref 4293810294. Bal: INR 3500.00"
+        val raw = RawMessage(
+            id = "union-bank-sms",
+            sourceType = SourceType.SMS,
+            packageName = null,
+            senderId = "UB-UNIONB",
+            title = "UB-UNIONB",
+            text = text,
+            timestamp = 1727600000000L
+        )
+
+        val source = sourceDetector.detect("UB-UNIONB", text)
+        val evidence = evidenceExtractor.extract(raw, source)
+        val result = classifier.classify(evidence, text, source)
+
+        assertTrue(evidence.amountAndDebitSameSentence, "Expected debit verb in same sentence as amount")
+        assertTrue(evidence.amountInTransactionContext, "Expected amount in transaction context")
+        assertFalse(evidence.amountHasForbiddenShape, "Bank debit SMS must not trigger forbidden shape")
+        assertTrue(result.pTransaction > 0.95, "Expected p > 0.95 for genuine Union Bank SMS, got ${result.pTransaction}")
+        assertEquals("0383", result.accountLast4)
+        assertEquals(TransactionType.DEBIT, result.type)
+        assertEquals(PolicyEngine.Action.AUTO_LOG, policy.action(result.pTransaction))
+    }
+
+    @Test
+    fun testRecentStateRepository_IndependentSameAmountNotPenalized() {
+        val repo = com.cashbuddy.core.prob.RecentStateRepository()
+        val t0 = 1727600000000L
+
+        // Rapido ₹50 transaction recorded
+        repo.record(amount = 50.0, merchant = "Rapido", sourcePackage = "com.rapido.passenger", timestamp = t0)
+
+        // 2 minutes later, Zomato ₹50 transaction arrives
+        val isDuplicate = repo.recentSimilarAmount(
+            newAmount = 50.0,
+            newMerchant = "Zomato",
+            newPackage = "com.application.zomato",
+            now = t0 + 120_000L
+        )
+
+        assertFalse(isDuplicate, "Independent ₹50 transactions with different merchants/packages must NOT be penalized")
+    }
+
+    @Test
+    fun testRecentStateRepository_SameMerchantSameAmountDetected() {
+        val repo = com.cashbuddy.core.prob.RecentStateRepository()
+        val t0 = 1727600000000L
+
+        // SmartQ ₹130 transaction recorded
+        repo.record(amount = 130.0, merchant = "SmartQ", sourcePackage = "com.smartq", timestamp = t0)
+
+        // 30 seconds later, duplicate SmartQ ₹130 arrives
+        val isDuplicate = repo.recentSimilarAmount(
+            newAmount = 130.0,
+            newMerchant = "SmartQ",
+            newPackage = "com.smartq",
+            now = t0 + 30_000L
+        )
+
+        assertTrue(isDuplicate, "Same merchant with same amount in 5m window must be detected as duplicate")
+    }
+
+    @Test
+    fun testRecentStateRepository_BurstDetected() {
+        val repo = com.cashbuddy.core.prob.RecentStateRepository()
+        val t0 = 1727600000000L
+
+        repo.recordRaw(t0, "com.pkg1")
+        repo.recordRaw(t0 + 5_000L, "com.pkg2")
+        repo.recordRaw(t0 + 10_000L, "com.pkg3")
+        repo.recordRaw(t0 + 15_000L, "com.pkg4")
+
+        assertTrue(repo.burstDetected(t0 + 20_000L), "More than 3 raw messages within 60s must trigger burstDetected")
+        assertFalse(repo.burstDetected(t0 + 100_000L), "Burst must clear after 60s window passes")
+    }
+
+    @Test
+    fun testP2PIncomingPaymentCreditAndMerchant() {
+        val text = "MANJAPPA SON OF DANAPPA paid you ₹7,000.00 Payment from PhonePe"
+        val raw = RawMessage(
+            id = "test-gpay-incoming",
+            sourceType = SourceType.NOTIFICATION,
+            packageName = "com.google.android.apps.nbu.paisa.user",
+            senderId = null,
+            title = "",
+            text = text,
+            timestamp = 1727600000000L
+        )
+
+        val source = sourceDetector.detect("com.google.android.apps.nbu.paisa.user", text)
+        val evidence = evidenceExtractor.extract(raw, source)
+        val result = classifier.classify(evidence, text, source, raw.packageName)
+
+        assertEquals(7000.0, result.amount)
+        assertEquals(TransactionType.CREDIT, result.type, "P2P 'paid you' must be classified as CREDIT, not DEBIT")
+        assertEquals("Manjappa Son Of Danappa", result.merchant, "Sender before 'paid you' must be extracted as merchant")
+        assertTrue(result.pTransaction >= 0.85, "Legitimate P2P transfer must have high confidence, got ${result.pTransaction}")
+    }
+
+    @Test
+    fun testP2POutgoingPaymentDebitAndMerchant() {
+        val text = "Paid ₹350.00 to Chai Point successfully. Transaction ID: T2610011234."
+        val raw = RawMessage(
+            id = "test-phonepe-outgoing",
+            sourceType = SourceType.NOTIFICATION,
+            packageName = "com.phonepe.app",
+            senderId = null,
+            title = "",
+            text = text,
+            timestamp = 1727600000000L
+        )
+
+        val source = sourceDetector.detect("com.phonepe.app", text)
+        val evidence = evidenceExtractor.extract(raw, source)
+        val result = classifier.classify(evidence, text, source, raw.packageName)
+
+        assertEquals(350.0, result.amount)
+        assertEquals(TransactionType.DEBIT, result.type, "Outgoing 'Paid ... to' must be classified as DEBIT")
+        assertEquals("Chai Point", result.merchant)
+    }
+
+    @Test
+    fun testP2PIncomingReceivedFrom() {
+        val text = "Received ₹500 from Ramesh Kumar via PhonePe"
+        val raw = RawMessage(
+            id = "test-received-from",
+            sourceType = SourceType.NOTIFICATION,
+            packageName = "net.one97.paytm",
+            senderId = null,
+            title = "",
+            text = text,
+            timestamp = 1727600000000L
+        )
+
+        val source = sourceDetector.detect("net.one97.paytm", text)
+        val evidence = evidenceExtractor.extract(raw, source)
+        val result = classifier.classify(evidence, text, source, raw.packageName)
+
+        assertEquals(500.0, result.amount)
+        assertEquals(TransactionType.CREDIT, result.type)
+        assertEquals("Ramesh Kumar", result.merchant)
+    }
 }
 

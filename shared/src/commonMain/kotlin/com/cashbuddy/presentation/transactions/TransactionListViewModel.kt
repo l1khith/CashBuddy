@@ -50,18 +50,6 @@ class TransactionListViewModel(
     private val _selectedPeriod = MutableStateFlow(TimePeriod.ALL_TIME)
     private val _customDateRange = MutableStateFlow<DateRange?>(null)
 
-    // Reactively executes SQL query according to selected date range filter
-    private val transactionsFlow = combine(_selectedPeriod, _customDateRange) { period, customRange ->
-        DateRangeHelper.calculateDateRange(period, customRange?.startTimestamp, customRange?.endTimestamp) to period
-    }.distinctUntilChanged()
-    .flatMapLatest { (range, period) ->
-        if (period == TimePeriod.ALL_TIME) {
-            transactionRepository.getAll()
-        } else {
-            transactionRepository.getByDateRange(range.startTimestamp, range.endTimestamp)
-        }
-    }.distinctUntilChanged()
-
     private data class FilterCriteria(
         val query: String,
         val type: TransactionType?,
@@ -80,63 +68,77 @@ class TransactionListViewModel(
         FilterCriteria(query, type, catId, period, customRange)
     }.distinctUntilChanged()
 
-    val uiState: StateFlow<TransactionListUiState> = combine(
-        transactionsFlow,
-        categoryRepository.getAll().distinctUntilChanged(),
-        filterCriteriaFlow
-    ) { allTxs, allCats, criteria ->
-        val trimmedQuery = criteria.query.trim()
-        val hasQuery = trimmedQuery.isNotEmpty()
+    val uiState: StateFlow<TransactionListUiState> = filterCriteriaFlow
+        .flatMapLatest { criteria ->
+            val range = DateRangeHelper.calculateDateRange(
+                criteria.period,
+                criteria.customRange?.startTimestamp,
+                criteria.customRange?.endTimestamp
+            )
+            val txsFlow = if (criteria.period == TimePeriod.ALL_TIME) {
+                transactionRepository.getAll()
+            } else {
+                transactionRepository.getByDateRange(range.startTimestamp, range.endTimestamp)
+            }
+            combine(
+                txsFlow.distinctUntilChanged(),
+                categoryRepository.getAll().distinctUntilChanged()
+            ) { allTxs, allCats ->
+                val trimmedQuery = criteria.query.trim()
+                val hasQuery = trimmedQuery.isNotEmpty()
 
-        val filtered = allTxs.filter { tx ->
-            // 1. Fast equality filters first
-            if (criteria.type != null && tx.type != criteria.type) return@filter false
-            if (criteria.catId != null && tx.categoryId != criteria.catId) return@filter false
+                val filtered = allTxs.filter { tx ->
+                    // 1. Fast equality filters first
+                    if (criteria.type != null && tx.type != criteria.type) return@filter false
+                    if (criteria.catId != null && tx.categoryId != criteria.catId) return@filter false
 
-            // 2. Query filter with early exit
-            if (!hasQuery) return@filter true
+                    // 2. Query filter with early exit
+                    if (!hasQuery) return@filter true
 
-            // Match merchant first (95% of cases)
-            if (tx.merchant.contains(trimmedQuery, ignoreCase = true)) return@filter true
+                    // Match merchant first (95% of cases)
+                    if (tx.merchant.contains(trimmedQuery, ignoreCase = true)) return@filter true
 
-            // Match category name
-            if (tx.categoryName?.contains(trimmedQuery, ignoreCase = true) == true) return@filter true
+                    // Match category name
+                    if (tx.categoryName?.contains(trimmedQuery, ignoreCase = true) == true) return@filter true
 
-            // Match user notes
-            if (tx.notes?.contains(trimmedQuery, ignoreCase = true) == true) return@filter true
+                    // Match user notes
+                    if (tx.notes?.contains(trimmedQuery, ignoreCase = true) == true) return@filter true
 
-            // Fallback to raw text only if necessary
-            tx.rawText.contains(trimmedQuery, ignoreCase = true)
+                    // Fallback to raw text only if necessary
+                    tx.rawText.contains(trimmedQuery, ignoreCase = true)
+                }
+
+                // Single-pass computation for debit and credit totals (zero intermediary list allocations)
+                var totalDebit = 0.0
+                var totalCredit = 0.0
+                for (tx in filtered) {
+                    if (tx.status == TransactionStatus.CONFIRMED) {
+                        if (tx.type == TransactionType.DEBIT) totalDebit += tx.amount
+                        else if (tx.type == TransactionType.CREDIT) totalCredit += tx.amount
+                    }
+                }
+
+                TransactionListUiState(
+                    filteredTransactions = filtered,
+                    categories = allCats,
+                    searchQuery = criteria.query,
+                    selectedType = criteria.type,
+                    selectedCategoryId = criteria.catId,
+                    selectedPeriod = criteria.period,
+                    customDateRange = criteria.customRange,
+                    totalDebit = totalDebit,
+                    totalCredit = totalCredit,
+                    totalCount = filtered.size,
+                    isLoading = false
+                )
+            }
         }
-
-        val totalDebit = filtered
-            .filter { it.type == TransactionType.DEBIT && it.status == TransactionStatus.CONFIRMED }
-            .sumOf { it.amount }
-
-        val totalCredit = filtered
-            .filter { it.type == TransactionType.CREDIT && it.status == TransactionStatus.CONFIRMED }
-            .sumOf { it.amount }
-
-        TransactionListUiState(
-            filteredTransactions = filtered,
-            categories = allCats,
-            searchQuery = criteria.query,
-            selectedType = criteria.type,
-            selectedCategoryId = criteria.catId,
-            selectedPeriod = criteria.period,
-            customDateRange = criteria.customRange,
-            totalDebit = totalDebit,
-            totalCredit = totalCredit,
-            totalCount = filtered.size,
-            isLoading = false
+        .flowOn(Dispatchers.Default) // Execute all heavy filtering & aggregation off the main thread
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = TransactionListUiState(isLoading = true)
         )
-    }
-    .flowOn(Dispatchers.Default) // Execute all heavy filtering off the main thread
-    .stateIn(
-        scope = viewModelScope,
-        started = SharingStarted.WhileSubscribed(5000),
-        initialValue = TransactionListUiState(isLoading = true)
-    )
 
     fun onSearchQueryChanged(query: String) {
         _searchQuery.value = query

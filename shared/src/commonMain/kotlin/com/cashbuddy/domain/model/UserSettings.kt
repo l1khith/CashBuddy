@@ -4,5 +4,6 @@ data class UserSettings(
     val autoConfirmThreshold: Double = 10000.0,
     val minConfidenceThreshold: Float = 0.85f,
     val notificationsEnabled: Boolean = true,
-    val biometricEnabled: Boolean = false
+    val biometricEnabled: Boolean = false,
+    val preferredCurrency: String = "INR"
 )

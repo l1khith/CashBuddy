@@ -243,21 +243,26 @@ private fun AnimatedBalanceText(
 ) {
     val animatedBalance by animateFloatAsState(
         targetValue = balance.toFloat(),
-        animationSpec = tween(800, easing = CashBuddyEasing.EaseOutQuart),
+        animationSpec = tween(600, easing = CashBuddyEasing.EaseOutQuart),
         label = "balance"
     )
 
-    val formattedBalance = if (isVisible) {
-        "₹" + formatCurrency(animatedBalance.toDouble())
-    } else {
-        "₹ ••••••"
+    val isNegative = balance < 0.0 || animatedBalance < -0.01f
+
+    val formattedBalance = remember(animatedBalance, isVisible, isNegative) {
+        if (isVisible) {
+            val absFormatted = formatCurrency(kotlin.math.abs(animatedBalance.toDouble()))
+            if (isNegative) "-₹$absFormatted" else "₹$absFormatted"
+        } else {
+            "₹ ••••••"
+        }
     }
 
     Text(
         text = formattedBalance,
         style = CashBuddyTypography.displayLarge.copy(fontSize = 38.sp),
         fontWeight = FontWeight.Bold,
-        color = MaterialTheme.colorScheme.onSurface,
+        color = if (isNegative) DangerRed else MaterialTheme.colorScheme.onSurface,
         modifier = modifier
     )
 }

@@ -8,6 +8,7 @@ sealed interface ReviewResult {
     data class TransactionConfirmed(val transactionId: Long) : ReviewResult
     data class TransactionRejected(val transactionId: Long) : ReviewResult
     data class CategoryModified(val transactionId: Long, val newCategoryId: Long) : ReviewResult
+    data class TransactionUpdated(val transaction: Transaction) : ReviewResult
     data class ConfidenceFilterChanged(val minConfidence: Float) : ReviewResult
     data object AllHighConfidenceConfirmed : ReviewResult
     data class Error(val message: String) : ReviewResult
@@ -31,6 +32,11 @@ class ReviewReducer {
             is ReviewResult.CategoryModified -> currentState.copy(
                 transactions = currentState.transactions.map { tx ->
                     if (tx.id == result.transactionId) tx.copy(categoryId = result.newCategoryId) else tx
+                }
+            )
+            is ReviewResult.TransactionUpdated -> currentState.copy(
+                transactions = currentState.transactions.map { tx ->
+                    if (tx.id == result.transaction.id) result.transaction else tx
                 }
             )
             is ReviewResult.ConfidenceFilterChanged -> currentState.copy(

@@ -52,6 +52,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.shape.CircleShape
 import com.cashbuddy.presentation.components.formatCurrency
 import com.cashbuddy.presentation.theme.CashBuddyTypography
+import com.cashbuddy.presentation.theme.DangerRed
 import com.cashbuddy.presentation.theme.PrimaryIndigo
 import com.cashbuddy.presentation.theme.RadiusLarge
 import com.cashbuddy.presentation.theme.RadiusMedium
@@ -194,11 +195,14 @@ private fun AccountItemCard(account: Account, onDelete: () -> Unit) {
             }
 
             Column(horizontalAlignment = Alignment.End) {
+                val isNegative = account.balance < 0.0
+                val absFormatted = formatCurrency(kotlin.math.abs(account.balance))
+                val balanceText = if (isNegative) "-₹$absFormatted" else "₹$absFormatted"
                 Text(
-                    text = "₹${formatCurrency(account.balance)}",
+                    text = balanceText,
                     style = CashBuddyTypography.titleLarge,
                     fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.primary
+                    color = if (isNegative) DangerRed else MaterialTheme.colorScheme.primary
                 )
             }
         }

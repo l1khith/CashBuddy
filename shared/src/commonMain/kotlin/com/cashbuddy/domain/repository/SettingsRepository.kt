@@ -18,4 +18,6 @@ interface SettingsRepository {
     suspend fun setDeveloperMode(enabled: Boolean)
     fun getDebugLogEnabled(): Flow<Boolean>
     suspend fun setDebugLogEnabled(enabled: Boolean)
+    fun getPreferredCurrency(): Flow<String>
+    suspend fun setPreferredCurrency(currencyCode: String)
 }

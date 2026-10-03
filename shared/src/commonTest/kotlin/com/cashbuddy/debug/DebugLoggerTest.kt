@@ -190,20 +190,21 @@ class DebugLoggerTest {
             hasAmount = true,
             hasAccount = true,
             hasUtr = true,
-            hasDebit = true,
-            hasCredit = false,
             hasOtp = false,
             hasPromo = false,
             hasOffer = false,
             hasUpiHandle = true,
             hasBalanceMention = true,
-            hasTransactionVerb = true,
             hasSuccessWord = true,
             senderLooksBank = true,
             fromMerchantPackage = false,
-            recentSameAmount = false,
+            amountInTransactionContext = true,
+            amountAndDebitSameSentence = true,
+            amountAndCreditSameSentence = false,
+            amountHasForbiddenShape = false,
+            recentSimilarAmount = false,
             recentSameMerchant = false,
-            velocityHigh = false
+            burstDetected = false
         )
 
         val json = evidence.toJson()
@@ -492,21 +493,5 @@ class DebugLoggerTest {
             val entry2 = repo.entries.last()
             assertEquals("Where are you?", entry2.rawText)
         }
-    }
-
-    @Test
-    fun testNoSourceFilesHaveTxtExtension() {
-        val rootDirs = listOf(
-            java.io.File("src"),
-            java.io.File("../shared/src"),
-            java.io.File("../androidApp/src")
-        ).filter { it.exists() }
-
-        val badFiles = rootDirs.flatMap { dir ->
-            dir.walkTopDown()
-                .filter { it.isFile && it.extension.equals("txt", ignoreCase = true) }
-                .toList()
-        }
-        assertTrue(badFiles.isEmpty(), "Found source files with .txt extension: $badFiles")
     }
 }

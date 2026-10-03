@@ -32,7 +32,22 @@ class FieldConfidenceEstimator {
         categoryMatchConfidence: Float = 0.5f
     ): FieldConfidences {
         val amountConf = if (amount != null && amount > 0.0) {
-            if (rawText.contains('₹') || rawText.contains("Rs", ignoreCase = true) || rawText.contains("INR", ignoreCase = true)) {
+            val hasCurrency = rawText.contains('₹') ||
+                    rawText.contains("Rs", ignoreCase = true) ||
+                    rawText.contains("INR", ignoreCase = true) ||
+                    rawText.contains('$') ||
+                    rawText.contains("USD", ignoreCase = true) ||
+                    rawText.contains('€') ||
+                    rawText.contains("EUR", ignoreCase = true) ||
+                    rawText.contains('£') ||
+                    rawText.contains("GBP", ignoreCase = true) ||
+                    rawText.contains('¥') ||
+                    rawText.contains("JPY", ignoreCase = true) ||
+                    rawText.contains("CAD", ignoreCase = true) ||
+                    rawText.contains("AUD", ignoreCase = true) ||
+                    rawText.contains("AED", ignoreCase = true) ||
+                    rawText.contains("SGD", ignoreCase = true)
+            if (hasCurrency) {
                 0.98
             } else {
                 0.80

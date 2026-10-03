@@ -36,21 +36,21 @@ val DividerDark = Color(0xFF262626)
 val DividerLight = Color(0xFFE5E5E5)
 val OverlayColor = Color(0xCC000000)
 
-// Category Colors (Consistent across app)
-val CategoryFood = Color(0xFFF97066)
-val CategoryTransport = Color(0xFF2DD4BF)
-val CategoryShopping = Color(0xFF38BDF8)
-val CategoryBills = Color(0xFF86EFAC)
-val CategoryEntertainment = Color(0xFFC4B5FD)
-val CategoryHealthcare = Color(0xFFFCD34D)
-val CategoryEducation = Color(0xFFA78BFA)
-val CategoryHousing = Color(0xFFFB7185)
-val CategoryInsurance = Color(0xFF60A5FA)
-val CategoryInvestments = Color(0xFF34D399)
-val CategorySalary = Color(0xFF10B981)
-val CategoryRefund = Color(0xFFFB923C)
-val CategoryGift = Color(0xFFF472B6)
-val CategoryUnknown = Color(0xFF9CA3AF)
+// Category Colors (JSON-driven via CategoryRegistry)
+val CategoryFood get() = com.cashbuddy.domain.model.CategoryRegistry.getColor("Food & Dining")
+val CategoryTransport get() = com.cashbuddy.domain.model.CategoryRegistry.getColor("Transportation")
+val CategoryShopping get() = com.cashbuddy.domain.model.CategoryRegistry.getColor("Shopping")
+val CategoryBills get() = com.cashbuddy.domain.model.CategoryRegistry.getColor("Bills & Utilities")
+val CategoryEntertainment get() = com.cashbuddy.domain.model.CategoryRegistry.getColor("Entertainment")
+val CategoryHealthcare get() = com.cashbuddy.domain.model.CategoryRegistry.getColor("Healthcare")
+val CategoryEducation get() = com.cashbuddy.domain.model.CategoryRegistry.getColor("Education")
+val CategoryHousing get() = com.cashbuddy.domain.model.CategoryRegistry.getColor("Housing")
+val CategoryInsurance get() = com.cashbuddy.domain.model.CategoryRegistry.getColor("Insurance")
+val CategoryInvestments get() = com.cashbuddy.domain.model.CategoryRegistry.getColor("Investments")
+val CategorySalary get() = com.cashbuddy.domain.model.CategoryRegistry.getColor("Salary")
+val CategoryRefund get() = com.cashbuddy.domain.model.CategoryRegistry.getColor("Refund")
+val CategoryGift get() = com.cashbuddy.domain.model.CategoryRegistry.getColor("Gift")
+val CategoryUnknown get() = com.cashbuddy.domain.model.CategoryRegistry.getColor("Uncategorized")
 
 // Backwards-compatible aliases for existing codebase
 val TrustBluePrimary = PrimaryIndigo
@@ -73,22 +73,4 @@ val OnSurfaceVariantLight = TextSecondaryLight
 val OutlineDark = DividerDark
 val OutlineLight = DividerLight
 
-fun getCategoryColor(name: String?): Color {
-    val lower = name?.lowercase() ?: ""
-    return when {
-        lower.contains("food") || lower.contains("dining") || lower.contains("restaurant") -> CategoryFood
-        lower.contains("transport") || lower.contains("cab") || lower.contains("fuel") || lower.contains("metro") -> CategoryTransport
-        lower.contains("shop") || lower.contains("ecommerce") -> CategoryShopping
-        lower.contains("bill") || lower.contains("utilit") || lower.contains("electric") -> CategoryBills
-        lower.contains("entertain") || lower.contains("movie") || lower.contains("ott") -> CategoryEntertainment
-        lower.contains("health") || lower.contains("medical") || lower.contains("pharmacy") -> CategoryHealthcare
-        lower.contains("educat") || lower.contains("school") || lower.contains("college") -> CategoryEducation
-        lower.contains("hous") || lower.contains("rent") -> CategoryHousing
-        lower.contains("insur") -> CategoryInsurance
-        lower.contains("invest") || lower.contains("mutual") || lower.contains("stock") -> CategoryInvestments
-        lower.contains("salary") -> CategorySalary
-        lower.contains("refund") -> CategoryRefund
-        lower.contains("gift") -> CategoryGift
-        else -> CategoryUnknown
-    }
-}
+fun getCategoryColor(name: String?): Color = com.cashbuddy.domain.model.CategoryRegistry.getColor(name)

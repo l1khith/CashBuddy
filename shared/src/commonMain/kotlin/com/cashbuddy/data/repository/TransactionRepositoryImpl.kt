@@ -102,6 +102,7 @@ class TransactionRepositoryImpl(
     }
 
     override suspend fun update(transaction: Transaction): Unit = withContext(dispatcher) {
+        val oldTx = queries.getById(transaction.id, ::mapTransaction).executeAsOneOrNull()
         queries.updateTransaction(
             amount = transaction.amount,
             type = transaction.type.name,
@@ -112,6 +113,33 @@ class TransactionRepositoryImpl(
             updated_at = com.cashbuddy.platform.currentTimeMillis(),
             id = transaction.id
         )
+        if (oldTx != null && (oldTx.status == TransactionStatus.CONFIRMED || oldTx.status == TransactionStatus.MODIFIED)
+            && (transaction.status == TransactionStatus.CONFIRMED || transaction.status == TransactionStatus.MODIFIED)) {
+            val oldEffect = if (oldTx.type == TransactionType.CREDIT) oldTx.amount else -oldTx.amount
+            val newEffect = if (transaction.type == TransactionType.CREDIT) transaction.amount else -transaction.amount
+            if (oldTx.accountId != null && oldTx.accountId == transaction.accountId) {
+                val delta = newEffect - oldEffect
+                if (delta != 0.0) {
+                    val acc = db.accountsQueries.getById(oldTx.accountId).executeAsOneOrNull()
+                    if (acc != null) {
+                        db.accountsQueries.updateBalance(acc.balance + delta, com.cashbuddy.platform.currentTimeMillis(), acc.id)
+                    }
+                }
+            } else {
+                if (oldTx.accountId != null) {
+                    val oldAcc = db.accountsQueries.getById(oldTx.accountId).executeAsOneOrNull()
+                    if (oldAcc != null) {
+                        db.accountsQueries.updateBalance(oldAcc.balance - oldEffect, com.cashbuddy.platform.currentTimeMillis(), oldAcc.id)
+                    }
+                }
+                if (transaction.accountId != null) {
+                    val newAcc = db.accountsQueries.getById(transaction.accountId).executeAsOneOrNull()
+                    if (newAcc != null) {
+                        db.accountsQueries.updateBalance(newAcc.balance + newEffect, com.cashbuddy.platform.currentTimeMillis(), newAcc.id)
+                    }
+                }
+            }
+        }
     }
 
     override suspend fun deleteById(id: Long): Unit = withContext(dispatcher) {

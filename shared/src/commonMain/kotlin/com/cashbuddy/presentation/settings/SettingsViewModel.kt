@@ -24,7 +24,6 @@ import kotlinx.coroutines.launch
 data class SettingsUiState(
     val notificationEnabled: Boolean = true,
     val autoConfirmThreshold: Double = 10000.0,
-    val autoConfirmMinConfidence: Float = 0.85f,
     val biometricLockEnabled: Boolean = false,
     val totalTransactionsCount: Int = 0,
     val totalAccountsCount: Int = 0,
@@ -33,6 +32,7 @@ data class SettingsUiState(
     val isDeveloperMode: Boolean = false,
     val isDebugLogEnabled: Boolean = false,
     val isDebugLogVisible: Boolean = true,
+    val preferredCurrency: String = "INR",
     val isLoading: Boolean = true
 )
 
@@ -69,7 +69,6 @@ class SettingsViewModel(
                 SettingsUiState(
                     notificationEnabled = settings.notificationsEnabled,
                     autoConfirmThreshold = settings.autoConfirmThreshold,
-                    autoConfirmMinConfidence = settings.minConfidenceThreshold,
                     biometricLockEnabled = settings.biometricEnabled,
                     totalTransactionsCount = txCount.toInt(),
                     totalAccountsCount = accCount.toInt(),
@@ -78,6 +77,7 @@ class SettingsViewModel(
                     isDeveloperMode = debugLogEnabled,
                     isDebugLogEnabled = debugLogEnabled,
                     isDebugLogVisible = true,
+                    preferredCurrency = settings.preferredCurrency,
                     isLoading = false
                 )
             }.collect {
@@ -121,9 +121,9 @@ class SettingsViewModel(
         }
     }
 
-    fun setAutoConfirmMinConfidence(confidence: Float) {
+    fun setPreferredCurrency(currencyCode: String) {
         viewModelScope.launch {
-            settingsRepository.setMinConfidenceThreshold(confidence)
+            settingsRepository.setPreferredCurrency(currencyCode)
         }
     }
 
