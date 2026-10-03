@@ -87,8 +87,9 @@ fun TransactionDetailScreen(
         } else {
             val tx = state.transaction!!
             val isDebit = tx.type == TransactionType.DEBIT
-            val prefix = if (isDebit) "-₹" else "+₹"
+            val sign = if (isDebit) "-" else "+"
             val amountColor = if (isDebit) MaterialTheme.colorScheme.onSurface else AccentEmerald
+            val formattedAmount = formatCurrency(tx.amount, tx.currency, includeSymbol = true)
 
             Column(
                 modifier = Modifier
@@ -135,7 +136,7 @@ fun TransactionDetailScreen(
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
                         Text(
-                            text = "$prefix${formatCurrency(tx.amount)}",
+                            text = "$sign$formattedAmount",
                             style = CashBuddyTypography.displayLarge.copy(fontSize = 38.sp),
                             fontWeight = FontWeight.Bold,
                             color = amountColor

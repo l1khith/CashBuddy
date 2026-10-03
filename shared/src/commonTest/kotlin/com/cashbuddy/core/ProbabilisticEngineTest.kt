@@ -484,5 +484,72 @@ class ProbabilisticEngineTest {
         assertTrue(repo.burstDetected(t0 + 20_000L), "More than 3 raw messages within 60s must trigger burstDetected")
         assertFalse(repo.burstDetected(t0 + 100_000L), "Burst must clear after 60s window passes")
     }
+
+    @Test
+    fun testP2PIncomingPaymentCreditAndMerchant() {
+        val text = "MANJAPPA SON OF DANAPPA paid you ₹7,000.00 Payment from PhonePe"
+        val raw = RawMessage(
+            id = "test-gpay-incoming",
+            sourceType = SourceType.NOTIFICATION,
+            packageName = "com.google.android.apps.nbu.paisa.user",
+            senderId = null,
+            title = "",
+            text = text,
+            timestamp = 1727600000000L
+        )
+
+        val source = sourceDetector.detect("com.google.android.apps.nbu.paisa.user", text)
+        val evidence = evidenceExtractor.extract(raw, source)
+        val result = classifier.classify(evidence, text, source, raw.packageName)
+
+        assertEquals(7000.0, result.amount)
+        assertEquals(TransactionType.CREDIT, result.type, "P2P 'paid you' must be classified as CREDIT, not DEBIT")
+        assertEquals("Manjappa Son Of Danappa", result.merchant, "Sender before 'paid you' must be extracted as merchant")
+        assertTrue(result.pTransaction >= 0.85, "Legitimate P2P transfer must have high confidence, got ${result.pTransaction}")
+    }
+
+    @Test
+    fun testP2POutgoingPaymentDebitAndMerchant() {
+        val text = "Paid ₹350.00 to Chai Point successfully. Transaction ID: T2610011234."
+        val raw = RawMessage(
+            id = "test-phonepe-outgoing",
+            sourceType = SourceType.NOTIFICATION,
+            packageName = "com.phonepe.app",
+            senderId = null,
+            title = "",
+            text = text,
+            timestamp = 1727600000000L
+        )
+
+        val source = sourceDetector.detect("com.phonepe.app", text)
+        val evidence = evidenceExtractor.extract(raw, source)
+        val result = classifier.classify(evidence, text, source, raw.packageName)
+
+        assertEquals(350.0, result.amount)
+        assertEquals(TransactionType.DEBIT, result.type, "Outgoing 'Paid ... to' must be classified as DEBIT")
+        assertEquals("Chai Point", result.merchant)
+    }
+
+    @Test
+    fun testP2PIncomingReceivedFrom() {
+        val text = "Received ₹500 from Ramesh Kumar via PhonePe"
+        val raw = RawMessage(
+            id = "test-received-from",
+            sourceType = SourceType.NOTIFICATION,
+            packageName = "net.one97.paytm",
+            senderId = null,
+            title = "",
+            text = text,
+            timestamp = 1727600000000L
+        )
+
+        val source = sourceDetector.detect("net.one97.paytm", text)
+        val evidence = evidenceExtractor.extract(raw, source)
+        val result = classifier.classify(evidence, text, source, raw.packageName)
+
+        assertEquals(500.0, result.amount)
+        assertEquals(TransactionType.CREDIT, result.type)
+        assertEquals("Ramesh Kumar", result.merchant)
+    }
 }
 

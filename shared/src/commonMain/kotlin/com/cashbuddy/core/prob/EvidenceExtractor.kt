@@ -7,9 +7,13 @@ class EvidenceExtractor(
     private val recentStateRepository: RecentStateRepository? = null
 ) {
     companion object {
-        private val DEBIT_VERBS = Regex("""(?i)\b(debited|withdrawn|spent|paid|sent|deducted|transferred|charged)\b""")
-        private val CREDIT_VERBS = Regex("""(?i)\b(credited|deposited|received|refunded)\b""")
+        private val DEBIT_VERBS = Regex("""(?i)\b(debited|withdrawn|spent|paid(?!\s+(?:to\s+)?you\b)|sent(?!\s+you\b)|transferred(?!\s+to\s+you\b)|deducted|charged)\b""")
+        private val CREDIT_VERBS = Regex("""(?i)\b(credited|deposited|received|refunded|cashback|paid\s+(?:to\s+)?you|sent\s+you|transferred\s+to\s+you)\b""")
         private val TRANSACTION_VERBS = Regex("""(?i)\b(debited|withdrawn|spent|paid|sent|deducted|transferred|charged|credited|deposited|received|refunded|payment|txn|transaction)\b""")
+
+        private val PAYMENT_RAILS = setOf(
+            "phonepe", "paytm", "gpay", "google pay", "bhim", "upi", "netbanking", "mobikwik", "cred", "bank"
+        )
 
         private const val CURR = """(?:₹|Rs[.:]?|INR|[$€£¥]|USD|EUR|GBP|CAD|AUD|AED|SGD|JPY)"""
 
@@ -185,22 +189,32 @@ class EvidenceExtractor(
         val vpa = Regexes.UPI_HANDLE.find(text)?.value
         if (vpa != null) {
             val handle = vpa.substringBefore("@").replace(".", " ").replace("-", " ").trim()
-            if (handle.length >= 3) {
+            if (handle.length >= 3 && !PAYMENT_RAILS.contains(handle.lowercase())) {
                 return formatMerchant(handle)
             }
         }
 
-        // 2. Fvg / In favour of / Banking name (as seen in Union Bank, Indian Bank SMS, and GPay receipts)
-        val fvgRegex = Regex("""(?i)(?:fvg:?|favoring|in\s+favou?r\s+of|banking\s+name:?)\s*([A-Za-z0-9\s&'.-]{2,30}?)(?:\s+avl|\s+bal|\s+ref|\s+on|\n|\.|\z)""")
-        val mFvg = fvgRegex.find(text)
-        if (mFvg != null) {
-            val raw = mFvg.groups[1]?.value?.trim()
-            if (!raw.isNullOrBlank() && raw.length >= 2) {
+        // 2. Incoming P2P payer before "paid you", "sent you", "transferred to you"
+        val payerRegex = Regex("""(?i)(?:^|[\n\r•·|—:]|\b(?:from|by)\s+)\s*([A-Za-z0-9\s&'.-]{2,40}?)\s+(?:paid\s+(?:to\s+)?you|sent\s+you|transferred\s+to\s+you)\b""")
+        val mPayer = payerRegex.find(text)
+        if (mPayer != null) {
+            val raw = mPayer.groups[1]?.value?.trim()
+            if (!raw.isNullOrBlank() && raw.length in 2..40 && !PAYMENT_RAILS.contains(raw.lowercase())) {
                 return formatMerchant(raw)
             }
         }
 
-        // 3. Line-by-line structure: "Paid to\n<Merchant>"
+        // 3. Fvg / In favour of / Banking name (as seen in Union Bank, Indian Bank SMS, and GPay receipts)
+        val fvgRegex = Regex("""(?i)(?:fvg:?|favoring|in\s+favou?r\s+of|banking\s+name:?)\s*([A-Za-z0-9\s&'.-]{2,30}?)(?:\s+avl|\s+bal|\s+ref|\s+on|\n|\.|\z)""")
+        val mFvg = fvgRegex.find(text)
+        if (mFvg != null) {
+            val raw = mFvg.groups[1]?.value?.trim()
+            if (!raw.isNullOrBlank() && raw.length >= 2 && !PAYMENT_RAILS.contains(raw.lowercase())) {
+                return formatMerchant(raw)
+            }
+        }
+
+        // 4. Line-by-line structure: "Paid to\n<Merchant>"
         val lines = text.lines().map { it.trim() }.filter { it.isNotEmpty() }
         for (i in lines.indices) {
             val l = lines[i].lowercase()
@@ -208,24 +222,45 @@ class EvidenceExtractor(
                 val next = lines.getOrNull(i + 1)?.trim()
                 if (!next.isNullOrBlank() && next.length in 2..40 &&
                     !next.startsWith("₹") && !next.startsWith("Rs", ignoreCase = true) &&
-                    !next.lowercase().startsWith("banking name") && !next.lowercase().startsWith("receiver")
+                    !next.lowercase().startsWith("banking name") && !next.lowercase().startsWith("receiver") &&
+                    !PAYMENT_RAILS.contains(next.lowercase())
                 ) {
                     return formatMerchant(next)
                 }
             }
         }
 
-        // 4. Prefix "paid to ...", "sent to ...", "towards ..."
-        val prefixRegex = Regex("""(?i)(?:paid\s+to|sent\s+to|transferred\s+to|towards|at|to)\s+([A-Za-z0-9\s&'-]{2,30}?)(?:\s+on|\s+ref|\s+via|\s+using|\s+bal|\s+avl|\s+upi|\n|\.|\z)""")
-        val m = prefixRegex.find(text)
-        if (m != null) {
-            val raw = m.groups[1]?.value?.trim()
-            if (!raw.isNullOrBlank() && raw.length >= 2) {
+        // 5. Outgoing recipient: "Paid ₹X to ...", "Sent ₹X to ...", "Paid to ...", "Sent to ..."
+        val recipientRegex = Regex("""(?i)(?:paid|sent|transferred)\s+(?:(?:₹|Rs[.:]?|INR|[$€£¥])\s*[\d,.]+\s+)?to\s+([A-Za-z0-9\s&'-]{2,30}?)(?:\s+on|\s+ref|\s+via|\s+using|\s+bal|\s+avl|\s+upi|\s+successfully|\n|\.|\z)""")
+        val mRecipient = recipientRegex.find(text)
+        if (mRecipient != null) {
+            val raw = mRecipient.groups[1]?.value?.trim()
+            if (!raw.isNullOrBlank() && raw.length in 2..30 && !PAYMENT_RAILS.contains(raw.lowercase())) {
                 return formatMerchant(raw)
             }
         }
 
-        // 5. MerchantMap brand token scan in text (e.g. "BMTC", "SmartQ", "Swiggy", "Zomato")
+        // 6. Incoming from: "Received ₹X from ...", "Received from ..."
+        val receivedRegex = Regex("""(?i)\b(?:received\s+(?:(?:₹|Rs[.:]?|INR|[$€£¥])\s*[\d,.]+\s+)?from|received\s+from)\s+([A-Za-z0-9\s&'-]{2,30}?)(?:\s+via|\s+using|\s+on|\s+ref|\s+upi|\s+bal|\s+avl|\n|\.|\z)""")
+        val mReceived = receivedRegex.find(text)
+        if (mReceived != null) {
+            val raw = mReceived.groups[1]?.value?.trim()
+            if (!raw.isNullOrBlank() && raw.length in 2..30 && !PAYMENT_RAILS.contains(raw.lowercase())) {
+                return formatMerchant(raw)
+            }
+        }
+
+        // 7. General Prefix "towards ...", "for ...", "at ...", "to ..."
+        val prefixRegex = Regex("""(?i)(?:towards|for|at|to)\s+([A-Za-z0-9\s&'-]{2,30}?)(?:\s+on|\s+ref|\s+via|\s+using|\s+bal|\s+avl|\s+upi|\n|\.|\z)""")
+        val m = prefixRegex.find(text)
+        if (m != null) {
+            val raw = m.groups[1]?.value?.trim()
+            if (!raw.isNullOrBlank() && raw.length >= 2 && !PAYMENT_RAILS.contains(raw.lowercase())) {
+                return formatMerchant(raw)
+            }
+        }
+
+        // 8. MerchantMap brand token scan in text (e.g. "BMTC", "SmartQ", "Swiggy", "Zomato")
         val tokens = text.lowercase().split(Regex("[^a-z0-9]")).filter { it.length >= 3 }
         for (token in tokens) {
             val match = MerchantMap.lookup(token)
@@ -234,7 +269,7 @@ class EvidenceExtractor(
             }
         }
 
-        // 6. MerchantMap brand token scan in packageName (e.g. "com.smartq" -> "Smartq")
+        // 9. MerchantMap brand token scan in packageName (e.g. "com.smartq" -> "Smartq")
         if (!packageName.isNullOrBlank()) {
             val pkgTokens = packageName.lowercase().split('.', '_', '-').filter { it.length >= 3 }
             for (token in pkgTokens) {
@@ -249,8 +284,10 @@ class EvidenceExtractor(
     }
 
     private fun formatMerchant(name: String): String {
-        return name.split(" ").filter { it.isNotBlank() }.joinToString(" ") { word ->
-            if (word.all { it.isLetter() && it.isUpperCase() } && word.length > 1) {
+        val cleaned = name.replace(Regex("""(?i)^(?:google\s+pay|gpay|phonepe|paytm|bhim|cred)\s*[:·-]?\s*"""), "").trim()
+            .trim('-', ':', '·', ' ', '•')
+        return cleaned.split(" ").filter { it.isNotBlank() }.joinToString(" ") { word ->
+            if (word.all { it.isLetter() && it.isUpperCase() }) {
                 word.lowercase().replaceFirstChar { if (it.isLowerCase()) it.titlecase() else it.toString() }
             } else {
                 word.replaceFirstChar { if (it.isLowerCase()) it.titlecase() else it.toString() }

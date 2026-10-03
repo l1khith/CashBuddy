@@ -3,6 +3,7 @@ package com.cashbuddy.core.prob
 
 import com.cashbuddy.core.CategoryEngine
 import com.cashbuddy.debug.DebugLogger
+import com.cashbuddy.domain.model.CategoryType
 import com.cashbuddy.domain.model.Transaction
 import com.cashbuddy.domain.model.TransactionStatus
 import com.cashbuddy.domain.model.TransactionType
@@ -148,7 +149,15 @@ class MessagePipeline(
                                 val allCategories = categoryRepo.getAll().firstOrNull() ?: emptyList()
                                 val matchedCategory = allCategories.find {
                                     it.name.equals(categoryMatch.category, ignoreCase = true)
-                                } ?: allCategories.firstOrNull()
+                                } ?: if (classification.type == TransactionType.CREDIT) {
+                                    allCategories.find { it.name.equals("Other Income", ignoreCase = true) }
+                                        ?: allCategories.find { it.name.equals("Uncategorized", ignoreCase = true) }
+                                        ?: allCategories.find { it.type == CategoryType.INCOME }
+                                        ?: allCategories.firstOrNull()
+                                } else {
+                                    allCategories.find { it.name.equals("Uncategorized", ignoreCase = true) }
+                                        ?: allCategories.firstOrNull()
+                                }
                                 val categoryId = matchedCategory?.id ?: 1L
 
                                 val status = if (action == PolicyEngine.Action.AUTO_LOG) {

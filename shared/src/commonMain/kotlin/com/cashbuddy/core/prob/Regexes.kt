@@ -12,8 +12,8 @@ object Regexes {
     val UPI_HANDLE = Regex("""(?i)\b[a-z0-9._-]+@[a-z]+\b""")
     val BALANCE = Regex("""(?i)(?:avl\s*bal|available\s*balance|bal)\s*[:₹$€£¥]?\s*\d""")
 
-    val DEBIT = Regex("""(?i)\b(debited|paid|spent|sent|transferred|withdrawn|charged|purchase at)\b""")
-    val CREDIT = Regex("""(?i)\b(credited|received|deposited|added|refunded|cashback)\b""")
+    val DEBIT = Regex("""(?i)\b(debited|paid(?!\s+(?:to\s+)?you\b)|spent|sent(?!\s+you\b)|transferred(?!\s+to\s+you\b)|withdrawn|charged|purchase at)\b""")
+    val CREDIT = Regex("""(?i)\b(credited|received|deposited|added|refunded|cashback|paid\s+(?:to\s+)?you|sent\s+you|transferred\s+to\s+you)\b""")
     val OTP = Regex("""(?i)\b(otp|one time password|verification code|secret code|do not share)\b""")
     val PROMO = Regex("""(?i)\b(congratulations|pre-approved|win cash|apply now|apply for|apply|earn|special offer|voucher)\b""")
     val OFFER = Regex("""(?i)\b(offer|discount|deal|cashback up to)\b""")
