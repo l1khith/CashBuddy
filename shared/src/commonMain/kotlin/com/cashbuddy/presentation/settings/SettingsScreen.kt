@@ -24,8 +24,11 @@ import androidx.compose.material.icons.filled.DeleteForever
 import androidx.compose.material.icons.filled.DeleteSweep
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.FileDownload
+import androidx.compose.material.icons.automirrored.filled.MergeType
+import androidx.compose.material.icons.automirrored.filled.Undo
 import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material.icons.filled.Visibility
+import com.cashbuddy.presentation.settings.components.DuplicateReconciliationDialog
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -80,6 +83,7 @@ fun SettingsScreen(
     val snackbarHostState = remember { SnackbarHostState() }
     var showClearDialog by remember { mutableStateOf(false) }
     var showClearTrainingDialog by remember { mutableStateOf(false) }
+    var showDuplicateDialog by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {
         viewModel.messageEffect.collectLatest { msg ->
@@ -473,6 +477,43 @@ fun SettingsScreen(
                                 Text("Export All Transactions (CSV)")
                             }
 
+                            OutlinedButton(
+                                onClick = {
+                                    viewModel.scanDuplicates {
+                                        showDuplicateDialog = true
+                                    }
+                                },
+                                modifier = Modifier.fillMaxWidth(),
+                                shape = RoundedCornerShape(10.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.AutoMirrored.Filled.MergeType,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(
+                                    if (state.isScanningDuplicates) "Scanning Duplicates..."
+                                    else "Clean Up Duplicates"
+                                )
+                            }
+
+                            if (state.hasRecentMerges) {
+                                OutlinedButton(
+                                    onClick = { viewModel.undoLastMerge() },
+                                    modifier = Modifier.fillMaxWidth(),
+                                    shape = RoundedCornerShape(10.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.AutoMirrored.Filled.Undo,
+                                        contentDescription = null,
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Text("Undo Last Duplicate Merge")
+                                }
+                            }
+
                             Button(
                                 onClick = { showClearDialog = true },
                                 modifier = Modifier.fillMaxWidth(),
@@ -678,6 +719,23 @@ fun SettingsScreen(
             dismissButton = {
                 TextButton(onClick = { showClearTrainingDialog = false }) { Text("Cancel") }
             }
+        )
+    }
+
+    if (showDuplicateDialog) {
+        DuplicateReconciliationDialog(
+            duplicateGroups = state.duplicateGroups,
+            preferredCurrency = state.preferredCurrency,
+            isMerging = state.isMerging,
+            onMergeConfirmed = {
+                viewModel.mergeDuplicates(state.duplicateGroups) {
+                    showDuplicateDialog = false
+                }
+            },
+            onPreviewCsv = {
+                viewModel.exportCsvData {}
+            },
+            onDismiss = { showDuplicateDialog = false }
         )
     }
 }

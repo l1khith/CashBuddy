@@ -22,6 +22,7 @@ LEFT JOIN transactions t ON b.category_id = t.category_id
     AND t.type = 'DEBIT' 
     AND t.status IN ('CONFIRMED', 'MODIFIED')
     AND t.timestamp BETWEEN b.start_date AND COALESCE(b.end_date, ?)
+    AND t.is_merged = 0
 WHERE b.is_active = 1
 GROUP BY b.id;
 

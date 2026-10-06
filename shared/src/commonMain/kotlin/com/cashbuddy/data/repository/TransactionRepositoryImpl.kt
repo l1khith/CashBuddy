@@ -92,7 +92,9 @@ class TransactionRepositoryImpl(
             notes = transaction.notes,
             timestamp = transaction.timestamp,
             created_at = transaction.createdAt,
-            updated_at = transaction.updatedAt
+            updated_at = transaction.updatedAt,
+            is_merged = if (transaction.isMerged) 1L else 0L,
+            merged_into_id = transaction.mergedIntoId
         )
         queries.lastInsertRowId().executeAsOne()
     }
@@ -162,6 +164,45 @@ class TransactionRepositoryImpl(
             }
         }
 
+    override suspend fun findDuplicateCandidates(): List<Transaction> = withContext(dispatcher) {
+        queries.findDuplicateCandidates(::mapTransaction).executeAsList()
+    }
+
+    override suspend fun markMerged(id: Long, survivorId: Long): Unit = withContext(dispatcher) {
+        queries.markMerged(merged_into_id = survivorId, updated_at = com.cashbuddy.platform.currentTimeMillis(), id = id)
+    }
+
+    override suspend fun unmarkMerged(id: Long): Unit = withContext(dispatcher) {
+        queries.unmarkMerged(updated_at = com.cashbuddy.platform.currentTimeMillis(), id = id)
+    }
+
+    override suspend fun insertMergeLog(survivorId: Long, mergedId: Long, timestamp: Long): Unit = withContext(dispatcher) {
+        queries.insertMergeLog(survivor_id = survivorId, merged_id = mergedId, merged_at = timestamp)
+    }
+
+    override suspend fun getMergedTransactions(survivorId: Long): List<Transaction> = withContext(dispatcher) {
+        queries.getMergedRecordsForSurvivor(survivorId, ::mapTransaction).executeAsList()
+    }
+
+    override suspend fun deleteMergeLog(survivorId: Long): Unit = withContext(dispatcher) {
+        queries.deleteMergeLogForSurvivor(survivorId)
+    }
+
+    override suspend fun getRecentMergeLogs(): List<com.cashbuddy.domain.repository.MergeLogEntry> = withContext(dispatcher) {
+        queries.getRecentMergeLogs().executeAsList().map {
+            com.cashbuddy.domain.repository.MergeLogEntry(
+                id = it.id,
+                survivorId = it.survivor_id,
+                mergedId = it.merged_id,
+                mergedAt = it.merged_at
+            )
+        }
+    }
+
+    override suspend fun getMergeLogCount(): Long = withContext(dispatcher) {
+        queries.getMergeLogCount().executeAsOne()
+    }
+
     private fun mapTransaction(
         id: Long,
         amount: Double,
@@ -178,6 +219,8 @@ class TransactionRepositoryImpl(
         timestamp: Long,
         createdAt: Long,
         updatedAt: Long,
+        isMerged: Long,
+        mergedIntoId: Long?,
         categoryName: String?,
         categoryColor: String?,
         categoryIcon: String?,
@@ -200,6 +243,8 @@ class TransactionRepositoryImpl(
             timestamp = timestamp,
             createdAt = createdAt,
             updatedAt = updatedAt,
+            isMerged = isMerged == 1L,
+            mergedIntoId = mergedIntoId,
             categoryName = categoryName,
             categoryColor = categoryColor,
             categoryIcon = categoryIcon,

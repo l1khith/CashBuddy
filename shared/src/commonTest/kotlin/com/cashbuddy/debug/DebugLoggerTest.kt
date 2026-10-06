@@ -161,6 +161,20 @@ class DebugLoggerTest {
         override fun getBalance(): Flow<Double> = flowOf(0.0)
         override fun getAverageAmount(): Flow<Double> = flowOf(0.0)
         override fun getCount(): Flow<Long> = flowOf(txs.size.toLong())
+        override suspend fun findDuplicateCandidates(): List<Transaction> = txs.filter { !it.isMerged }
+        override suspend fun markMerged(id: Long, survivorId: Long) {
+            val idx = txs.indexOfFirst { it.id == id }
+            if (idx != -1) txs[idx] = txs[idx].copy(isMerged = true, mergedIntoId = survivorId)
+        }
+        override suspend fun unmarkMerged(id: Long) {
+            val idx = txs.indexOfFirst { it.id == id }
+            if (idx != -1) txs[idx] = txs[idx].copy(isMerged = false, mergedIntoId = null)
+        }
+        override suspend fun insertMergeLog(survivorId: Long, mergedId: Long, timestamp: Long) {}
+        override suspend fun getMergedTransactions(survivorId: Long): List<Transaction> = txs.filter { it.mergedIntoId == survivorId }
+        override suspend fun deleteMergeLog(survivorId: Long) {}
+        override suspend fun getRecentMergeLogs(): List<com.cashbuddy.domain.repository.MergeLogEntry> = emptyList()
+        override suspend fun getMergeLogCount(): Long = 0L
     }
 
     private class TestCategoryRepository : CategoryRepository {

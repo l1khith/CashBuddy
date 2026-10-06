@@ -14,6 +14,8 @@ CREATE TABLE transactions (
     timestamp INTEGER NOT NULL,
     created_at INTEGER NOT NULL,
     updated_at INTEGER NOT NULL,
+    is_merged INTEGER NOT NULL DEFAULT 0,
+    merged_into_id INTEGER,
     FOREIGN KEY (category_id) REFERENCES categories(id),
     FOREIGN KEY (account_id) REFERENCES accounts(id)
 );
@@ -24,6 +26,20 @@ CREATE INDEX idx_transactions_account ON transactions(account_id);
 CREATE INDEX idx_transactions_status ON transactions(status);
 CREATE INDEX idx_transactions_merchant ON transactions(merchant);
 CREATE INDEX idx_transactions_summary ON transactions(status, type, timestamp);
+CREATE INDEX idx_transactions_is_merged ON transactions(is_merged);
+CREATE INDEX idx_transactions_merged_into ON transactions(merged_into_id);
+
+CREATE TABLE merge_log (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    survivor_id INTEGER NOT NULL,
+    merged_id INTEGER NOT NULL,
+    merged_at INTEGER NOT NULL,
+    FOREIGN KEY (survivor_id) REFERENCES transactions(id),
+    FOREIGN KEY (merged_id) REFERENCES transactions(id)
+);
+
+CREATE INDEX idx_merge_log_survivor ON merge_log(survivor_id);
+CREATE INDEX idx_merge_log_merged ON merge_log(merged_id);
 
 -- Auto-update account balance on confirmed transactions
 CREATE TRIGGER update_account_balance_debit
@@ -78,6 +94,7 @@ SELECT t.*, c.name AS category_name, c.color AS category_color, c.icon AS catego
 FROM transactions t
 LEFT JOIN categories c ON t.category_id = c.id
 LEFT JOIN accounts a ON t.account_id = a.id
+WHERE t.is_merged = 0
 ORDER BY t.timestamp DESC;
 
 getById:
@@ -94,7 +111,7 @@ SELECT t.*, c.name AS category_name, c.color AS category_color, c.icon AS catego
 FROM transactions t
 LEFT JOIN categories c ON t.category_id = c.id
 LEFT JOIN accounts a ON t.account_id = a.id
-WHERE t.status = 'PENDING'
+WHERE t.status = 'PENDING' AND t.is_merged = 0
 ORDER BY t.timestamp DESC;
 
 getByDateRange:
@@ -103,7 +120,7 @@ SELECT t.*, c.name AS category_name, c.color AS category_color, c.icon AS catego
 FROM transactions t
 LEFT JOIN categories c ON t.category_id = c.id
 LEFT JOIN accounts a ON t.account_id = a.id
-WHERE t.timestamp BETWEEN ? AND ?
+WHERE t.timestamp BETWEEN ? AND ? AND t.is_merged = 0
 ORDER BY t.timestamp DESC;
 
 getByDateRangeWithLimit:
@@ -112,7 +129,7 @@ SELECT t.*, c.name AS category_name, c.color AS category_color, c.icon AS catego
 FROM transactions t
 LEFT JOIN categories c ON t.category_id = c.id
 LEFT JOIN accounts a ON t.account_id = a.id
-WHERE t.timestamp BETWEEN ? AND ?
+WHERE t.timestamp BETWEEN ? AND ? AND t.is_merged = 0
 ORDER BY t.timestamp DESC
 LIMIT ?;
 
@@ -122,6 +139,7 @@ SELECT t.*, c.name AS category_name, c.color AS category_color, c.icon AS catego
 FROM transactions t
 LEFT JOIN categories c ON t.category_id = c.id
 LEFT JOIN accounts a ON t.account_id = a.id
+WHERE t.is_merged = 0
 ORDER BY t.timestamp DESC
 LIMIT ?;
 
@@ -131,7 +149,7 @@ SELECT
     COALESCE(SUM(CASE WHEN t.type = 'CREDIT' AND t.status IN ('CONFIRMED', 'MODIFIED') THEN t.amount ELSE 0.0 END), 0.0) AS total_credit,
     COUNT(*) AS transaction_count
 FROM transactions t
-WHERE t.timestamp BETWEEN ? AND ?;
+WHERE t.timestamp BETWEEN ? AND ? AND t.is_merged = 0;
 
 getByCategory:
 SELECT t.*, c.name AS category_name, c.color AS category_color, c.icon AS category_icon,
@@ -139,7 +157,7 @@ SELECT t.*, c.name AS category_name, c.color AS category_color, c.icon AS catego
 FROM transactions t
 LEFT JOIN categories c ON t.category_id = c.id
 LEFT JOIN accounts a ON t.account_id = a.id
-WHERE t.category_id = ?
+WHERE t.category_id = ? AND t.is_merged = 0
 ORDER BY t.timestamp DESC;
 
 getMonthlySummary:
@@ -149,6 +167,7 @@ SELECT
     SUM(CASE WHEN t.type = 'CREDIT' AND t.status IN ('CONFIRMED', 'MODIFIED') THEN t.amount ELSE 0.0 END) AS total_credit,
     COUNT(*) AS transaction_count
 FROM transactions t
+WHERE t.is_merged = 0
 GROUP BY month
 ORDER BY month DESC;
 
@@ -162,13 +181,13 @@ SELECT
     AVG(t.amount) AS average_amount
 FROM transactions t
 JOIN categories c ON t.category_id = c.id
-WHERE t.type = 'DEBIT' AND t.status IN ('CONFIRMED', 'MODIFIED') AND t.timestamp BETWEEN ? AND ?
+WHERE t.type = 'DEBIT' AND t.status IN ('CONFIRMED', 'MODIFIED') AND t.timestamp BETWEEN ? AND ? AND t.is_merged = 0
 GROUP BY c.id
 ORDER BY total_amount DESC;
 
 insert:
-INSERT INTO transactions (amount, type, currency, merchant, category_id, account_id, source_app, raw_text, confidence, status, notes, timestamp, created_at, updated_at)
-VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+INSERT INTO transactions (amount, type, currency, merchant, category_id, account_id, source_app, raw_text, confidence, status, notes, timestamp, created_at, updated_at, is_merged, merged_into_id)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
 
 updateStatus:
 UPDATE transactions SET status = ?, updated_at = ? WHERE id = ?;
@@ -183,11 +202,50 @@ getBalance:
 SELECT 
     COALESCE(SUM(CASE WHEN type = 'CREDIT' AND status IN ('CONFIRMED', 'MODIFIED') THEN amount ELSE 0.0 END), 0.0) -
     COALESCE(SUM(CASE WHEN type = 'DEBIT' AND status IN ('CONFIRMED', 'MODIFIED') THEN amount ELSE 0.0 END), 0.0)
-FROM transactions;
+FROM transactions
+WHERE is_merged = 0;
 
 lastInsertRowId:
 SELECT last_insert_rowid();
 
 getCount:
-SELECT COUNT(*) FROM transactions;
+SELECT COUNT(*) FROM transactions WHERE is_merged = 0;
+
+findDuplicateCandidates:
+SELECT t.*, c.name AS category_name, c.color AS category_color, c.icon AS category_icon,
+       a.name AS account_name, a.type AS account_type
+FROM transactions t
+LEFT JOIN categories c ON t.category_id = c.id
+LEFT JOIN accounts a ON t.account_id = a.id
+WHERE t.is_merged = 0
+ORDER BY t.amount ASC, t.timestamp ASC;
+
+markMerged:
+UPDATE transactions SET is_merged = 1, merged_into_id = ?, updated_at = ? WHERE id = ?;
+
+unmarkMerged:
+UPDATE transactions SET is_merged = 0, merged_into_id = NULL, updated_at = ? WHERE id = ?;
+
+insertMergeLog:
+INSERT INTO merge_log (survivor_id, merged_id, merged_at)
+VALUES (?, ?, ?);
+
+getMergedRecordsForSurvivor:
+SELECT t.*, c.name AS category_name, c.color AS category_color, c.icon AS category_icon,
+       a.name AS account_name, a.type AS account_type
+FROM transactions t
+LEFT JOIN categories c ON t.category_id = c.id
+LEFT JOIN accounts a ON t.account_id = a.id
+WHERE t.merged_into_id = ?
+ORDER BY t.timestamp DESC;
+
+deleteMergeLogForSurvivor:
+DELETE FROM merge_log WHERE survivor_id = ?;
+
+getRecentMergeLogs:
+SELECT * FROM merge_log ORDER BY merged_at DESC;
+
+getMergeLogCount:
+SELECT COUNT(*) FROM merge_log;
+
 
