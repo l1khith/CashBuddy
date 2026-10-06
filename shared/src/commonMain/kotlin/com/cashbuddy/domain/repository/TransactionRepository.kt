@@ -39,4 +39,19 @@ interface TransactionRepository {
     fun getBalance(): Flow<Double>
     fun getAverageAmount(): Flow<Double>
     fun getCount(): Flow<Long>
+    suspend fun findDuplicateCandidates(): List<Transaction>
+    suspend fun markMerged(id: Long, survivorId: Long)
+    suspend fun unmarkMerged(id: Long)
+    suspend fun insertMergeLog(survivorId: Long, mergedId: Long, timestamp: Long)
+    suspend fun getMergedTransactions(survivorId: Long): List<Transaction>
+    suspend fun deleteMergeLog(survivorId: Long)
+    suspend fun getRecentMergeLogs(): List<MergeLogEntry>
+    suspend fun getMergeLogCount(): Long
 }
+
+data class MergeLogEntry(
+    val id: Long,
+    val survivorId: Long,
+    val mergedId: Long,
+    val mergedAt: Long
+)

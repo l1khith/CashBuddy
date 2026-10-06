@@ -31,6 +31,8 @@ data class Transaction(
     val timestamp: Long,
     val createdAt: Long = timestamp,
     val updatedAt: Long = timestamp,
+    val isMerged: Boolean = false,
+    val mergedIntoId: Long? = null,
     val categoryName: String? = null,
     val categoryColor: String? = null,
     val categoryIcon: String? = null,

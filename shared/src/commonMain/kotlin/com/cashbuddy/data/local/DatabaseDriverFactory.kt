@@ -45,6 +45,7 @@ fun ensureSchema(driver: SqlDriver) {
     }
 
     if (alreadyCreated) {
+        runMigrations(driver)
         return
     }
     val statements = listOf(
@@ -210,8 +211,20 @@ fun ensureSchema(driver: SqlDriver) {
             timestamp INTEGER NOT NULL,
             created_at INTEGER NOT NULL,
             updated_at INTEGER NOT NULL,
+            is_merged INTEGER NOT NULL DEFAULT 0,
+            merged_into_id INTEGER,
             FOREIGN KEY (category_id) REFERENCES categories(id),
             FOREIGN KEY (account_id) REFERENCES accounts(id)
+        )
+        """.trimIndent(),
+        """
+        CREATE TABLE IF NOT EXISTS merge_log (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            survivor_id INTEGER NOT NULL,
+            merged_id INTEGER NOT NULL,
+            merged_at INTEGER NOT NULL,
+            FOREIGN KEY (survivor_id) REFERENCES transactions(id),
+            FOREIGN KEY (merged_id) REFERENCES transactions(id)
         )
         """.trimIndent(),
         """
@@ -240,6 +253,10 @@ fun ensureSchema(driver: SqlDriver) {
         "CREATE INDEX IF NOT EXISTS idx_transactions_status ON transactions(status)",
         "CREATE INDEX IF NOT EXISTS idx_transactions_merchant ON transactions(merchant)",
         "CREATE INDEX IF NOT EXISTS idx_transactions_summary ON transactions(status, type, timestamp)",
+        "CREATE INDEX IF NOT EXISTS idx_transactions_is_merged ON transactions(is_merged)",
+        "CREATE INDEX IF NOT EXISTS idx_transactions_merged_into ON transactions(merged_into_id)",
+        "CREATE INDEX IF NOT EXISTS idx_merge_log_survivor ON merge_log(survivor_id)",
+        "CREATE INDEX IF NOT EXISTS idx_merge_log_merged ON merge_log(merged_id)",
         """
         CREATE TRIGGER IF NOT EXISTS update_account_balance_debit
         AFTER INSERT ON transactions
@@ -293,4 +310,26 @@ fun ensureSchema(driver: SqlDriver) {
     for (stmt in statements) {
         executeQuietly(driver, stmt)
     }
+
+    runMigrations(driver)
 }
+
+private fun runMigrations(driver: SqlDriver) {
+    executeQuietly(driver, "ALTER TABLE transactions ADD COLUMN is_merged INTEGER NOT NULL DEFAULT 0;")
+    executeQuietly(driver, "ALTER TABLE transactions ADD COLUMN merged_into_id INTEGER;")
+    executeQuietly(driver, """
+        CREATE TABLE IF NOT EXISTS merge_log (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            survivor_id INTEGER NOT NULL,
+            merged_id INTEGER NOT NULL,
+            merged_at INTEGER NOT NULL,
+            FOREIGN KEY (survivor_id) REFERENCES transactions(id),
+            FOREIGN KEY (merged_id) REFERENCES transactions(id)
+        );
+    """.trimIndent())
+    executeQuietly(driver, "CREATE INDEX IF NOT EXISTS idx_transactions_is_merged ON transactions(is_merged);")
+    executeQuietly(driver, "CREATE INDEX IF NOT EXISTS idx_transactions_merged_into ON transactions(merged_into_id);")
+    executeQuietly(driver, "CREATE INDEX IF NOT EXISTS idx_merge_log_survivor ON merge_log(survivor_id);")
+    executeQuietly(driver, "CREATE INDEX IF NOT EXISTS idx_merge_log_merged ON merge_log(merged_id);")
+}
+

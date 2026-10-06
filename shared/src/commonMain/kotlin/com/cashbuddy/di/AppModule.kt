@@ -1,6 +1,7 @@
 package com.cashbuddy.di
 
 import com.cashbuddy.core.CategoryEngine
+import com.cashbuddy.core.DuplicateReconciler
 import com.cashbuddy.core.NotificationParser
 import com.cashbuddy.core.ScreenshotParserEngine
 import com.cashbuddy.data.repository.AccountRepositoryImpl
@@ -82,6 +83,7 @@ val appModule = module {
     single { com.cashbuddy.core.prob.FieldConfidenceEstimator() }
     single { com.cashbuddy.core.prob.PolicyEngine() }
     single { com.cashbuddy.core.prob.DedupEngine }
+    single { DuplicateReconciler(get(), get()) }
     single { com.cashbuddy.core.prob.AccountRegistry(get()) }
     singleOf(::SignalObservationRepositoryImpl) bind SignalObservationRepository::class
     singleOf(::RawMessageRepositoryImpl) bind RawMessageRepository::class
@@ -146,7 +148,7 @@ val appModule = module {
     viewModelOf(::AccountsViewModel)
     viewModelOf(::BudgetViewModel)
     viewModelOf(::GoalsViewModel)
-    viewModel { SettingsViewModel(get(), get(), get(), get(), get(), getOrNull(), getOrNull()) }
+    viewModel { SettingsViewModel(get(), get(), get(), get(), get(), getOrNull(), getOrNull(), getOrNull()) }
     viewModel { PersonalizationViewModel(get(), get(), get(), get(), getOrNull()) }
     viewModelOf(::AddTransactionViewModel)
     viewModel { DebugLogViewModel(get(), get(), getOrNull()) }

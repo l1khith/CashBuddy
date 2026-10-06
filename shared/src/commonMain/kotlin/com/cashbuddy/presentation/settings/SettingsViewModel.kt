@@ -33,7 +33,11 @@ data class SettingsUiState(
     val isDebugLogEnabled: Boolean = false,
     val isDebugLogVisible: Boolean = true,
     val preferredCurrency: String = "INR",
-    val isLoading: Boolean = true
+    val isLoading: Boolean = true,
+    val isScanningDuplicates: Boolean = false,
+    val duplicateGroups: List<com.cashbuddy.core.DuplicateReconciler.DuplicateGroup> = emptyList(),
+    val hasRecentMerges: Boolean = false,
+    val isMerging: Boolean = false
 )
 
 class SettingsViewModel(
@@ -43,7 +47,8 @@ class SettingsViewModel(
     private val exportDataUseCase: ExportDataUseCase,
     private val trainingDataRepository: TrainingDataRepository,
     private val fileExporter: FileExporter? = null,
-    private val debugConfig: com.cashbuddy.debug.DebugConfig? = null
+    private val debugConfig: com.cashbuddy.debug.DebugConfig? = null,
+    private val duplicateReconciler: com.cashbuddy.core.DuplicateReconciler? = null
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(SettingsUiState())
@@ -191,5 +196,71 @@ class SettingsViewModel(
             }
             _messageEffect.emit("All data deleted ($allTxs transactions)")
         }
+    }
+
+    fun scanDuplicates(onComplete: (Int) -> Unit = {}) {
+        val reconciler = duplicateReconciler ?: return
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(isScanningDuplicates = true)
+            val groups = reconciler.findDuplicateGroups()
+            val mergeCount = transactionRepository.getMergeLogCount()
+            _uiState.value = _uiState.value.copy(
+                isScanningDuplicates = false,
+                duplicateGroups = groups,
+                hasRecentMerges = mergeCount > 0L
+            )
+            onComplete(groups.size)
+        }
+    }
+
+    fun mergeDuplicates(groups: List<com.cashbuddy.core.DuplicateReconciler.DuplicateGroup>, onComplete: (Int) -> Unit = {}) {
+        val reconciler = duplicateReconciler ?: return
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(isMerging = true)
+            val summary = reconciler.mergeDuplicateGroups(groups)
+            val remaining = reconciler.findDuplicateGroups()
+            val mergeCount = transactionRepository.getMergeLogCount()
+            _uiState.value = _uiState.value.copy(
+                isMerging = false,
+                duplicateGroups = remaining,
+                hasRecentMerges = mergeCount > 0L
+            )
+            _messageEffect.emit("Merged ${summary.totalDuplicatesMerged} duplicates across ${summary.groupsMerged} groups")
+            onComplete(summary.totalDuplicatesMerged)
+        }
+    }
+
+    fun undoLastMerge(onComplete: (Int) -> Unit = {}) {
+        val reconciler = duplicateReconciler ?: return
+        viewModelScope.launch {
+            val undone = reconciler.undoLastMerge()
+            val remaining = reconciler.findDuplicateGroups()
+            val mergeCount = transactionRepository.getMergeLogCount()
+            _uiState.value = _uiState.value.copy(
+                duplicateGroups = remaining,
+                hasRecentMerges = mergeCount > 0L
+            )
+            if (undone > 0) {
+                _messageEffect.emit("Undone: restored $undone merged transactions")
+            } else {
+                _messageEffect.emit("No recent merges to undo")
+            }
+            onComplete(undone)
+        }
+    }
+
+    fun exportDuplicatePreviewCsv(): String {
+        val groups = _uiState.value.duplicateGroups
+        val sb = StringBuilder()
+        sb.append("Group,Role,TransactionId,Amount,Merchant,Confidence,Status,Timestamp,SourceApp,RawText\n")
+        groups.forEachIndexed { groupIndex, group ->
+            val gNum = groupIndex + 1
+            val survivor = group.survivor
+            sb.append("$gNum,SURVIVOR,${survivor.id},${survivor.amount},\"${survivor.merchant}\",${survivor.confidence},${survivor.status},${survivor.timestamp},\"${survivor.sourceApp}\",\"${survivor.rawText.replace("\"", "\"\"")}\"\n")
+            group.duplicates.forEach { dup ->
+                sb.append("$gNum,DUPLICATE_TO_MERGE,${dup.id},${dup.amount},\"${dup.merchant}\",${dup.confidence},${dup.status},${dup.timestamp},\"${dup.sourceApp}\",\"${dup.rawText.replace("\"", "\"\"")}\"\n")
+            }
+        }
+        return sb.toString()
     }
 }
