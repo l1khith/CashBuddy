@@ -88,16 +88,16 @@ fun ensureSchema(driver: SqlDriver) {
         """.trimIndent(),
         """
         CREATE TABLE IF NOT EXISTS budgets (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            category_id INTEGER,
+            id TEXT PRIMARY KEY NOT NULL,
+            category TEXT NOT NULL,
             amount REAL NOT NULL,
-            period TEXT NOT NULL DEFAULT 'MONTHLY' CHECK(period IN ('DAILY', 'WEEKLY', 'MONTHLY', 'YEARLY')),
+            period TEXT NOT NULL,
             start_date INTEGER NOT NULL,
-            end_date INTEGER,
             is_active INTEGER NOT NULL DEFAULT 1,
-            alert_threshold REAL NOT NULL DEFAULT 80.0,
+            last_alert_state TEXT,
+            last_alert_at INTEGER,
             created_at INTEGER NOT NULL,
-            FOREIGN KEY (category_id) REFERENCES categories(id)
+            updated_at INTEGER NOT NULL
         )
         """.trimIndent(),
         """
@@ -240,6 +240,8 @@ fun ensureSchema(driver: SqlDriver) {
         "CREATE INDEX IF NOT EXISTS idx_debug_log_package ON debug_log(package_name)",
         "CREATE INDEX IF NOT EXISTS idx_accounts_active ON accounts(is_active)",
         "CREATE INDEX IF NOT EXISTS idx_accounts_type ON accounts(type)",
+        "CREATE INDEX IF NOT EXISTS idx_budgets_category ON budgets(category)",
+        "CREATE INDEX IF NOT EXISTS idx_budgets_is_active ON budgets(is_active)",
         "CREATE INDEX IF NOT EXISTS idx_categories_type ON categories(type)",
         "CREATE INDEX IF NOT EXISTS idx_categories_parent ON categories(parent_id)",
         "CREATE INDEX IF NOT EXISTS idx_merchant_rules_pattern ON merchant_rules(pattern)",
@@ -331,5 +333,45 @@ private fun runMigrations(driver: SqlDriver) {
     executeQuietly(driver, "CREATE INDEX IF NOT EXISTS idx_transactions_merged_into ON transactions(merged_into_id);")
     executeQuietly(driver, "CREATE INDEX IF NOT EXISTS idx_merge_log_survivor ON merge_log(survivor_id);")
     executeQuietly(driver, "CREATE INDEX IF NOT EXISTS idx_merge_log_merged ON merge_log(merged_id);")
+
+    val needsBudgetMigration = try {
+        driver.executeQuery(
+            identifier = null,
+            sql = "PRAGMA table_info(budgets);",
+            mapper = { cursor ->
+                var hasLastAlertState = false
+                while (cursor.next().value) {
+                    val colName = cursor.getString(1)
+                    if (colName == "last_alert_state") {
+                        hasLastAlertState = true
+                    }
+                }
+                QueryResult.Value(!hasLastAlertState)
+            },
+            parameters = 0
+        ).value
+    } catch (_: Throwable) {
+        false
+    }
+
+    if (needsBudgetMigration) {
+        executeQuietly(driver, "DROP TABLE IF EXISTS budgets;")
+        executeQuietly(driver, """
+            CREATE TABLE IF NOT EXISTS budgets (
+                id TEXT PRIMARY KEY NOT NULL,
+                category TEXT NOT NULL,
+                amount REAL NOT NULL,
+                period TEXT NOT NULL,
+                start_date INTEGER NOT NULL,
+                is_active INTEGER NOT NULL DEFAULT 1,
+                last_alert_state TEXT,
+                last_alert_at INTEGER,
+                created_at INTEGER NOT NULL,
+                updated_at INTEGER NOT NULL
+            );
+        """.trimIndent())
+        executeQuietly(driver, "CREATE INDEX IF NOT EXISTS idx_budgets_category ON budgets(category);")
+        executeQuietly(driver, "CREATE INDEX IF NOT EXISTS idx_budgets_is_active ON budgets(is_active);")
+    }
 }
 

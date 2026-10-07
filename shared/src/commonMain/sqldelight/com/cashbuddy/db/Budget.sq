@@ -1,0 +1,56 @@
+CREATE TABLE budgets (
+    id TEXT PRIMARY KEY NOT NULL,
+    category TEXT NOT NULL,
+    amount REAL NOT NULL,
+    period TEXT NOT NULL,
+    start_date INTEGER NOT NULL,
+    is_active INTEGER NOT NULL DEFAULT 1,
+    last_alert_state TEXT,
+    last_alert_at INTEGER,
+    created_at INTEGER NOT NULL,
+    updated_at INTEGER NOT NULL
+);
+
+CREATE INDEX idx_budgets_category ON budgets(category);
+CREATE INDEX idx_budgets_is_active ON budgets(is_active);
+
+getActive:
+SELECT * FROM budgets
+WHERE is_active = 1
+ORDER BY created_at DESC;
+
+getAll:
+SELECT * FROM budgets
+ORDER BY created_at DESC;
+
+getById:
+SELECT * FROM budgets
+WHERE id = :id;
+
+findByCategory:
+SELECT * FROM budgets
+WHERE category = :category AND period = :period AND is_active = 1
+LIMIT 1;
+
+insert:
+INSERT INTO budgets (id, category, amount, period, start_date, is_active, last_alert_state, last_alert_at, created_at, updated_at)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+
+update:
+UPDATE budgets
+SET category = ?, amount = ?, period = ?, start_date = ?, is_active = ?, last_alert_state = ?, last_alert_at = ?, updated_at = ?
+WHERE id = ?;
+
+deleteById:
+DELETE FROM budgets
+WHERE id = :id;
+
+markAlerted:
+UPDATE budgets
+SET last_alert_state = :lastAlertState, last_alert_at = :lastAlertAt, updated_at = :updatedAt
+WHERE id = :id;
+
+resetAlertState:
+UPDATE budgets
+SET last_alert_state = 'ON_TRACK', last_alert_at = NULL, updated_at = :updatedAt
+WHERE id = :id;

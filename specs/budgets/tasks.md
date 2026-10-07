@@ -1,11 +1,11 @@
 # Budgets — Tasks
 
 ## T1 — Schema
-- [ ] Add `budgets` table to `Budget.sq`
-- [ ] Add `sumByCategory` query to `Transaction.sq`
-- [ ] Add SQLDelight migration `1.sqm`
-- [ ] Regenerate Kotlin bindings
-- [ ] Verify build passes
+- [x] Add `budgets` table to `Budget.sq`
+- [x] Add `sumByCategory` query to `Transaction.sq`
+- [x] Add SQLDelight migration `1.sqm`
+- [x] Regenerate Kotlin bindings
+- [x] Verify build passes
 
 ## T2 — Domain models
 - [ ] Create `Budget` data class in `domain/model/`
