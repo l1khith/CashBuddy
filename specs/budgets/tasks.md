@@ -73,6 +73,6 @@
 - [x] Accessibility labels
 
 ## T12 — Documentation
-- [ ] Update `README.md` with budget feature
-- [ ] Add `specs/budgets/` to repo docs index
-- [ ] Note in CHANGELOG
+- [x] Update `README.md` with budget feature
+- [x] Add `specs/budgets/` to repo docs index
+- [x] Note in CHANGELOG
