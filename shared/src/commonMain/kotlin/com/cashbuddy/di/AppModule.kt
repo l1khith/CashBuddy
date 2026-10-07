@@ -86,6 +86,7 @@ val appModule = module {
     single { DuplicateReconciler(get(), get()) }
     single { com.cashbuddy.core.prob.AccountRegistry(get()) }
     single { com.cashbuddy.core.budget.BudgetEngine(get()) }
+    single { com.cashbuddy.core.budget.BudgetAlertScheduler(get(), get(), getOrNull()) }
     singleOf(::SignalObservationRepositoryImpl) bind SignalObservationRepository::class
     singleOf(::RawMessageRepositoryImpl) bind RawMessageRepository::class
     singleOf(::UserRuleRepositoryImpl) bind UserRuleRepository::class
@@ -108,7 +109,8 @@ val appModule = module {
             categoryRepo = get(),
             debugLogger = get(),
             recentStateRepository = get(),
-            settingsRepo = get()
+            settingsRepo = get(),
+            budgetAlertScheduler = getOrNull()
         )
     }
 

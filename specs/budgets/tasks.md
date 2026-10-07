@@ -55,11 +55,11 @@
 - [x] Compose UI test
 
 ## T9 — Alerts
-- [ ] Create `BudgetAlertScheduler`
-- [ ] Hook into `MessagePipeline` after transaction commit
-- [ ] Implement at-most-once-per-transition logic
-- [ ] Reset on period rollover
-- [ ] Unit tests with fake clock
+- [x] Create `BudgetAlertScheduler`
+- [x] Hook into `MessagePipeline` after transaction commit
+- [x] Implement at-most-once-per-transition logic
+- [x] Reset on period rollover
+- [x] Unit tests with fake clock
 
 ## T10 — Navigation
 - [ ] Add Budgets to bottom nav or home screen entry
