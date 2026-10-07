@@ -175,6 +175,8 @@ class DebugLoggerTest {
         override suspend fun deleteMergeLog(survivorId: Long) {}
         override suspend fun getRecentMergeLogs(): List<com.cashbuddy.domain.repository.MergeLogEntry> = emptyList()
         override suspend fun getMergeLogCount(): Long = 0L
+        override suspend fun sumByCategory(category: String, startTime: Long, endTime: Long): Double = 0.0
+        override fun getByCategoryAndPeriod(category: String, startTime: Long, endTime: Long): Flow<List<Transaction>> = flowOf(emptyList())
     }
 
     private class TestCategoryRepository : CategoryRepository {

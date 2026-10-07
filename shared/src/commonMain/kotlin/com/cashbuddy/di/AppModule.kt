@@ -85,6 +85,7 @@ val appModule = module {
     single { com.cashbuddy.core.prob.DedupEngine }
     single { DuplicateReconciler(get(), get()) }
     single { com.cashbuddy.core.prob.AccountRegistry(get()) }
+    single { com.cashbuddy.core.budget.BudgetEngine(get()) }
     singleOf(::SignalObservationRepositoryImpl) bind SignalObservationRepository::class
     singleOf(::RawMessageRepositoryImpl) bind RawMessageRepository::class
     singleOf(::UserRuleRepositoryImpl) bind UserRuleRepository::class

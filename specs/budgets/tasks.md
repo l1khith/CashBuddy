@@ -19,9 +19,9 @@
 - [x] Add tests covering all methods with in-memory DB
 
 ## T4 — Engine
-- [ ] Create `BudgetEngine` with `statusFor(budget, now)`
-- [ ] Implement `periodRange(period, now)`
-- [ ] Add tests:
+- [x] Create `BudgetEngine` with `statusFor(budget, now)`
+- [x] Implement `periodRange(period, now)`
+- [x] Add tests:
   - budget with zero transactions
   - budget at exactly 100%
   - budget crossing period boundary

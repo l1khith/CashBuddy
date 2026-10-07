@@ -203,6 +203,22 @@ class TransactionRepositoryImpl(
         queries.getMergeLogCount().executeAsOne()
     }
 
+    override suspend fun sumByCategory(category: String, startTime: Long, endTime: Long): Double = withContext(dispatcher) {
+        queries.sumByCategory(
+            category = category,
+            startTime = startTime,
+            endTime = endTime
+        ).executeAsOne()
+    }
+
+    override fun getByCategoryAndPeriod(category: String, startTime: Long, endTime: Long): Flow<List<Transaction>> =
+        queries.getByCategoryAndPeriod(
+            category = category,
+            startTime = startTime,
+            endTime = endTime,
+            mapper = ::mapTransaction
+        ).asFlow().mapToList(dispatcher).distinctUntilChanged()
+
     private fun mapTransaction(
         id: Long,
         amount: Double,

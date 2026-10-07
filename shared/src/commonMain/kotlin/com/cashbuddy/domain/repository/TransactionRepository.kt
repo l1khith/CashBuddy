@@ -47,6 +47,8 @@ interface TransactionRepository {
     suspend fun deleteMergeLog(survivorId: Long)
     suspend fun getRecentMergeLogs(): List<MergeLogEntry>
     suspend fun getMergeLogCount(): Long
+    suspend fun sumByCategory(category: String, startTime: Long, endTime: Long): Double
+    fun getByCategoryAndPeriod(category: String, startTime: Long, endTime: Long): Flow<List<Transaction>>
 }
 
 data class MergeLogEntry(
