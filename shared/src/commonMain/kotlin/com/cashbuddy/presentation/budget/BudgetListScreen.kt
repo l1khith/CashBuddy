@@ -16,6 +16,9 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -30,19 +33,58 @@ import com.cashbuddy.presentation.theme.TrustBluePrimary
 fun BudgetListScreen(
     viewModel: BudgetViewModel,
     onBudgetClick: (BudgetStatus) -> Unit = {},
-    onBudgetLongClick: (Budget) -> Unit = {},
-    onAddBudgetClick: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
+    var showEditSheet by remember { mutableStateOf(false) }
+    var editingBudget by remember { mutableStateOf<Budget?>(null) }
 
     BudgetListContent(
         state = state,
         onBudgetClick = onBudgetClick,
-        onBudgetLongClick = onBudgetLongClick,
-        onAddBudgetClick = onAddBudgetClick,
+        onBudgetLongClick = { budget ->
+            editingBudget = budget
+            showEditSheet = true
+        },
+        onAddBudgetClick = {
+            editingBudget = null
+            showEditSheet = true
+        },
         modifier = modifier
     )
+
+    if (showEditSheet) {
+        BudgetEditSheet(
+            initialBudget = editingBudget,
+            categories = state.categories,
+            existingBudgets = state.budgets,
+            onDismiss = {
+                showEditSheet = false
+                editingBudget = null
+            },
+            onSave = { category, amount, period ->
+                val current = editingBudget
+                if (current != null) {
+                    viewModel.updateBudget(
+                        current.copy(
+                            category = category,
+                            amount = amount,
+                            period = period
+                        )
+                    )
+                } else {
+                    viewModel.createBudget(category, amount, period)
+                }
+                showEditSheet = false
+                editingBudget = null
+            },
+            onDelete = { id ->
+                viewModel.deleteBudget(id)
+                showEditSheet = false
+                editingBudget = null
+            }
+        )
+    }
 }
 
 @Composable

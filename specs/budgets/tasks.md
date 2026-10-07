@@ -42,11 +42,11 @@
 - [x] Compose UI test for both states
 
 ## T7 — UI: Edit Sheet
-- [ ] Create `BudgetEditSheet`
-- [ ] Category dropdown, amount field, period segmented control
-- [ ] Validation
-- [ ] Save / Delete actions
-- [ ] Compose UI test for create flow
+- [x] Create `BudgetEditSheet`
+- [x] Category dropdown, amount field, period segmented control
+- [x] Validation
+- [x] Save / Delete actions
+- [x] Compose UI test for create flow
 
 ## T8 — UI: Drill-down
 - [ ] Create `BudgetDrilldownScreen`
