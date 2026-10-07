@@ -23,6 +23,12 @@ class BudgetViewModel(
     coroutineScope: CoroutineScope? = null
 ) : ViewModel() {
 
+    constructor(
+        budgetRepository: BudgetRepository,
+        categoryRepository: CategoryRepository,
+        budgetEngine: BudgetEngine
+    ) : this(budgetRepository, categoryRepository, budgetEngine, null)
+
     private val scope: CoroutineScope = coroutineScope ?: viewModelScope
 
     private val _uiState = MutableStateFlow(BudgetUiState())
