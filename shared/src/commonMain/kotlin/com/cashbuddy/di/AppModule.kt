@@ -5,7 +5,7 @@ import com.cashbuddy.core.DuplicateReconciler
 import com.cashbuddy.core.NotificationParser
 import com.cashbuddy.core.ScreenshotParserEngine
 import com.cashbuddy.data.repository.AccountRepositoryImpl
-import com.cashbuddy.data.repository.BudgetRepositoryImpl
+import com.cashbuddy.data.repository.SqlDelightBudgetRepository
 import com.cashbuddy.data.repository.CategoryRepositoryImpl
 import com.cashbuddy.data.repository.CorrectionRepositoryImpl
 import com.cashbuddy.data.repository.DebugLogRepositoryImpl
@@ -115,7 +115,7 @@ val appModule = module {
     singleOf(::TransactionRepositoryImpl) bind TransactionRepository::class
     singleOf(::AccountRepositoryImpl) bind AccountRepository::class
     singleOf(::CategoryRepositoryImpl) bind CategoryRepository::class
-    singleOf(::BudgetRepositoryImpl) bind BudgetRepository::class
+    singleOf(::SqlDelightBudgetRepository) bind BudgetRepository::class
     singleOf(::GoalRepositoryImpl) bind GoalRepository::class
     singleOf(::SettingsRepositoryImpl) bind SettingsRepository::class
     singleOf(::MerchantRuleRepositoryImpl) bind MerchantRuleRepository::class

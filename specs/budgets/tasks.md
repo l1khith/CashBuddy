@@ -14,9 +14,9 @@
 - [x] Create `BudgetStatus` data class
 
 ## T3 — Repository
-- [ ] Create `BudgetRepository` interface
-- [ ] Implement `SqlDelightBudgetRepository`
-- [ ] Add tests covering all methods with in-memory DB
+- [x] Create `BudgetRepository` interface
+- [x] Implement `SqlDelightBudgetRepository`
+- [x] Add tests covering all methods with in-memory DB
 
 ## T4 — Engine
 - [ ] Create `BudgetEngine` with `statusFor(budget, now)`
