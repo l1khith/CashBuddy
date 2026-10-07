@@ -65,11 +65,11 @@ fun BudgetCard(
 
     val (barColor, statusIcon, statusText) = when {
         status.percentUsed >= 100f || status.state == AlertState.EXCEEDED ->
-            Triple(DangerRed, Icons.Default.Warning, "Exceeded by ₹${formatCurrency(abs(status.remaining))}")
+            Triple(DangerRed, Icons.Default.Warning, "Exceeded by ${formatCurrency(abs(status.remaining), includeSymbol = true)}")
         status.percentUsed >= 80f || status.state == AlertState.WARNING ->
             Triple(WarningAmber, Icons.Default.Warning, "Approaching limit ($percentInt% used)")
         else ->
-            Triple(AccentEmerald, Icons.Default.CheckCircle, "₹${formatCurrency(status.remaining)} remaining ($percentInt% used)")
+            Triple(AccentEmerald, Icons.Default.CheckCircle, "${formatCurrency(status.remaining, includeSymbol = true)} remaining ($percentInt% used)")
     }
 
     val categoryColor = getCategoryColor(budget.category)
@@ -83,7 +83,7 @@ fun BudgetCard(
                 onLongClick = onLongClick
             )
             .semantics {
-                contentDescription = "${budget.category} budget: ₹${formatCurrency(status.spent)} of ₹${formatCurrency(budget.amount)} spent. $statusText"
+                contentDescription = "${budget.category} budget: ${formatCurrency(status.spent, includeSymbol = true)} of ${formatCurrency(budget.amount, includeSymbol = true)} spent. $statusText"
             },
         shape = RadiusLarge,
         colors = CardDefaults.cardColors(
@@ -118,7 +118,7 @@ fun BudgetCard(
                 }
 
                 Text(
-                    text = "₹${formatCurrency(status.spent)} / ₹${formatCurrency(budget.amount)}",
+                    text = "${formatCurrency(status.spent, includeSymbol = true)} / ${formatCurrency(budget.amount, includeSymbol = true)}",
                     style = CashBuddyTypography.titleMedium,
                     fontWeight = FontWeight.SemiBold,
                     color = MaterialTheme.colorScheme.onSurface

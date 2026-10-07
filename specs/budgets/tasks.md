@@ -67,10 +67,10 @@
 - [x] Back stack behavior test
 
 ## T11 — Polish
-- [ ] Colors: green < 80, amber 80–99, red >= 100
-- [ ] Progress bar animation
-- [ ] Currency formatting uses existing `CurrencyRegistry.format`
-- [ ] Accessibility labels
+- [x] Colors: green < 80, amber 80–99, red >= 100
+- [x] Progress bar animation
+- [x] Currency formatting uses existing `CurrencyRegistry.format`
+- [x] Accessibility labels
 
 ## T12 — Documentation
 - [ ] Update `README.md` with budget feature
