@@ -51,6 +51,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.cashbuddy.domain.model.Budget
+import com.cashbuddy.domain.model.BudgetStatus
+import com.cashbuddy.domain.model.AlertState
 import com.cashbuddy.presentation.components.formatCurrency
 import com.cashbuddy.presentation.theme.AccentEmerald
 import com.cashbuddy.presentation.theme.CashBuddyTypography
@@ -127,10 +129,10 @@ fun BudgetScreen(
                         )
                     }
                 } else {
-                    items(state.budgets, key = { it.id }) { b ->
+                    items(state.budgets, key = { it.budget.id }) { b ->
                         BudgetProgressCard(
-                            budget = b,
-                            onDelete = { viewModel.processIntent(BudgetIntent.DeleteBudget(b.id.toLongOrNull() ?: 0L)) }
+                            budgetStatus = b,
+                            onDelete = { viewModel.deleteBudget(b.budget.id) }
                         )
                     }
                 }
@@ -152,19 +154,18 @@ fun BudgetScreen(
 
 @Composable
 private fun BudgetProgressCard(
-    budget: Budget,
+    budgetStatus: BudgetStatus,
     onDelete: () -> Unit
 ) {
-    val fraction = if (budget.amount > 0) {
-        (budget.spentAmount / budget.amount).toFloat().coerceIn(0f, 1f)
-    } else 0f
-    val percentUsed = (if (budget.amount > 0) (budget.spentAmount / budget.amount * 100) else 0.0).toInt()
-    val categoryColor = getCategoryColor(budget.categoryName)
+    val budget = budgetStatus.budget
+    val fraction = (budgetStatus.percentUsed / 100f).coerceIn(0f, 1f)
+    val percentUsed = budgetStatus.percentUsed.toInt()
+    val categoryColor = getCategoryColor(budget.category)
 
-    val (barColor, statusIcon, statusText) = when {
-        budget.spentAmount >= budget.amount -> Triple(DangerRed, Icons.Default.Warning, "Over budget!")
-        percentUsed >= 80 -> Triple(WarningAmber, Icons.Default.Warning, "Approaching limit ($percentUsed% used)")
-        else -> Triple(AccentEmerald, Icons.Default.CheckCircle, "On track ($percentUsed% used)")
+    val (barColor, statusIcon, statusText) = when (budgetStatus.state) {
+        com.cashbuddy.domain.model.AlertState.EXCEEDED -> Triple(DangerRed, Icons.Default.Warning, "Over budget!")
+        com.cashbuddy.domain.model.AlertState.WARNING -> Triple(WarningAmber, Icons.Default.Warning, "Approaching limit ($percentUsed% used)")
+        com.cashbuddy.domain.model.AlertState.ON_TRACK -> Triple(AccentEmerald, Icons.Default.CheckCircle, "On track ($percentUsed% used)")
     }
 
     Card(
@@ -186,13 +187,13 @@ private fun BudgetProgressCard(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = budget.categoryName ?: "General",
+                    text = budget.category,
                     style = CashBuddyTypography.titleMedium,
                     fontWeight = FontWeight.Bold,
                     color = categoryColor
                 )
                 Text(
-                    text = "₹${formatCurrency(budget.spentAmount)} / ₹${formatCurrency(budget.amount)}",
+                    text = "₹${formatCurrency(budgetStatus.spent)} / ₹${formatCurrency(budget.amount)}",
                     style = CashBuddyTypography.titleMedium,
                     fontWeight = FontWeight.SemiBold,
                     color = MaterialTheme.colorScheme.onSurface

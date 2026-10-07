@@ -28,11 +28,11 @@
   - budget with merged transactions excluded
 
 ## T5 — ViewModel
-- [ ] Create `BudgetViewModel`
-- [ ] Load active budgets on init
-- [ ] Expose `StateFlow<BudgetUiState>`
-- [ ] Handle create/update/delete actions
-- [ ] Add tests for each action
+- [x] Create `BudgetViewModel`
+- [x] Load active budgets on init
+- [x] Expose `StateFlow<BudgetUiState>`
+- [x] Handle create/update/delete actions
+- [x] Add tests for each action
 
 ## T6 — UI: List
 - [ ] Create `BudgetListScreen`
