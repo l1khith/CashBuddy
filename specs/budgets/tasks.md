@@ -8,10 +8,10 @@
 - [x] Verify build passes
 
 ## T2 — Domain models
-- [ ] Create `Budget` data class in `domain/model/`
-- [ ] Create `BudgetPeriod` enum (MONTHLY, WEEKLY, YEARLY)
-- [ ] Create `AlertState` enum (ON_TRACK, WARNING, EXCEEDED)
-- [ ] Create `BudgetStatus` data class
+- [x] Create `Budget` data class in `domain/model/`
+- [x] Create `BudgetPeriod` enum (MONTHLY, WEEKLY, YEARLY)
+- [x] Create `AlertState` enum (ON_TRACK, WARNING, EXCEEDED)
+- [x] Create `BudgetStatus` data class
 
 ## T3 — Repository
 - [ ] Create `BudgetRepository` interface

@@ -1,23 +1,17 @@
 package com.cashbuddy.domain.model
 
-enum class BudgetPeriod {
-    DAILY,
-    WEEKLY,
-    MONTHLY,
-    YEARLY
-}
-
 data class Budget(
-    val id: Long = 0,
-    val categoryId: Long? = null,
+    val id: String,
+    val category: String,
     val amount: Double,
-    val period: BudgetPeriod = BudgetPeriod.MONTHLY,
+    val period: BudgetPeriod,
     val startDate: Long,
-    val endDate: Long? = null,
     val isActive: Boolean = true,
-    val alertThreshold: Double = 80.0,
-    val createdAt: Long = 0,
-    val categoryName: String? = null,
-    val categoryColor: String? = null,
-    val spentAmount: Double = 0.0
-)
+    val lastAlertState: AlertState? = null,
+    val lastAlertAt: Long? = null,
+    val createdAt: Long,
+    val updatedAt: Long
+) {
+    val categoryName: String get() = category
+    val spentAmount: Double get() = 0.0
+}

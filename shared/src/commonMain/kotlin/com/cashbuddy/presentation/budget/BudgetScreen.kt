@@ -130,7 +130,7 @@ fun BudgetScreen(
                     items(state.budgets, key = { it.id }) { b ->
                         BudgetProgressCard(
                             budget = b,
-                            onDelete = { viewModel.processIntent(BudgetIntent.DeleteBudget(b.id)) }
+                            onDelete = { viewModel.processIntent(BudgetIntent.DeleteBudget(b.id.toLongOrNull() ?: 0L)) }
                         )
                     }
                 }

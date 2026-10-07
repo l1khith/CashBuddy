@@ -53,13 +53,14 @@ class BudgetViewModel(
         viewModelScope.launch {
             val now = com.cashbuddy.platform.currentTimeMillis()
             val budget = Budget(
-                id = 0L,
-                categoryId = categoryId,
+                id = "${now}-${kotlin.random.Random.nextLong().toString(16)}",
+                category = categoryId.toString(),
                 amount = amount,
                 period = period,
                 startDate = now,
-                endDate = null,
-                createdAt = now
+                isActive = true,
+                createdAt = now,
+                updatedAt = now
             )
             budgetRepository.insert(budget)
         }
