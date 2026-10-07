@@ -339,14 +339,14 @@ private fun runMigrations(driver: SqlDriver) {
             identifier = null,
             sql = "PRAGMA table_info(budgets);",
             mapper = { cursor ->
+                var hasCategory = false
                 var hasLastAlertState = false
                 while (cursor.next().value) {
                     val colName = cursor.getString(1)
-                    if (colName == "last_alert_state") {
-                        hasLastAlertState = true
-                    }
+                    if (colName == "category") hasCategory = true
+                    if (colName == "last_alert_state") hasLastAlertState = true
                 }
-                QueryResult.Value(!hasLastAlertState)
+                QueryResult.Value(!hasCategory || !hasLastAlertState)
             },
             parameters = 0
         ).value
