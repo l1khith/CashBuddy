@@ -148,6 +148,14 @@ val appModule = module {
     viewModelOf(::StatsViewModel)
     viewModelOf(::AccountsViewModel)
     viewModelOf(::BudgetViewModel)
+    viewModel { (category: String, period: String) ->
+        com.cashbuddy.presentation.budget.BudgetDrilldownViewModel(
+            category = category,
+            periodName = period,
+            transactionRepository = get(),
+            budgetEngine = get()
+        )
+    }
     viewModelOf(::GoalsViewModel)
     viewModel { SettingsViewModel(get(), get(), get(), get(), get(), getOrNull(), getOrNull(), getOrNull()) }
     viewModel { PersonalizationViewModel(get(), get(), get(), get(), getOrNull()) }

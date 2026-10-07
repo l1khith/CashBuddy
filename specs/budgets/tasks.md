@@ -49,10 +49,10 @@
 - [x] Compose UI test for create flow
 
 ## T8 — UI: Drill-down
-- [ ] Create `BudgetDrilldownScreen`
-- [ ] Reuse `TransactionItemCard`
-- [ ] Filter by category and period
-- [ ] Compose UI test
+- [x] Create `BudgetDrilldownScreen`
+- [x] Reuse `TransactionItemCard`
+- [x] Filter by category and period
+- [x] Compose UI test
 
 ## T9 — Alerts
 - [ ] Create `BudgetAlertScheduler`

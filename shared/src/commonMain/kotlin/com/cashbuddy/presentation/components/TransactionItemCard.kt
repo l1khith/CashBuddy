@@ -183,7 +183,7 @@ fun TransactionItemCard(
     )
 }
 
-private fun getCategoryIcon(categoryName: String, isDebit: Boolean): ImageVector {
+fun getCategoryIcon(categoryName: String, isDebit: Boolean = true): ImageVector {
     return when (categoryName) {
         "Food", "Food & Dining", "Dining", "Restaurant" -> Icons.Default.Restaurant
         "Transport", "Transportation", "Travel", "Cab", "Fuel" -> Icons.Default.DirectionsCar
