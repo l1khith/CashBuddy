@@ -62,9 +62,9 @@
 - [x] Unit tests with fake clock
 
 ## T10 — Navigation
-- [ ] Add Budgets to bottom nav or home screen entry
-- [ ] Wire drill-down navigation
-- [ ] Back stack behavior test
+- [x] Add Budgets to bottom nav or home screen entry
+- [x] Wire drill-down navigation
+- [x] Back stack behavior test
 
 ## T11 — Polish
 - [ ] Colors: green < 80, amber 80–99, red >= 100

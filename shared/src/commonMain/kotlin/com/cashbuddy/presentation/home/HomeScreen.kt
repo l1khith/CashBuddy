@@ -49,6 +49,9 @@ import com.cashbuddy.presentation.theme.TealMintSecondary
 import com.cashbuddy.presentation.theme.TrustBluePrimary
 import kotlinx.coroutines.flow.collectLatest
 
+import androidx.compose.material.icons.filled.PieChart
+import com.cashbuddy.presentation.theme.PrimaryIndigo
+
 @Composable
 fun HomeScreen(
     viewModel: HomeViewModel,
@@ -56,6 +59,7 @@ fun HomeScreen(
     onNavigateToDetail: (Long) -> Unit,
     onNavigateToAddTransaction: () -> Unit,
     onNavigateToAllTransactions: () -> Unit,
+    onNavigateToBudgets: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
@@ -121,6 +125,68 @@ fun HomeScreen(
                         monthlyCredit = state.periodCredit,
                         selectedPeriod = state.selectedPeriod
                     )
+                }
+
+                // Budgets Quick Entry Card
+                item {
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { onNavigateToBudgets() },
+                        shape = RoundedCornerShape(14.dp),
+                        colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.surface
+                        ),
+                        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(16.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(40.dp)
+                                        .clip(CircleShape)
+                                        .background(PrimaryIndigo.copy(alpha = 0.15f)),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.PieChart,
+                                        contentDescription = "Budgets",
+                                        tint = PrimaryIndigo,
+                                        modifier = Modifier.size(22.dp)
+                                    )
+                                }
+                                Spacer(modifier = Modifier.width(12.dp))
+                                Column {
+                                    Text(
+                                        text = "Budgets",
+                                        style = MaterialTheme.typography.titleMedium,
+                                        fontWeight = FontWeight.Bold,
+                                        color = MaterialTheme.colorScheme.onSurface
+                                    )
+                                    Text(
+                                        text = "Track and control category spending limits",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                            }
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.ArrowForward,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+                    }
                 }
 
                 // Review Banner if pending transactions exist
