@@ -35,11 +35,11 @@
 - [x] Add tests for each action
 
 ## T6 — UI: List
-- [ ] Create `BudgetListScreen`
-- [ ] Create `BudgetCard` composable
-- [ ] Empty state
-- [ ] FAB wiring
-- [ ] Compose UI test for both states
+- [x] Create `BudgetListScreen`
+- [x] Create `BudgetCard` composable
+- [x] Empty state
+- [x] FAB wiring
+- [x] Compose UI test for both states
 
 ## T7 — UI: Edit Sheet
 - [ ] Create `BudgetEditSheet`
