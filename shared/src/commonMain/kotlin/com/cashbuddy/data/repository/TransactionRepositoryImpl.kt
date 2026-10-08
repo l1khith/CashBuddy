@@ -1,3 +1,4 @@
+// NO-NETWORK
 package com.cashbuddy.data.repository
 
 import app.cash.sqldelight.coroutines.asFlow
@@ -206,6 +207,14 @@ class TransactionRepositoryImpl(
     override suspend fun sumByCategory(category: String, startTime: Long, endTime: Long): Double = withContext(dispatcher) {
         queries.sumByCategory(
             category = category,
+            startTime = startTime,
+            endTime = endTime
+        ).executeAsOne()
+    }
+
+    override suspend fun sumAll(startTime: Long, endTime: Long, type: TransactionType): Double = withContext(dispatcher) {
+        queries.sumAll(
+            type = type.name,
             startTime = startTime,
             endTime = endTime
         ).executeAsOne()

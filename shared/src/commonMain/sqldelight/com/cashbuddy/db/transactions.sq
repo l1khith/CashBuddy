@@ -271,5 +271,13 @@ WHERE (c.name = :category OR CAST(t.category_id AS TEXT) = :category)
   AND t.is_merged = 0
 ORDER BY t.timestamp DESC;
 
+sumAll:
+SELECT COALESCE(SUM(amount), 0.0)
+FROM transactions
+WHERE type = :type
+  AND timestamp >= :startTime
+  AND timestamp <= :endTime
+  AND is_merged = 0;
+
 
 

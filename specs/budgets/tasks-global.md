@@ -1,11 +1,11 @@
 # Global Budget — Tasks
 
 ## T1 — Constant and query
-- [ ] Add `BudgetCategories.GLOBAL` constant in `domain/model/`
-- [ ] Add `sumAll` query to `Transaction.sq`
-- [ ] Regenerate SQLDelight bindings
-- [ ] Add `sumAll` to `TransactionRepository` interface and implementation
-- [ ] Test: `sumAll` returns correct totals
+- [x] Add `BudgetCategories.GLOBAL` constant in `domain/model/`
+- [x] Add `sumAll` query to `Transaction.sq`
+- [x] Regenerate SQLDelight bindings
+- [x] Add `sumAll` to `TransactionRepository` interface and implementation
+- [x] Test: `sumAll` returns correct totals
 
 ## T2 — Engine branch
 - [ ] Update `BudgetEngine.statusFor` with the global branch
