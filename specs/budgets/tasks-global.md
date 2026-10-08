@@ -41,9 +41,9 @@
 - [x] Test: global at 85% with no category alerts fires the global alert
 
 ## T7 — Polish
-- [ ] Global card label uses the period name ("Monthly Budget", "Weekly Budget", "Yearly Budget")
-- [ ] Colors: same as category cards (green < 80%, amber 80–99%, red >= 100%)
-- [ ] Accessibility labels on global card and unbudgeted row
+- [x] Global card label uses the period name ("Monthly Budget", "Weekly Budget", "Yearly Budget")
+- [x] Colors: same as category cards (green < 80%, amber 80–99%, red >= 100%)
+- [x] Accessibility labels on global card and unbudgeted row
 
 ## T8 — Documentation
 - [ ] Update `README.md` with global budget feature

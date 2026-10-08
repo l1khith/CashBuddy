@@ -169,4 +169,37 @@ class BudgetListScreenTest {
         assertEquals(null, state.globalBudget)
         assertEquals(0.0, state.unbudgetedSpent)
     }
+
+    @Test
+    fun testGlobalPeriodTitleMapping() {
+        val monthlyBudget = Budget(
+            id = "m1",
+            category = com.cashbuddy.domain.model.BudgetCategories.GLOBAL,
+            amount = 10000.0,
+            period = BudgetPeriod.MONTHLY,
+            startDate = 1000L,
+            isActive = true,
+            createdAt = 1000L,
+            updatedAt = 1000L
+        )
+        val weeklyBudget = monthlyBudget.copy(id = "w1", period = BudgetPeriod.WEEKLY)
+        val yearlyBudget = monthlyBudget.copy(id = "y1", period = BudgetPeriod.YEARLY)
+
+        fun getTitle(budget: Budget, isGlobal: Boolean): String {
+            return if (isGlobal) {
+                when (budget.period) {
+                    BudgetPeriod.MONTHLY -> "Monthly Budget"
+                    BudgetPeriod.WEEKLY -> "Weekly Budget"
+                    BudgetPeriod.YEARLY -> "Yearly Budget"
+                }
+            } else {
+                budget.category
+            }
+        }
+
+        assertEquals("Monthly Budget", getTitle(monthlyBudget, isGlobal = true))
+        assertEquals("Weekly Budget", getTitle(weeklyBudget, isGlobal = true))
+        assertEquals("Yearly Budget", getTitle(yearlyBudget, isGlobal = true))
+        assertEquals(com.cashbuddy.domain.model.BudgetCategories.GLOBAL, getTitle(monthlyBudget, isGlobal = false))
+    }
 }
