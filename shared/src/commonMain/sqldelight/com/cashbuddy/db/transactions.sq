@@ -248,4 +248,36 @@ SELECT * FROM merge_log ORDER BY merged_at DESC;
 getMergeLogCount:
 SELECT COUNT(*) FROM merge_log;
 
+sumByCategory:
+SELECT COALESCE(SUM(t.amount), 0.0)
+FROM transactions t
+LEFT JOIN categories c ON t.category_id = c.id
+WHERE (c.name = :category OR CAST(t.category_id AS TEXT) = :category)
+  AND t.type = 'DEBIT'
+  AND t.timestamp >= :startTime
+  AND t.timestamp <= :endTime
+  AND t.is_merged = 0;
+
+getByCategoryAndPeriod:
+SELECT t.*, c.name AS category_name, c.color AS category_color, c.icon AS category_icon,
+       a.name AS account_name, a.type AS account_type
+FROM transactions t
+LEFT JOIN categories c ON t.category_id = c.id
+LEFT JOIN accounts a ON t.account_id = a.id
+WHERE (c.name = :category OR CAST(t.category_id AS TEXT) = :category)
+  AND t.type = 'DEBIT'
+  AND t.timestamp >= :startTime
+  AND t.timestamp <= :endTime
+  AND t.is_merged = 0
+ORDER BY t.timestamp DESC;
+
+sumAll:
+SELECT COALESCE(SUM(amount), 0.0)
+FROM transactions
+WHERE type = :type
+  AND timestamp >= :startTime
+  AND timestamp <= :endTime
+  AND is_merged = 0;
+
+
 

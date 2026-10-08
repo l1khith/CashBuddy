@@ -65,6 +65,20 @@ class DuplicateReconcilerTest {
         }
         override suspend fun getRecentMergeLogs(): List<MergeLogEntry> = mergeLogs.sortedByDescending { it.mergedAt }
         override suspend fun getMergeLogCount(): Long = mergeLogs.size.toLong()
+        override suspend fun sumByCategory(category: String, startTime: Long, endTime: Long): Double =
+            txs.filter {
+                (it.categoryName == category || it.categoryId.toString() == category) &&
+                it.type == TransactionType.DEBIT &&
+                it.timestamp in startTime..endTime &&
+                !it.isMerged
+            }.sumOf { it.amount }
+        override fun getByCategoryAndPeriod(category: String, startTime: Long, endTime: Long): Flow<List<Transaction>> =
+            flowOf(txs.filter {
+                (it.categoryName == category || it.categoryId.toString() == category) &&
+                it.type == TransactionType.DEBIT &&
+                it.timestamp in startTime..endTime &&
+                !it.isMerged
+            })
     }
 
     private class FakeAccountRepo : AccountRepository {

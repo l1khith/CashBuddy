@@ -22,7 +22,8 @@ It captures, categorizes, and tracks expenses and income across all Indian banks
 - 🛡️ **Human-in-the-Loop Review**: Transactions with confidence $< 0.85$ or amount $\ge ₹10,000$ are flagged as `PENDING` for explicit user review.
 - 🔐 **Hardware-Backed Encryption**: Encrypted with **SQLCipher (AES-256 GCM)** using hardware-backed keys from the **Android Keystore (TEE / StrongBox)**.
 - 👆 **Biometric Security**: Protected by `BIOMETRIC_STRONG` authentication on app launch and automatically locks after 5 minutes of background inactivity.
-- 📊 **Visual Analytics**: Interactive monthly summaries, spending category breakdowns, budget tracking, and financial goals.
+- 📊 **Visual Analytics**: Interactive monthly summaries, spending category breakdowns, and financial goals.
+- 🎯 **Global & Category Budgets & Real-Time Alerts**: Set an overall global spending limit as well as per-category budgets for monthly, weekly, or yearly periods. Features computed Unbudgeted spending visibility, dynamic progress tracking (<80% green, 80–99% amber, ≥100% red), prioritized at-most-once notifications (category before global) at 80% and 100% threshold crossings, automated period rollover, and transaction drill-down. (See [Budgets Spec](specs/budgets/spec.md) and [Global Budget Spec](specs/budgets/spec-global.md)).
 
 ---
 

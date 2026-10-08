@@ -16,6 +16,8 @@ import com.cashbuddy.presentation.accounts.AccountsScreen
 import com.cashbuddy.presentation.accounts.AccountsViewModel
 import com.cashbuddy.presentation.addtransaction.AddTransactionScreen
 import com.cashbuddy.presentation.addtransaction.AddTransactionViewModel
+import com.cashbuddy.presentation.budget.BudgetDrilldownScreen
+import com.cashbuddy.presentation.budget.BudgetDrilldownViewModel
 import com.cashbuddy.presentation.budget.BudgetScreen
 import com.cashbuddy.presentation.budget.BudgetViewModel
 import com.cashbuddy.presentation.components.CashBuddyBottomBar
@@ -128,7 +130,8 @@ fun CashBuddyApp(
                         onNavigateToReview = { navController.navigate(ScreenRoute.ReviewInbox) },
                         onNavigateToDetail = { id -> navController.navigate(ScreenRoute.TransactionDetail(id)) },
                         onNavigateToAddTransaction = { navController.navigate(ScreenRoute.AddTransaction()) },
-                        onNavigateToAllTransactions = { navController.navigate(ScreenRoute.Transactions) }
+                        onNavigateToAllTransactions = { navController.navigate(ScreenRoute.Transactions) },
+                        onNavigateToBudgets = { navController.navigate(ScreenRoute.Budgets) }
                     )
                 }
 
@@ -171,7 +174,29 @@ fun CashBuddyApp(
 
                 composable<ScreenRoute.Budgets> {
                     val budgetViewModel: BudgetViewModel = koinViewModel()
-                    BudgetScreen(viewModel = budgetViewModel)
+                    BudgetScreen(
+                        viewModel = budgetViewModel,
+                        onBudgetClick = { status ->
+                            navController.navigate(
+                                ScreenRoute.BudgetDrilldown(
+                                    category = status.budget.category,
+                                    period = status.budget.period.name
+                                )
+                            )
+                        }
+                    )
+                }
+
+                composable<ScreenRoute.BudgetDrilldown> { backStackEntry ->
+                    val route: ScreenRoute.BudgetDrilldown = backStackEntry.toRoute()
+                    val drilldownViewModel: BudgetDrilldownViewModel = koinViewModel(
+                        parameters = { parametersOf(route.category, route.period) }
+                    )
+                    BudgetDrilldownScreen(
+                        viewModel = drilldownViewModel,
+                        onNavigateBack = { navController.popBackStack() },
+                        onTransactionClick = { txId -> navController.navigate(ScreenRoute.TransactionDetail(txId)) }
+                    )
                 }
 
                 composable<ScreenRoute.Goals> {

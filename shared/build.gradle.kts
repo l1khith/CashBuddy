@@ -94,4 +94,5 @@ sqldelight {
 
 dependencies {
     androidRuntimeClasspath(libs.compose.uiTooling)
+    "androidHostTestImplementation"("app.cash.sqldelight:sqlite-driver:2.0.2")
 }

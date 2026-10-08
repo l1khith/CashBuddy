@@ -5,7 +5,7 @@ import com.cashbuddy.core.DuplicateReconciler
 import com.cashbuddy.core.NotificationParser
 import com.cashbuddy.core.ScreenshotParserEngine
 import com.cashbuddy.data.repository.AccountRepositoryImpl
-import com.cashbuddy.data.repository.BudgetRepositoryImpl
+import com.cashbuddy.data.repository.SqlDelightBudgetRepository
 import com.cashbuddy.data.repository.CategoryRepositoryImpl
 import com.cashbuddy.data.repository.CorrectionRepositoryImpl
 import com.cashbuddy.data.repository.DebugLogRepositoryImpl
@@ -85,6 +85,8 @@ val appModule = module {
     single { com.cashbuddy.core.prob.DedupEngine }
     single { DuplicateReconciler(get(), get()) }
     single { com.cashbuddy.core.prob.AccountRegistry(get()) }
+    single { com.cashbuddy.core.budget.BudgetEngine(get()) }
+    single { com.cashbuddy.core.budget.BudgetAlertScheduler(get(), get(), getOrNull()) }
     singleOf(::SignalObservationRepositoryImpl) bind SignalObservationRepository::class
     singleOf(::RawMessageRepositoryImpl) bind RawMessageRepository::class
     singleOf(::UserRuleRepositoryImpl) bind UserRuleRepository::class
@@ -107,7 +109,8 @@ val appModule = module {
             categoryRepo = get(),
             debugLogger = get(),
             recentStateRepository = get(),
-            settingsRepo = get()
+            settingsRepo = get(),
+            budgetAlertScheduler = getOrNull()
         )
     }
 
@@ -115,7 +118,7 @@ val appModule = module {
     singleOf(::TransactionRepositoryImpl) bind TransactionRepository::class
     singleOf(::AccountRepositoryImpl) bind AccountRepository::class
     singleOf(::CategoryRepositoryImpl) bind CategoryRepository::class
-    singleOf(::BudgetRepositoryImpl) bind BudgetRepository::class
+    singleOf(::SqlDelightBudgetRepository) bind BudgetRepository::class
     singleOf(::GoalRepositoryImpl) bind GoalRepository::class
     singleOf(::SettingsRepositoryImpl) bind SettingsRepository::class
     singleOf(::MerchantRuleRepositoryImpl) bind MerchantRuleRepository::class
@@ -146,7 +149,21 @@ val appModule = module {
     viewModel { (id: Long) -> TransactionDetailViewModel(id, get(), get(), get(), get()) }
     viewModelOf(::StatsViewModel)
     viewModelOf(::AccountsViewModel)
-    viewModelOf(::BudgetViewModel)
+    viewModel {
+        BudgetViewModel(
+            budgetRepository = get(),
+            categoryRepository = get(),
+            budgetEngine = get()
+        )
+    }
+    viewModel { (category: String, period: String) ->
+        com.cashbuddy.presentation.budget.BudgetDrilldownViewModel(
+            category = category,
+            periodName = period,
+            transactionRepository = get(),
+            budgetEngine = get()
+        )
+    }
     viewModelOf(::GoalsViewModel)
     viewModel { SettingsViewModel(get(), get(), get(), get(), get(), getOrNull(), getOrNull(), getOrNull()) }
     viewModel { PersonalizationViewModel(get(), get(), get(), get(), getOrNull()) }

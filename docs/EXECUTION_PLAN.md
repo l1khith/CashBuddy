@@ -52,11 +52,21 @@ gantt
 
 ---
 
+### ✅ Phase 4: Budgets & Spending Limits (Spec-Driven Development)
+- [x] Schema & Migration: `Budget.sq`, `sumByCategory`, SQLDelight migration `1.sqm`.
+- [x] Domain & Repository: `Budget`, `BudgetPeriod`, `AlertState`, `BudgetStatus`, `SqlDelightBudgetRepository`.
+- [x] Pure Logic Engine: `BudgetEngine` with boundary period ranges and non-cached calculation.
+- [x] ViewModels & UI: `BudgetViewModel`, `BudgetListScreen`, `BudgetCard` with progress animations.
+- [x] Interactive Flows: `BudgetEditSheet` creation/update/delete modal and `BudgetDrilldownScreen` filtered view.
+- [x] Automated Alerts: `BudgetAlertScheduler` with at-most-once state transitions and period rollover reset.
+- [x] Complete Specification: [specs/budgets/spec.md](../specs/budgets/spec.md), [plan.md](../specs/budgets/plan.md), [tasks.md](../specs/budgets/tasks.md).
+
+---
+
 ## 3. Next Focus Areas
 
 1. **Enhanced Visualizations & Reports**:
    - Monthly category breakdown pie/bar charts.
-   - Budget progress bars with threshold alerts.
 2. **Local Data Backup & Scoped Storage Export**:
    - Export transactions to CSV and Excel via Android's Storage Access Framework (`ACTION_CREATE_DOCUMENT`).
 3. **Personalization Learning Polish**:

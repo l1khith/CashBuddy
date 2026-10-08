@@ -62,7 +62,8 @@ class MessagePipeline(
     private val categoryRepo: CategoryRepository,
     private val debugLogger: DebugLogger? = null,
     private val recentStateRepository: RecentStateRepository? = null,
-    private val settingsRepo: SettingsRepository? = null
+    private val settingsRepo: SettingsRepository? = null,
+    private val budgetAlertScheduler: com.cashbuddy.core.budget.BudgetAlertScheduler? = null
 ) {
     suspend fun ingest(raw: RawMessage): PipelineOutcome {
         recentStateRepository?.recordRaw(raw.timestamp, raw.packageName)
@@ -192,6 +193,12 @@ class MessagePipeline(
                                     )
                                 )
                                 rawMessageRepo.updateResultingTx(raw.id, insertedId.toString())
+
+                                try {
+                                    budgetAlertScheduler?.checkAndAlert(raw.timestamp)
+                                } catch (_: Throwable) {
+                                    // Non-blocking best-effort alert check
+                                }
 
                                 if (status == TransactionStatus.CONFIRMED) {
                                     PipelineOutcome.Logged(insertedId, classification.pTransaction, amount, tx.merchant)

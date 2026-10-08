@@ -3,6 +3,7 @@ package com.cashbuddy.domain.repository
 import com.cashbuddy.domain.model.DateRangeSummary
 import com.cashbuddy.domain.model.Transaction
 import com.cashbuddy.domain.model.TransactionStatus
+import com.cashbuddy.domain.model.TransactionType
 import kotlinx.coroutines.flow.Flow
 
 data class MonthlySummary(
@@ -47,6 +48,9 @@ interface TransactionRepository {
     suspend fun deleteMergeLog(survivorId: Long)
     suspend fun getRecentMergeLogs(): List<MergeLogEntry>
     suspend fun getMergeLogCount(): Long
+    suspend fun sumByCategory(category: String, startTime: Long, endTime: Long): Double
+    fun getByCategoryAndPeriod(category: String, startTime: Long, endTime: Long): Flow<List<Transaction>>
+    suspend fun sumAll(startTime: Long, endTime: Long, type: TransactionType = TransactionType.DEBIT): Double = 0.0
 }
 
 data class MergeLogEntry(

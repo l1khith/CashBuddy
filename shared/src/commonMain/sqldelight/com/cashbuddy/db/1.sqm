@@ -1,0 +1,17 @@
+DROP TABLE IF EXISTS budgets;
+
+CREATE TABLE IF NOT EXISTS budgets (
+    id TEXT PRIMARY KEY NOT NULL,
+    category TEXT NOT NULL,
+    amount REAL NOT NULL,
+    period TEXT NOT NULL,
+    start_date INTEGER NOT NULL,
+    is_active INTEGER NOT NULL DEFAULT 1,
+    last_alert_state TEXT,
+    last_alert_at INTEGER,
+    created_at INTEGER NOT NULL,
+    updated_at INTEGER NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_budgets_category ON budgets(category);
+CREATE INDEX IF NOT EXISTS idx_budgets_is_active ON budgets(is_active);
