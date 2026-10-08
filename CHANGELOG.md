@@ -2,7 +2,28 @@
 
 All notable changes to the CashBuddy project will be documented in this file.
 
-## [Unreleased] - 2026-10-07
+## [Unreleased] - 2026-10-08
+
+### Added - Global Budget Feature (Spec-Driven Development Bundle)
+- **Constant & Aggregate Query (`T1`)**:
+  - Added `BudgetCategories.GLOBAL = "__GLOBAL__"` sentinel category.
+  - Added `sumAll` aggregate debit query to `Transaction.sq` and wired into `TransactionRepository`.
+- **Core Budget Engine (`T2`)**:
+  - Added global budget branch to `BudgetEngine.statusFor` summing all debit transactions regardless of category.
+- **ViewModel Architecture (`T3`)**:
+  - Exposed `globalBudget`, `categoryBudgets`, and computed `unbudgetedSpent` in `BudgetViewModel` and `BudgetUiState`.
+- **Compose Multiplatform UI Restructure (`T4`)**:
+  - Restructured `BudgetListScreen` to display global budget card at top, followed by category budgets and dynamic "Unbudgeted" row.
+  - Updated `BudgetCard` with `isGlobal` support (larger typography, no category dot, disabled drilldown tap).
+- **Budget Edit Sheet (`T5`)**:
+  - Added "Global (all spending)" option in category dropdown with sentinel validation ("A global budget for this period already exists").
+- **Alert Precedence Scheduler (`T6`)**:
+  - Updated `BudgetAlertScheduler` to process category budgets before global, ensuring at most one notification per transition cycle.
+  - Global state updates silently when category alerts fire.
+- **Polish & Design System (`T7`)**:
+  - Added dynamic period titles ("Monthly Budget", "Weekly Budget", "Yearly Budget") and accessibility semantics on `BudgetCard`, `UnbudgetedCard`, and `SectionHeader`.
+- **Documentation (`T8`)**:
+  - Updated `README.md`, specs index (`specs/README.md`), and `CHANGELOG.md`.
 
 ### Added - Budgets Feature (Spec-Driven Development Bundle)
 - **Database Schema & Migrations (`T1`)**:

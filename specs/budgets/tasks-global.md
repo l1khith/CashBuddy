@@ -46,6 +46,6 @@
 - [x] Accessibility labels on global card and unbudgeted row
 
 ## T8 — Documentation
-- [ ] Update `README.md` with global budget feature
-- [ ] Add `spec-global.md` and `plan-global.md` to the specs index
-- [ ] Update CHANGELOG
+- [x] Update `README.md` with global budget feature
+- [x] Add `spec-global.md` and `plan-global.md` to the specs index
+- [x] Update CHANGELOG
