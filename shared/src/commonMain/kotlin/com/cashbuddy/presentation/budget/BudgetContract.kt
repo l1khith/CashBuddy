@@ -8,6 +8,9 @@ import com.cashbuddy.domain.model.Category
 @Immutable
 data class BudgetUiState(
     val budgets: List<BudgetStatus> = emptyList(),
+    val globalBudget: BudgetStatus? = null,
+    val categoryBudgets: List<BudgetStatus> = emptyList(),
+    val unbudgetedSpent: Double = 0.0,
     val categories: List<Category> = emptyList(),
     val isLoading: Boolean = true,
     val error: String? = null

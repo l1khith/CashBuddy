@@ -13,11 +13,11 @@
 - [x] Test: category status still computes only its category
 
 ## T3 — ViewModel
-- [ ] Expose `globalBudget: StateFlow<BudgetStatus?>`
-- [ ] Expose `categoryBudgets: StateFlow<List<BudgetStatus>>` (rename from existing if needed)
-- [ ] Add `unbudgetedSpent: StateFlow<Double>`
-- [ ] Test: unbudgeted computes correctly with global + categories
-- [ ] Test: unbudgeted is 0.0 when no global budget
+- [x] Expose `globalBudget: StateFlow<BudgetStatus?>`
+- [x] Expose `categoryBudgets: StateFlow<List<BudgetStatus>>` (rename from existing if needed)
+- [x] Add `unbudgetedSpent: StateFlow<Double>`
+- [x] Test: unbudgeted computes correctly with global + categories
+- [x] Test: unbudgeted is 0.0 when no global budget
 
 ## T4 — UI restructure
 - [ ] Update `BudgetListScreen` to render global, then categories, then unbudgeted

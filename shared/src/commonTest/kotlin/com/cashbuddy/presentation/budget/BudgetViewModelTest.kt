@@ -4,6 +4,7 @@ package com.cashbuddy.presentation.budget
 import com.cashbuddy.core.budget.BudgetEngine
 import com.cashbuddy.domain.model.AlertState
 import com.cashbuddy.domain.model.Budget
+import com.cashbuddy.domain.model.BudgetCategories
 import com.cashbuddy.domain.model.BudgetPeriod
 import com.cashbuddy.domain.model.Category
 import com.cashbuddy.domain.model.CategoryType
@@ -89,6 +90,13 @@ class BudgetViewModelTest {
             txs.filter {
                 (it.categoryName == category || it.categoryId.toString() == category) &&
                 it.type == TransactionType.DEBIT &&
+                it.timestamp in startTime..endTime &&
+                !it.isMerged
+            }.sumOf { it.amount }
+
+        override suspend fun sumAll(startTime: Long, endTime: Long, type: TransactionType): Double =
+            txs.filter {
+                it.type == type &&
                 it.timestamp in startTime..endTime &&
                 !it.isMerged
             }.sumOf { it.amount }
@@ -226,5 +234,168 @@ class BudgetViewModelTest {
         viewModel.deleteBudget("b1").join()
 
         assertTrue(budgetRepo.budgets.isEmpty())
+    }
+
+    @Test
+    fun testUnbudgetedComputesCorrectlyWithGlobalAndCategories() = runBlocking {
+        val budgetRepo = FakeBudgetRepo()
+        val catRepo = FakeCategoryRepo()
+        val txRepo = FakeTxRepo()
+        val engine = BudgetEngine(txRepo, TimeZone.UTC)
+        val oct15_2026 = 1792065600000L
+
+        // 1. Global budget: ₹10,000
+        budgetRepo.create(
+            Budget(
+                id = "global_1",
+                category = BudgetCategories.GLOBAL,
+                amount = 10000.0,
+                period = BudgetPeriod.MONTHLY,
+                startDate = oct15_2026 - 100_000L,
+                isActive = true,
+                createdAt = oct15_2026,
+                updatedAt = oct15_2026
+            )
+        )
+
+        // 2. Category budget 1 (Food): ₹3,000
+        budgetRepo.create(
+            Budget(
+                id = "cat_food",
+                category = "Food",
+                amount = 3000.0,
+                period = BudgetPeriod.MONTHLY,
+                startDate = oct15_2026 - 100_000L,
+                isActive = true,
+                createdAt = oct15_2026,
+                updatedAt = oct15_2026
+            )
+        )
+
+        // 3. Category budget 2 (Transport): ₹2,000
+        budgetRepo.create(
+            Budget(
+                id = "cat_transport",
+                category = "Transport",
+                amount = 2000.0,
+                period = BudgetPeriod.MONTHLY,
+                startDate = oct15_2026 - 100_000L,
+                isActive = true,
+                createdAt = oct15_2026,
+                updatedAt = oct15_2026
+            )
+        )
+
+        // Transactions:
+        // Food: ₹1,500
+        txRepo.txs.add(
+            Transaction(
+                id = 1L,
+                amount = 1500.0,
+                type = TransactionType.DEBIT,
+                merchant = "Grocery",
+                categoryId = 1L,
+                categoryName = "Food",
+                sourceApp = "GPAY",
+                rawText = "text",
+                confidence = 1.0f,
+                status = TransactionStatus.CONFIRMED,
+                timestamp = oct15_2026
+            )
+        )
+        // Transport: ₹800
+        txRepo.txs.add(
+            Transaction(
+                id = 2L,
+                amount = 800.0,
+                type = TransactionType.DEBIT,
+                merchant = "Metro",
+                categoryId = 2L,
+                categoryName = "Transport",
+                sourceApp = "GPAY",
+                rawText = "text",
+                confidence = 1.0f,
+                status = TransactionStatus.CONFIRMED,
+                timestamp = oct15_2026
+            )
+        )
+        // Unbudgeted Category (Shopping): ₹1,200
+        txRepo.txs.add(
+            Transaction(
+                id = 3L,
+                amount = 1200.0,
+                type = TransactionType.DEBIT,
+                merchant = "Mall",
+                categoryId = 3L,
+                categoryName = "Shopping",
+                sourceApp = "GPAY",
+                rawText = "text",
+                confidence = 1.0f,
+                status = TransactionStatus.CONFIRMED,
+                timestamp = oct15_2026
+            )
+        )
+
+        val viewModel = BudgetViewModel(budgetRepo, catRepo, engine, coroutineScope = this)
+        viewModel.loadBudgets().join()
+
+        // Global spent = 1500 + 800 + 1200 = 3500
+        // Category spent = 1500 (Food) + 800 (Transport) = 2300
+        // Unbudgeted spent = 3500 - 2300 = 1200
+        val global = viewModel.globalBudget.value
+        assertNotNull(global)
+        assertEquals(3500.0, global.spent)
+
+        val cats = viewModel.categoryBudgets.value
+        assertEquals(2, cats.size)
+
+        assertEquals(1200.0, viewModel.unbudgetedSpent.value)
+        assertEquals(1200.0, viewModel.uiState.value.unbudgetedSpent)
+    }
+
+    @Test
+    fun testUnbudgetedIsZeroWhenNoGlobalBudget() = runBlocking {
+        val budgetRepo = FakeBudgetRepo()
+        val catRepo = FakeCategoryRepo()
+        val txRepo = FakeTxRepo()
+        val engine = BudgetEngine(txRepo, TimeZone.UTC)
+        val oct15_2026 = 1792065600000L
+
+        // Only category budget (Food): ₹3,000
+        budgetRepo.create(
+            Budget(
+                id = "cat_food",
+                category = "Food",
+                amount = 3000.0,
+                period = BudgetPeriod.MONTHLY,
+                startDate = oct15_2026 - 100_000L,
+                isActive = true,
+                createdAt = oct15_2026,
+                updatedAt = oct15_2026
+            )
+        )
+
+        txRepo.txs.add(
+            Transaction(
+                id = 1L,
+                amount = 1500.0,
+                type = TransactionType.DEBIT,
+                merchant = "Grocery",
+                categoryId = 1L,
+                categoryName = "Food",
+                sourceApp = "GPAY",
+                rawText = "text",
+                confidence = 1.0f,
+                status = TransactionStatus.CONFIRMED,
+                timestamp = oct15_2026
+            )
+        )
+
+        val viewModel = BudgetViewModel(budgetRepo, catRepo, engine, coroutineScope = this)
+        viewModel.loadBudgets().join()
+
+        assertEquals(null, viewModel.globalBudget.value)
+        assertEquals(0.0, viewModel.unbudgetedSpent.value)
+        assertEquals(0.0, viewModel.uiState.value.unbudgetedSpent)
     }
 }
