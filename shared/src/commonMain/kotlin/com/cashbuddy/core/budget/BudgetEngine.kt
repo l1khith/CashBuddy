@@ -3,8 +3,10 @@ package com.cashbuddy.core.budget
 
 import com.cashbuddy.domain.model.AlertState
 import com.cashbuddy.domain.model.Budget
+import com.cashbuddy.domain.model.BudgetCategories
 import com.cashbuddy.domain.model.BudgetPeriod
 import com.cashbuddy.domain.model.BudgetStatus
+import com.cashbuddy.domain.model.TransactionType
 import com.cashbuddy.domain.repository.TransactionRepository
 import kotlinx.datetime.DatePeriod
 import kotlinx.datetime.Instant
@@ -34,7 +36,11 @@ class BudgetEngine(
         }
 
         val range = periodRange(budget.period, now)
-        val spent = transactionRepository.sumByCategory(budget.category, range.first, range.last)
+        val spent = if (budget.category == BudgetCategories.GLOBAL) {
+            transactionRepository.sumAll(range.first, range.last, TransactionType.DEBIT)
+        } else {
+            transactionRepository.sumByCategory(budget.category, range.first, range.last)
+        }
         val remaining = budget.amount - spent
         val ratio = if (budget.amount > 0.0) spent / budget.amount else if (spent > 0.0) 1.0 else 0.0
         val percentUsed = if (budget.amount > 0.0) ((spent / budget.amount) * 100.0).toFloat() else 0.0f

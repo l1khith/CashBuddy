@@ -8,9 +8,9 @@
 - [x] Test: `sumAll` returns correct totals
 
 ## T2 — Engine branch
-- [ ] Update `BudgetEngine.statusFor` with the global branch
-- [ ] Test: global status computes sum of all DEBIT transactions
-- [ ] Test: category status still computes only its category
+- [x] Update `BudgetEngine.statusFor` with the global branch
+- [x] Test: global status computes sum of all DEBIT transactions
+- [x] Test: category status still computes only its category
 
 ## T3 — ViewModel
 - [ ] Expose `globalBudget: StateFlow<BudgetStatus?>`

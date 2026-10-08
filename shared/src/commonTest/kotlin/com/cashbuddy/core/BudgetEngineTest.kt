@@ -4,6 +4,7 @@ package com.cashbuddy.core
 import com.cashbuddy.core.budget.BudgetEngine
 import com.cashbuddy.domain.model.AlertState
 import com.cashbuddy.domain.model.Budget
+import com.cashbuddy.domain.model.BudgetCategories
 import com.cashbuddy.domain.model.BudgetPeriod
 import com.cashbuddy.domain.model.Transaction
 import com.cashbuddy.domain.model.TransactionStatus
@@ -31,6 +32,13 @@ class BudgetEngineTest {
             txs.filter {
                 (it.categoryName == category || it.categoryId.toString() == category) &&
                 it.type == TransactionType.DEBIT &&
+                it.timestamp in startTime..endTime &&
+                !it.isMerged
+            }.sumOf { it.amount }
+
+        override suspend fun sumAll(startTime: Long, endTime: Long, type: TransactionType): Double =
+            txs.filter {
+                it.type == type &&
                 it.timestamp in startTime..endTime &&
                 !it.isMerged
             }.sumOf { it.amount }
@@ -293,6 +301,153 @@ class BudgetEngineTest {
         // Only 1500 should be counted, not 4500
         assertEquals(1500.0, status.spent)
         assertEquals(2500.0, status.remaining)
+        assertEquals(AlertState.ON_TRACK, status.state)
+    }
+
+    @Test
+    fun testGlobalBudgetSumsAllDebitTransactions() = runBlocking {
+        val repo = FakeTransactionRepo()
+        val engine = BudgetEngine(repo, fixedUtc)
+
+        // Global Budget: ₹5,000 limit
+        val globalBudget = Budget(
+            id = "global_1",
+            category = BudgetCategories.GLOBAL,
+            amount = 5000.0,
+            period = BudgetPeriod.MONTHLY,
+            startDate = oct15_2026 - 100_000L,
+            isActive = true,
+            createdAt = oct15_2026,
+            updatedAt = oct15_2026
+        )
+
+        // 1. Dining expense: ₹1,500
+        repo.insert(
+            Transaction(
+                amount = 1500.0,
+                type = TransactionType.DEBIT,
+                merchant = "Restaurant",
+                categoryId = 1L,
+                categoryName = "Dining",
+                sourceApp = "GPAY",
+                rawText = "Paid 1500",
+                confidence = 1.0f,
+                status = TransactionStatus.CONFIRMED,
+                timestamp = oct15_2026
+            )
+        )
+
+        // 2. Transport expense: ₹1,000
+        repo.insert(
+            Transaction(
+                amount = 1000.0,
+                type = TransactionType.DEBIT,
+                merchant = "Metro",
+                categoryId = 2L,
+                categoryName = "Transport",
+                sourceApp = "GPAY",
+                rawText = "Paid 1000",
+                confidence = 1.0f,
+                status = TransactionStatus.CONFIRMED,
+                timestamp = oct15_2026
+            )
+        )
+
+        // 3. Salary income: ₹20,000 (CREDIT - should be ignored)
+        repo.insert(
+            Transaction(
+                amount = 20000.0,
+                type = TransactionType.CREDIT,
+                merchant = "Salary",
+                categoryId = 3L,
+                categoryName = "Salary",
+                sourceApp = "SMS",
+                rawText = "Credited 20000",
+                confidence = 1.0f,
+                status = TransactionStatus.CONFIRMED,
+                timestamp = oct15_2026
+            )
+        )
+
+        // 4. Merged transaction: ₹500 (isMerged = true - should be ignored)
+        val mergedId = repo.insert(
+            Transaction(
+                amount = 500.0,
+                type = TransactionType.DEBIT,
+                merchant = "Metro Duplicate",
+                categoryId = 2L,
+                categoryName = "Transport",
+                sourceApp = "GPAY",
+                rawText = "Paid 500",
+                confidence = 1.0f,
+                status = TransactionStatus.CONFIRMED,
+                timestamp = oct15_2026,
+                isMerged = true,
+                mergedIntoId = 2L
+            )
+        )
+
+        val status = engine.statusFor(globalBudget, oct15_2026)
+        // Total spent = 1500 + 1000 = 2500.0 (50% used)
+        assertEquals(2500.0, status.spent)
+        assertEquals(2500.0, status.remaining)
+        assertEquals(50.0f, status.percentUsed)
+        assertEquals(AlertState.ON_TRACK, status.state)
+    }
+
+    @Test
+    fun testCategoryBudgetStillComputesOnlyItsCategory() = runBlocking {
+        val repo = FakeTransactionRepo()
+        val engine = BudgetEngine(repo, fixedUtc)
+
+        val diningBudget = Budget(
+            id = "cat_1",
+            category = "Dining",
+            amount = 2000.0,
+            period = BudgetPeriod.MONTHLY,
+            startDate = oct15_2026 - 100_000L,
+            isActive = true,
+            createdAt = oct15_2026,
+            updatedAt = oct15_2026
+        )
+
+        // Dining expense: ₹1,500
+        repo.insert(
+            Transaction(
+                amount = 1500.0,
+                type = TransactionType.DEBIT,
+                merchant = "Restaurant",
+                categoryId = 1L,
+                categoryName = "Dining",
+                sourceApp = "GPAY",
+                rawText = "Paid 1500",
+                confidence = 1.0f,
+                status = TransactionStatus.CONFIRMED,
+                timestamp = oct15_2026
+            )
+        )
+
+        // Transport expense: ₹1,000 (different category)
+        repo.insert(
+            Transaction(
+                amount = 1000.0,
+                type = TransactionType.DEBIT,
+                merchant = "Metro",
+                categoryId = 2L,
+                categoryName = "Transport",
+                sourceApp = "GPAY",
+                rawText = "Paid 1000",
+                confidence = 1.0f,
+                status = TransactionStatus.CONFIRMED,
+                timestamp = oct15_2026
+            )
+        )
+
+        val status = engine.statusFor(diningBudget, oct15_2026)
+        // Should only count Dining = 1500.0 (75% used)
+        assertEquals(1500.0, status.spent)
+        assertEquals(500.0, status.remaining)
+        assertEquals(75.0f, status.percentUsed)
         assertEquals(AlertState.ON_TRACK, status.state)
     }
 }
