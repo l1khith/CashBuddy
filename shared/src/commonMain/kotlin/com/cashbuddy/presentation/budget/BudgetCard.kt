@@ -35,6 +35,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.cashbuddy.domain.model.AlertState
+import com.cashbuddy.domain.model.BudgetPeriod
 import com.cashbuddy.domain.model.BudgetStatus
 import com.cashbuddy.presentation.components.formatCurrency
 import com.cashbuddy.presentation.theme.AccentEmerald
@@ -44,12 +45,18 @@ import com.cashbuddy.presentation.theme.RadiusLarge
 import com.cashbuddy.presentation.theme.RadiusSmall
 import com.cashbuddy.presentation.theme.WarningAmber
 import com.cashbuddy.presentation.theme.getCategoryColor
+import kotlinx.datetime.Instant
+import kotlinx.datetime.LocalDate
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.isoDayNumber
+import kotlinx.datetime.toLocalDateTime
 import kotlin.math.abs
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun BudgetCard(
     status: BudgetStatus,
+    isGlobal: Boolean = false,
     onClick: () -> Unit = {},
     onLongClick: () -> Unit = {},
     modifier: Modifier = Modifier
@@ -73,28 +80,61 @@ fun BudgetCard(
     }
 
     val categoryColor = getCategoryColor(budget.category)
+    val title = if (isGlobal) {
+        when (budget.period) {
+            BudgetPeriod.MONTHLY -> "Monthly Budget"
+            BudgetPeriod.WEEKLY -> "Weekly Budget"
+            BudgetPeriod.YEARLY -> "Yearly Budget"
+        }
+    } else {
+        budget.category
+    }
+
+    val daysRemaining = if (isGlobal) {
+        val now = com.cashbuddy.platform.currentTimeMillis()
+        val instant = Instant.fromEpochMilliseconds(now)
+        val timeZone = TimeZone.currentSystemDefault()
+        val localDate = instant.toLocalDateTime(timeZone).date
+        when (budget.period) {
+            BudgetPeriod.MONTHLY -> {
+                val nextMonth = if (localDate.monthNumber == 12) {
+                    LocalDate(localDate.year + 1, 1, 1)
+                } else {
+                    LocalDate(localDate.year, localDate.monthNumber + 1, 1)
+                }
+                (nextMonth.toEpochDays() - localDate.toEpochDays()).coerceAtLeast(0)
+            }
+            BudgetPeriod.WEEKLY -> {
+                (7 - localDate.dayOfWeek.isoDayNumber).coerceAtLeast(0)
+            }
+            BudgetPeriod.YEARLY -> {
+                val endOfYear = LocalDate(localDate.year, 12, 31)
+                (endOfYear.toEpochDays() - localDate.toEpochDays()).coerceAtLeast(0)
+            }
+        }
+    } else null
 
     Card(
         modifier = modifier
             .fillMaxWidth()
             .clip(RadiusLarge)
             .combinedClickable(
-                onClick = onClick,
+                onClick = { if (!isGlobal) onClick() },
                 onLongClick = onLongClick
             )
             .semantics {
-                contentDescription = "${budget.category} budget: ${formatCurrency(status.spent, includeSymbol = true)} of ${formatCurrency(budget.amount, includeSymbol = true)} spent. $statusText"
+                contentDescription = "$title: ${formatCurrency(status.spent, includeSymbol = true)} of ${formatCurrency(budget.amount, includeSymbol = true)} spent. $statusText"
             },
         shape = RadiusLarge,
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surface
         ),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+        elevation = CardDefaults.cardElevation(defaultElevation = if (isGlobal) 3.dp else 2.dp)
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(16.dp)
+                .padding(if (isGlobal) 20.dp else 16.dp)
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -102,16 +142,18 @@ fun BudgetCard(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Box(
-                        modifier = Modifier
-                            .size(10.dp)
-                            .clip(CircleShape)
-                            .background(categoryColor)
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
+                    if (!isGlobal) {
+                        Box(
+                            modifier = Modifier
+                                .size(10.dp)
+                                .clip(CircleShape)
+                                .background(categoryColor)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                    }
                     Text(
-                        text = budget.category,
-                        style = CashBuddyTypography.titleMedium,
+                        text = title,
+                        style = if (isGlobal) CashBuddyTypography.titleLarge else CashBuddyTypography.titleMedium,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onSurface
                     )
@@ -119,8 +161,8 @@ fun BudgetCard(
 
                 Text(
                     text = "${formatCurrency(status.spent, includeSymbol = true)} / ${formatCurrency(budget.amount, includeSymbol = true)}",
-                    style = CashBuddyTypography.titleMedium,
-                    fontWeight = FontWeight.SemiBold,
+                    style = if (isGlobal) CashBuddyTypography.titleLarge else CashBuddyTypography.titleMedium,
+                    fontWeight = if (isGlobal) FontWeight.Bold else FontWeight.SemiBold,
                     color = MaterialTheme.colorScheme.onSurface
                 )
             }
@@ -131,7 +173,7 @@ fun BudgetCard(
                 progress = { animatedProgress },
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(8.dp)
+                    .height(if (isGlobal) 10.dp else 8.dp)
                     .clip(RadiusSmall),
                 color = barColor,
                 trackColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
@@ -139,20 +181,35 @@ fun BudgetCard(
 
             Spacer(modifier = Modifier.height(8.dp))
 
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(
-                    imageVector = statusIcon,
-                    contentDescription = null,
-                    tint = barColor,
-                    modifier = Modifier.size(14.dp)
-                )
-                Spacer(modifier = Modifier.width(4.dp))
-                Text(
-                    text = statusText,
-                    style = CashBuddyTypography.bodySmall,
-                    color = barColor,
-                    fontWeight = FontWeight.Medium
-                )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        imageVector = statusIcon,
+                        contentDescription = null,
+                        tint = barColor,
+                        modifier = Modifier.size(14.dp)
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text(
+                        text = statusText,
+                        style = CashBuddyTypography.bodySmall,
+                        color = barColor,
+                        fontWeight = FontWeight.Medium
+                    )
+                }
+
+                if (daysRemaining != null) {
+                    Text(
+                        text = "$daysRemaining days left",
+                        style = CashBuddyTypography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        fontWeight = FontWeight.Medium
+                    )
+                }
             }
         }
     }

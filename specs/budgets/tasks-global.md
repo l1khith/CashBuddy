@@ -20,13 +20,13 @@
 - [x] Test: unbudgeted is 0.0 when no global budget
 
 ## T4 — UI restructure
-- [ ] Update `BudgetListScreen` to render global, then categories, then unbudgeted
-- [ ] Add `isGlobal` parameter to `BudgetCard`
-- [ ] Add `UnbudgetedCard` composable
-- [ ] Add `SectionHeader` composable if not present
-- [ ] Test: global card renders above category cards
-- [ ] Test: unbudgeted row hidden when no global
-- [ ] Test: global card has no drill-down tap
+- [x] Update `BudgetListScreen` to render global, then categories, then unbudgeted
+- [x] Add `isGlobal` parameter to `BudgetCard`
+- [x] Add `UnbudgetedCard` composable
+- [x] Add `SectionHeader` composable if not present
+- [x] Test: global card renders above category cards
+- [x] Test: unbudgeted row hidden when no global
+- [x] Test: global card has no drill-down tap
 
 ## T5 — Edit sheet
 - [ ] Add "Global (all spending)" as the first option in the category dropdown
