@@ -35,10 +35,10 @@
 - [x] Test: creating a second global budget for the same period fails
 
 ## T6 — Alerts
-- [ ] Update `BudgetAlertScheduler` to check category alerts before global
-- [ ] Ensure only one notification fires per transition cycle
-- [ ] Test: category at 90% and global at 85% fires only the category alert
-- [ ] Test: global at 85% with no category alerts fires the global alert
+- [x] Update `BudgetAlertScheduler` to check category alerts before global
+- [x] Ensure only one notification fires per transition cycle
+- [x] Test: category at 90% and global at 85% fires only the category alert
+- [x] Test: global at 85% with no category alerts fires the global alert
 
 ## T7 — Polish
 - [ ] Global card label uses the period name ("Monthly Budget", "Weekly Budget", "Yearly Budget")

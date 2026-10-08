@@ -7,6 +7,7 @@ import com.cashbuddy.core.budget.BudgetEngine
 import com.cashbuddy.core.budget.BudgetNotifier
 import com.cashbuddy.domain.model.AlertState
 import com.cashbuddy.domain.model.Budget
+import com.cashbuddy.domain.model.BudgetCategories
 import com.cashbuddy.domain.model.BudgetPeriod
 import com.cashbuddy.domain.model.DateRangeSummary
 import com.cashbuddy.domain.model.Transaction
@@ -86,6 +87,13 @@ class BudgetAlertSchedulerTest {
                 it.timestamp in startTime..endTime &&
                 !it.isMerged
             })
+
+        override suspend fun sumAll(startTime: Long, endTime: Long, type: TransactionType): Double =
+            txs.filter {
+                it.type == type &&
+                it.timestamp in startTime..endTime &&
+                !it.isMerged
+            }.sumOf { it.amount }
 
         override fun getAll(): Flow<List<Transaction>> = flowOf(txs)
         override fun getById(id: Long): Flow<Transaction?> = flowOf(txs.find { it.id == id })
@@ -361,5 +369,107 @@ class BudgetAlertSchedulerTest {
         assertEquals(AlertState.WARNING, alerts.first().state)
         assertEquals(AlertState.WARNING, budgetRepo.getById("b1")?.lastAlertState)
         assertEquals(mayNow, budgetRepo.getById("b1")?.lastAlertAt)
+    }
+
+    @Test
+    fun testCategoryAt90AndGlobalAt85FiresOnlyCategoryAlert() = runBlocking {
+        val budgetRepo = FakeBudgetRepo()
+        val txRepo = FakeTxRepo()
+        val engine = BudgetEngine(txRepo, TimeZone.UTC)
+        val notifier = RecordingNotifier()
+
+        val now = 1713182400000L // 2024-04-15
+        val categoryBudget = Budget(
+            id = "b_cat",
+            category = "Food",
+            amount = 10000.0,
+            period = BudgetPeriod.MONTHLY,
+            startDate = now - 100000L,
+            isActive = true,
+            createdAt = now,
+            updatedAt = now
+        )
+        val globalBudget = Budget(
+            id = "b_global",
+            category = BudgetCategories.GLOBAL,
+            amount = 50000.0,
+            period = BudgetPeriod.MONTHLY,
+            startDate = now - 100000L,
+            isActive = true,
+            createdAt = now,
+            updatedAt = now
+        )
+        // Add global first to verify sorting checks category first
+        budgetRepo.create(globalBudget)
+        budgetRepo.create(categoryBudget)
+
+        // Category spend = 9000 (90%), other spend = 33500. Total = 42500 (85% of 50000)
+        txRepo.txs.add(createTx(1L, 9000.0, "Food", now))
+        txRepo.txs.add(createTx(2L, 33500.0, "Travel", now))
+
+        val scheduler = BudgetAlertScheduler(budgetRepo, engine, notifier, { now })
+
+        val alerts = scheduler.checkAndAlert(now)
+        // Exactly one notification fires: category alert
+        assertEquals(1, alerts.size)
+        assertEquals("Food budget is at 80%", alerts.first().message)
+        assertEquals("Food", alerts.first().category)
+        assertEquals(AlertState.WARNING, alerts.first().state)
+
+        assertEquals(1, notifier.events.size)
+        assertEquals("Food budget is at 80%", notifier.events.first().message)
+
+        // Category marked alerted
+        assertEquals(AlertState.WARNING, budgetRepo.getById("b_cat")?.lastAlertState)
+        // Global state updated silently
+        assertEquals(AlertState.WARNING, budgetRepo.getById("b_global")?.lastAlertState)
+    }
+
+    @Test
+    fun testGlobalAt85WithNoCategoryAlertsFiresGlobalAlert() = runBlocking {
+        val budgetRepo = FakeBudgetRepo()
+        val txRepo = FakeTxRepo()
+        val engine = BudgetEngine(txRepo, TimeZone.UTC)
+        val notifier = RecordingNotifier()
+
+        val now = 1713182400000L // 2024-04-15
+        val categoryBudget = Budget(
+            id = "b_cat",
+            category = "Food",
+            amount = 10000.0,
+            period = BudgetPeriod.MONTHLY,
+            startDate = now - 100000L,
+            isActive = true,
+            createdAt = now,
+            updatedAt = now
+        )
+        val globalBudget = Budget(
+            id = "b_global",
+            category = BudgetCategories.GLOBAL,
+            amount = 50000.0,
+            period = BudgetPeriod.MONTHLY,
+            startDate = now - 100000L,
+            isActive = true,
+            createdAt = now,
+            updatedAt = now
+        )
+        budgetRepo.create(categoryBudget)
+        budgetRepo.create(globalBudget)
+
+        // Food spent = 5000 (50% - ON_TRACK), other spend = 37500. Total = 42500 (85% of 50000)
+        txRepo.txs.add(createTx(1L, 5000.0, "Food", now))
+        txRepo.txs.add(createTx(2L, 37500.0, "Shopping", now))
+
+        val scheduler = BudgetAlertScheduler(budgetRepo, engine, notifier, { now })
+
+        val alerts = scheduler.checkAndAlert(now)
+        assertEquals(1, alerts.size)
+        assertEquals("You've used 80% of your monthly budget", alerts.first().message)
+        assertEquals(BudgetCategories.GLOBAL, alerts.first().category)
+        assertEquals(AlertState.WARNING, alerts.first().state)
+
+        assertEquals(1, notifier.events.size)
+        assertEquals(AlertState.WARNING, budgetRepo.getById("b_global")?.lastAlertState)
+        assertNull(budgetRepo.getById("b_cat")?.lastAlertState)
     }
 }
