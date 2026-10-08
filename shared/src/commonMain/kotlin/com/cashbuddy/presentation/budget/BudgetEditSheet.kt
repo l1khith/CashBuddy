@@ -17,6 +17,8 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Public
+import com.cashbuddy.domain.model.BudgetCategories
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.DropdownMenu
@@ -70,6 +72,9 @@ fun BudgetEditSheet(
     var selectedCategory by remember {
         mutableStateOf(initialBudget?.category ?: (categories.firstOrNull()?.name ?: ""))
     }
+    val isGlobal = selectedCategory == BudgetCategories.GLOBAL
+    val categoryDisplayText = if (isGlobal) "Global (all spending)" else selectedCategory
+
     var amountText by remember {
         mutableStateOf(
             initialBudget?.amount?.let {
@@ -113,7 +118,7 @@ fun BudgetEditSheet(
                 )
                 Box(modifier = Modifier.fillMaxWidth()) {
                     OutlinedTextField(
-                        value = selectedCategory,
+                        value = categoryDisplayText,
                         onValueChange = {},
                         readOnly = true,
                         modifier = Modifier
@@ -127,7 +132,14 @@ fun BudgetEditSheet(
                             )
                         },
                         leadingIcon = {
-                            if (selectedCategory.isNotBlank()) {
+                            if (isGlobal) {
+                                Icon(
+                                    imageVector = Icons.Default.Public,
+                                    contentDescription = "Global",
+                                    tint = TrustBluePrimary,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                            } else if (selectedCategory.isNotBlank()) {
                                 Box(
                                     modifier = Modifier
                                         .size(10.dp)
@@ -144,6 +156,27 @@ fun BudgetEditSheet(
                         onDismissRequest = { categoryDropdownExpanded = false },
                         modifier = Modifier.fillMaxWidth(0.85f)
                     ) {
+                        // Global (all spending) as first option
+                        DropdownMenuItem(
+                            text = {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Icon(
+                                        imageVector = Icons.Default.Public,
+                                        contentDescription = null,
+                                        tint = TrustBluePrimary,
+                                        modifier = Modifier.size(16.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Text("Global (all spending)", fontWeight = FontWeight.SemiBold)
+                                }
+                            },
+                            onClick = {
+                                selectedCategory = BudgetCategories.GLOBAL
+                                categoryDropdownExpanded = false
+                                inlineError = null
+                            }
+                        )
+
                         categories.forEach { cat ->
                             DropdownMenuItem(
                                 text = {
@@ -257,23 +290,19 @@ fun BudgetEditSheet(
 
                 Button(
                     onClick = {
-                        val amount = amountText.toDoubleOrNull()
-                        when {
-                            selectedCategory.isBlank() -> {
-                                inlineError = "Please select a category"
-                            }
-                            amount == null || amount <= 0.0 -> {
-                                inlineError = "Please enter an amount greater than ₹0"
-                            }
-                            initialBudget == null && existingBudgets.any {
-                                it.budget.category.equals(selectedCategory, ignoreCase = true) &&
-                                it.budget.period == selectedPeriod
-                            } -> {
-                                inlineError = "A ${selectedPeriod.name.lowercase()} budget for $selectedCategory already exists"
-                            }
-                            else -> {
-                                onSave(selectedCategory, amount, selectedPeriod)
-                            }
+                        val error = validateBudgetInput(
+                            category = selectedCategory,
+                            amountText = amountText,
+                            period = selectedPeriod,
+                            isEditing = initialBudget != null,
+                            existingBudgets = existingBudgets,
+                            currentBudgetId = initialBudget?.id
+                        )
+                        if (error != null) {
+                            inlineError = error
+                        } else {
+                            val amount = amountText.toDouble()
+                            onSave(selectedCategory, amount, selectedPeriod)
                         }
                     },
                     colors = ButtonDefaults.buttonColors(containerColor = TrustBluePrimary),
@@ -284,5 +313,44 @@ fun BudgetEditSheet(
                 }
             }
         }
+    }
+}
+
+fun validateBudgetInput(
+    category: String,
+    amountText: String,
+    period: BudgetPeriod,
+    isEditing: Boolean,
+    existingBudgets: List<BudgetStatus>,
+    currentBudgetId: String? = null
+): String? {
+    val amount = amountText.toDoubleOrNull()
+    val isGlobal = category == BudgetCategories.GLOBAL
+    val hasDuplicate = if (!isEditing) {
+        if (isGlobal) {
+            existingBudgets.any {
+                it.budget.category == BudgetCategories.GLOBAL && it.budget.period == period
+            }
+        } else {
+            existingBudgets.any {
+                it.budget.category.equals(category, ignoreCase = true) && it.budget.period == period
+            }
+        }
+    } else {
+        existingBudgets.any {
+            it.budget.id != currentBudgetId &&
+            it.budget.category.equals(category, ignoreCase = true) &&
+            it.budget.period == period
+        }
+    }
+
+    return when {
+        category.isBlank() -> "Please select a category"
+        amount == null || amount <= 0.0 -> "Please enter an amount greater than ₹0"
+        hasDuplicate -> {
+            if (isGlobal) "A global budget for this period already exists"
+            else "A ${period.name.lowercase()} budget for $category already exists"
+        }
+        else -> null
     }
 }

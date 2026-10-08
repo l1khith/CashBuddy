@@ -29,10 +29,10 @@
 - [x] Test: global card has no drill-down tap
 
 ## T5 — Edit sheet
-- [ ] Add "Global (all spending)" as the first option in the category dropdown
-- [ ] Add validation: one global per period
-- [ ] Test: creating a global budget succeeds
-- [ ] Test: creating a second global budget for the same period fails
+- [x] Add "Global (all spending)" as the first option in the category dropdown
+- [x] Add validation: one global per period
+- [x] Test: creating a global budget succeeds
+- [x] Test: creating a second global budget for the same period fails
 
 ## T6 — Alerts
 - [ ] Update `BudgetAlertScheduler` to check category alerts before global

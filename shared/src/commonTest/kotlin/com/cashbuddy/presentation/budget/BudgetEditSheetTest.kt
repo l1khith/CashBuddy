@@ -3,6 +3,7 @@ package com.cashbuddy.presentation.budget
 
 import com.cashbuddy.domain.model.AlertState
 import com.cashbuddy.domain.model.Budget
+import com.cashbuddy.domain.model.BudgetCategories
 import com.cashbuddy.domain.model.BudgetPeriod
 import com.cashbuddy.domain.model.BudgetStatus
 import com.cashbuddy.domain.model.Category
@@ -19,24 +20,6 @@ class BudgetEditSheetTest {
         Category(id = 1L, name = "Food", type = CategoryType.EXPENSE, icon = "food", color = "#FF0000", isDefault = true),
         Category(id = 2L, name = "Bills", type = CategoryType.EXPENSE, icon = "bill", color = "#00FF00", isDefault = true)
     )
-
-    private fun validateBudgetInput(
-        category: String,
-        amountText: String,
-        period: BudgetPeriod,
-        isEditing: Boolean,
-        existingBudgets: List<BudgetStatus>
-    ): String? {
-        val amount = amountText.toDoubleOrNull()
-        return when {
-            category.isBlank() -> "Please select a category"
-            amount == null || amount <= 0.0 -> "Please enter an amount greater than ₹0"
-            !isEditing && existingBudgets.any {
-                it.budget.category.equals(category, ignoreCase = true) && it.budget.period == period
-            } -> "A ${period.name.lowercase()} budget for $category already exists"
-            else -> null
-        }
-    }
 
     @Test
     fun testValidCreateInput() {
@@ -130,5 +113,79 @@ class BudgetEditSheetTest {
             existingBudgets = existing
         )
         assertNull(errorDifferentPeriod)
+    }
+
+    @Test
+    fun testCreateGlobalBudgetSucceeds() {
+        val error = validateBudgetInput(
+            category = BudgetCategories.GLOBAL,
+            amountText = "10000",
+            period = BudgetPeriod.MONTHLY,
+            isEditing = false,
+            existingBudgets = emptyList()
+        )
+        assertNull(error)
+    }
+
+    @Test
+    fun testCreateSecondGlobalBudgetSamePeriodFails() {
+        val existingGlobal = listOf(
+            BudgetStatus(
+                budget = Budget(
+                    id = "g1",
+                    category = BudgetCategories.GLOBAL,
+                    amount = 10000.0,
+                    period = BudgetPeriod.MONTHLY,
+                    startDate = 1000L,
+                    isActive = true,
+                    createdAt = 1000L,
+                    updatedAt = 1000L
+                ),
+                spent = 1000.0,
+                remaining = 9000.0,
+                percentUsed = 10f,
+                state = AlertState.ON_TRACK
+            )
+        )
+
+        val error = validateBudgetInput(
+            category = BudgetCategories.GLOBAL,
+            amountText = "15000",
+            period = BudgetPeriod.MONTHLY,
+            isEditing = false,
+            existingBudgets = existingGlobal
+        )
+        assertEquals("A global budget for this period already exists", error)
+    }
+
+    @Test
+    fun testCreateSecondGlobalBudgetDifferentPeriodSucceeds() {
+        val existingGlobal = listOf(
+            BudgetStatus(
+                budget = Budget(
+                    id = "g1",
+                    category = BudgetCategories.GLOBAL,
+                    amount = 10000.0,
+                    period = BudgetPeriod.MONTHLY,
+                    startDate = 1000L,
+                    isActive = true,
+                    createdAt = 1000L,
+                    updatedAt = 1000L
+                ),
+                spent = 1000.0,
+                remaining = 9000.0,
+                percentUsed = 10f,
+                state = AlertState.ON_TRACK
+            )
+        )
+
+        val error = validateBudgetInput(
+            category = BudgetCategories.GLOBAL,
+            amountText = "3000",
+            period = BudgetPeriod.WEEKLY,
+            isEditing = false,
+            existingBudgets = existingGlobal
+        )
+        assertNull(error)
     }
 }
