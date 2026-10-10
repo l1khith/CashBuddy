@@ -60,7 +60,6 @@ import com.cashbuddy.presentation.theme.CashBuddyTypography
 import com.cashbuddy.presentation.theme.DangerRed
 import com.cashbuddy.presentation.theme.RadiusLarge
 import com.cashbuddy.presentation.theme.TextPrimaryDark
-import com.cashbuddy.presentation.theme.TextTertiaryDark
 import com.cashbuddy.presentation.theme.WarningAmber
 import com.cashbuddy.presentation.theme.getCategoryColor
 

@@ -26,7 +26,6 @@ val WarningAmber = Color(0xFFF59E0B)
 // Text Tokens
 val TextPrimaryDark = Color(0xFFFAFAFA)
 val TextSecondaryDark = Color(0xFFA3A3A3)
-val TextTertiaryDark = Color(0xFF737373)
 
 val TextPrimaryLight = Color(0xFF171717)
 val TextSecondaryLight = Color(0xFF525252)
@@ -34,23 +33,6 @@ val TextTertiaryLight = Color(0xFF737373)
 
 val DividerDark = Color(0xFF262626)
 val DividerLight = Color(0xFFE5E5E5)
-val OverlayColor = Color(0xCC000000)
-
-// Category Colors (JSON-driven via CategoryRegistry)
-val CategoryFood get() = com.cashbuddy.domain.model.CategoryRegistry.getColor("Food & Dining")
-val CategoryTransport get() = com.cashbuddy.domain.model.CategoryRegistry.getColor("Transportation")
-val CategoryShopping get() = com.cashbuddy.domain.model.CategoryRegistry.getColor("Shopping")
-val CategoryBills get() = com.cashbuddy.domain.model.CategoryRegistry.getColor("Bills & Utilities")
-val CategoryEntertainment get() = com.cashbuddy.domain.model.CategoryRegistry.getColor("Entertainment")
-val CategoryHealthcare get() = com.cashbuddy.domain.model.CategoryRegistry.getColor("Healthcare")
-val CategoryEducation get() = com.cashbuddy.domain.model.CategoryRegistry.getColor("Education")
-val CategoryHousing get() = com.cashbuddy.domain.model.CategoryRegistry.getColor("Housing")
-val CategoryInsurance get() = com.cashbuddy.domain.model.CategoryRegistry.getColor("Insurance")
-val CategoryInvestments get() = com.cashbuddy.domain.model.CategoryRegistry.getColor("Investments")
-val CategorySalary get() = com.cashbuddy.domain.model.CategoryRegistry.getColor("Salary")
-val CategoryRefund get() = com.cashbuddy.domain.model.CategoryRegistry.getColor("Refund")
-val CategoryGift get() = com.cashbuddy.domain.model.CategoryRegistry.getColor("Gift")
-val CategoryUnknown get() = com.cashbuddy.domain.model.CategoryRegistry.getColor("Uncategorized")
 
 // Backwards-compatible aliases for existing codebase
 val TrustBluePrimary = PrimaryIndigo
@@ -61,9 +43,6 @@ val TealMintDark = AccentMuted
 val TealMintLight = Color(0xFF34D399)
 val ExpenseCrimson = DangerRed
 val IncomeEmerald = AccentEmerald
-val ConfidenceHigh = AccentEmerald
-val ConfidenceMedium = WarningAmber
-val ConfidenceLow = DangerRed
 val SurfaceVariantDark = SurfaceElevatedDark
 val SurfaceVariantLight = SurfaceElevatedLight
 val OnSurfaceDark = TextPrimaryDark

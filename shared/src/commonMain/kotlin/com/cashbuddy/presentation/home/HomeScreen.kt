@@ -44,7 +44,7 @@ import androidx.compose.ui.unit.sp
 import com.cashbuddy.presentation.components.BalanceHeaderCard
 import com.cashbuddy.presentation.components.EmptyStateView
 import com.cashbuddy.presentation.components.TransactionItemCard
-import com.cashbuddy.presentation.theme.ConfidenceMedium
+import com.cashbuddy.presentation.theme.WarningAmber
 import com.cashbuddy.presentation.theme.TealMintSecondary
 import com.cashbuddy.presentation.theme.TrustBluePrimary
 import kotlinx.coroutines.flow.collectLatest
@@ -198,7 +198,7 @@ fun HomeScreen(
                                 .clickable { viewModel.onReviewBannerClicked() },
                             shape = RoundedCornerShape(14.dp),
                             colors = CardDefaults.cardColors(
-                                containerColor = ConfidenceMedium.copy(alpha = 0.12f)
+                                containerColor = WarningAmber.copy(alpha = 0.12f)
                             )
                         ) {
                             Row(
@@ -215,7 +215,7 @@ fun HomeScreen(
                                     Icon(
                                         imageVector = Icons.Default.Warning,
                                         contentDescription = null,
-                                        tint = ConfidenceMedium,
+                                        tint = WarningAmber,
                                         modifier = Modifier.size(24.dp)
                                     )
                                     Spacer(modifier = Modifier.width(12.dp))
@@ -239,13 +239,13 @@ fun HomeScreen(
                                         text = "Review",
                                         style = MaterialTheme.typography.labelLarge,
                                         fontWeight = FontWeight.Bold,
-                                        color = ConfidenceMedium
+                                        color = WarningAmber
                                     )
                                     Spacer(modifier = Modifier.width(4.dp))
                                     Icon(
                                         imageVector = Icons.AutoMirrored.Filled.ArrowForward,
                                         contentDescription = null,
-                                        tint = ConfidenceMedium,
+                                        tint = WarningAmber,
                                         modifier = Modifier.size(16.dp)
                                     )
                                 }
