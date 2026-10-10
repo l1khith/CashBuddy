@@ -204,3 +204,32 @@ CashBuddy/
 │       └── kotlin/com/cashbuddy/core/CoreEnginesTest.kt
 └── iosApp/                   # Xcode project & SwiftUI entry point
 ```
+
+---
+
+## 7. Mathematical Foundations & Statistical Formulations
+
+CashBuddy integrates three core mathematical formulas across its core pipeline, strictly adhering to **P2 (Structural Over Lexical)** and **P4 (Single Source of Truth)**:
+
+### 1. Jaro-Winkler Similarity Metric
+- **Architectural Role**: Used in Tier 3 fuzzy matching within [`MerchantMap.kt`](../shared/src/commonMain/kotlin/com/cashbuddy/core/prob/MerchantMap.kt) to match merchant variations (e.g., `SWIGGY_BLR_KORAMANGALA`, `PAYTM*SWIGGY`, `swiggy@ybl`) against canonical merchants without lexical dictionary expansion.
+- **Formulation**:
+  $$d_j = \frac{1}{3}\left(\frac{m}{|s_1|} + \frac{m}{|s_2|} + \frac{m - t}{m}\right)$$
+  $$d_w = d_j + \ell \cdot p \cdot (1 - d_j)$$
+  where $m$ is the count of matching characters within match window $\lfloor\frac{\max(|s_1|, |s_2|)}{2}\rfloor - 1$, $t$ is half the number of transpositions, $p = 0.1$ is the prefix scaling constant, and $\ell = \min(\text{prefix length}, 4)$.
+- **Behavior**: Evaluated when exact match (Tier 1) and token split match (Tier 2) fail. With calibrated threshold $\text{similarity} \ge 0.88$, it assigns category confidence $0.85 \times \text{similarity}$.
+
+### 2. Modified Z-Score via Median Absolute Deviation (MAD)
+- **Architectural Role**: Outlier and anomaly detection for expense amounts in [`FraudDetector.kt`](../shared/src/commonMain/kotlin/com/cashbuddy/core/FraudDetector.kt).
+- **Formulation**:
+  $$\text{median} = \text{median}(x)$$
+  $$\text{MAD} = \text{median}(|x_i - \text{median}|)$$
+  $$M_i = \frac{0.6745 \cdot |x_i - \text{median}|}{\text{MAD}}$$
+- **Behavior**: Computed dynamically at query time from historical debit amounts for the specific merchant over a 90-day window ($n \ge 10$). If $M_i > 3.5$ and $\text{MAD} > 0.0$, the transaction is flagged as an anomaly and annotated in `transaction.notes` (`anomaly_score=%.2f median=%.2f mad=%.2f`). Statistical values are never cached or persisted as columns (P4).
+
+### 3. Log-Odds Sigmoid Calibration
+- **Architectural Role**: Calibrated probability scoring in [`ProbabilisticClassifier.kt`](../shared/src/commonMain/kotlin/com/cashbuddy/core/prob/ProbabilisticClassifier.kt).
+- **Formulation**:
+  $$\text{logit} = \ln\left(\frac{P_0}{1 - P_0}\right) + \sum_{i} \ln(\text{LR}_i)$$
+  $$p = \frac{1}{1 + \exp(-\text{logit})}$$
+- **Behavior**: Translates base prior log-odds and product of likelihood ratios into a monotonic, well-calibrated confidence probability $p \in [0.0, 1.0]$ for policy thresholding (Auto-Log $\ge 0.85$, Pending Review $\ge 0.50$, Ignore $< 0.50$).

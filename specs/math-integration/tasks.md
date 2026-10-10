@@ -44,7 +44,7 @@
     - Anomaly is written to transaction notes when `isAnomalous = true`.
     - No behavior change when `isAnomalous = false`.
 
-- [ ] **T6 — Documentation**
+- [x] **T6 — Documentation**
   - **Files**:
     - Modify `docs/ARCHITECTURE_HLD.md`
     - Modify `specs/README.md`
