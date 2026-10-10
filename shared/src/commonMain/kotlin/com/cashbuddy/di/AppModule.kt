@@ -32,11 +32,8 @@ import com.cashbuddy.domain.usecase.BatchCategorizeUseCase
 import com.cashbuddy.domain.usecase.CalculateBalanceUseCase
 import com.cashbuddy.domain.usecase.ConfirmTransactionUseCase
 import com.cashbuddy.domain.usecase.ExportDataUseCase
-import com.cashbuddy.domain.usecase.GenerateCategoryBreakdownUseCase
 import com.cashbuddy.domain.usecase.GetDateRangeSummaryUseCase
-import com.cashbuddy.domain.usecase.GetMonthlySummaryUseCase
 import com.cashbuddy.domain.usecase.GetRecentTransactionsUseCase
-import com.cashbuddy.domain.usecase.GetTransactionsByDateRangeUseCase
 import com.cashbuddy.domain.usecase.GetTransactionsByDateRangeWithLimitUseCase
 import com.cashbuddy.domain.usecase.GetUnreviewedCountUseCase
 import com.cashbuddy.domain.usecase.ManualAddTransactionUseCase
@@ -119,12 +116,9 @@ val appModule = module {
     // Use Cases
     factoryOf(::CalculateBalanceUseCase)
     factoryOf(::GetRecentTransactionsUseCase)
-    factoryOf(::GetTransactionsByDateRangeUseCase)
     factoryOf(::GetTransactionsByDateRangeWithLimitUseCase)
     factoryOf(::GetDateRangeSummaryUseCase)
     factoryOf(::GetUnreviewedCountUseCase)
-    factoryOf(::GetMonthlySummaryUseCase)
-    factoryOf(::GenerateCategoryBreakdownUseCase)
     factoryOf(::ManualAddTransactionUseCase)
     factoryOf(::ConfirmTransactionUseCase)
     factoryOf(::RejectTransactionUseCase)

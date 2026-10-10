@@ -112,8 +112,5 @@ class SqlDelightBudgetRepository(
         create(budget)
         return budget.id.toLongOrNull() ?: 0L
     }
-
-    override suspend fun deleteById(id: Long) {
-        delete(id.toString())
-    }
 }
+

@@ -1,7 +1,6 @@
 package com.cashbuddy.domain.usecase
 
 import com.cashbuddy.domain.repository.AccountRepository
-import com.cashbuddy.domain.repository.CategoryRepository
 import com.cashbuddy.domain.repository.TransactionRepository
 import kotlinx.coroutines.flow.first
 
@@ -20,35 +19,3 @@ class ExportDataUseCase(
     }
 }
 
-class ImportDataUseCase(
-    private val transactionRepository: TransactionRepository,
-    private val accountRepository: AccountRepository,
-    private val categoryRepository: CategoryRepository
-) {
-    suspend operator fun invoke(csvContent: String): Int {
-        val lines = csvContent.lines()
-        if (lines.size <= 1) return 0
-        var importedCount = 0
-        // Basic parser for imported CSV rows
-        return importedCount
-    }
-}
-
-class BackupDatabaseUseCase(
-    private val transactionRepository: TransactionRepository,
-    private val accountRepository: AccountRepository
-) {
-    suspend operator fun invoke(): ByteArray {
-        // Generates an encrypted snapshot bytes buffer of transactions and accounts
-        return ByteArray(0)
-    }
-}
-
-class RestoreDatabaseUseCase(
-    private val transactionRepository: TransactionRepository,
-    private val accountRepository: AccountRepository
-) {
-    suspend operator fun invoke(backupData: ByteArray): Boolean {
-        return true
-    }
-}
