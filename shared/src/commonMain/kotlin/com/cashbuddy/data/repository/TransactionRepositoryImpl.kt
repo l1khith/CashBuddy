@@ -241,7 +241,7 @@ class TransactionRepositoryImpl(
     }
 
     override suspend fun updateNotes(id: Long, notes: String): Unit = withContext(dispatcher) {
-        val now = kotlinx.datetime.Clock.System.now().toEpochMilliseconds()
+        val now = com.cashbuddy.platform.currentTimeMillis()
         queries.updateNotes(notes = notes, updatedAt = now, id = id)
     }
 

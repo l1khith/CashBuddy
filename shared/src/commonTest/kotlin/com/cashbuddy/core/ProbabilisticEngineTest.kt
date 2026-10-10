@@ -439,7 +439,7 @@ class ProbabilisticEngineTest {
         val t0 = 1727600000000L
 
         // Rapido ₹50 transaction recorded
-        repo.record(amount = 50.0, merchant = "Rapido", sourcePackage = "com.rapido.passenger", timestamp = t0)
+        repo.record(com.cashbuddy.core.prob.RecentTx(amount = 50.0, merchant = "Rapido", sourcePackage = "com.rapido.passenger", timestamp = t0))
 
         // 2 minutes later, Zomato ₹50 transaction arrives
         val isDuplicate = repo.recentSimilarAmount(
@@ -458,7 +458,7 @@ class ProbabilisticEngineTest {
         val t0 = 1727600000000L
 
         // SmartQ ₹130 transaction recorded
-        repo.record(amount = 130.0, merchant = "SmartQ", sourcePackage = "com.smartq", timestamp = t0)
+        repo.record(com.cashbuddy.core.prob.RecentTx(amount = 130.0, merchant = "SmartQ", sourcePackage = "com.smartq", timestamp = t0))
 
         // 30 seconds later, duplicate SmartQ ₹130 arrives
         val isDuplicate = repo.recentSimilarAmount(
