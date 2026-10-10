@@ -165,6 +165,16 @@ class DuplicateReconciler(
             .replace(Regex("[^a-z0-9]"), "")
     }
 
+    private fun normalizeMerchant(s: String): String {
+        return s.trim()
+            .lowercase()
+            .replace("pvt ltd", "")
+            .replace("private limited", "")
+            .replace("ltd", "")
+            .replace("india", "")
+            .trim()
+    }
+
     /**
      * Executes merge on the given duplicate groups:
      * - Marks duplicate transactions as merged with survivor ID

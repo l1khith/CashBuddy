@@ -3,7 +3,6 @@ package com.cashbuddy.screenshot
 import android.content.Context
 import android.net.Uri
 import android.util.Log
-import com.cashbuddy.core.isDuplicateTransaction
 import com.cashbuddy.domain.model.Transaction
 import com.cashbuddy.domain.model.TransactionStatus
 import com.cashbuddy.domain.model.TransactionType

@@ -2,7 +2,6 @@ package com.cashbuddy.di
 
 import com.cashbuddy.core.CategoryEngine
 import com.cashbuddy.core.DuplicateReconciler
-import com.cashbuddy.core.NotificationParser
 import com.cashbuddy.core.ScreenshotParserEngine
 import com.cashbuddy.data.repository.AccountRepositoryImpl
 import com.cashbuddy.data.repository.SqlDelightBudgetRepository
@@ -74,8 +73,6 @@ val appModule = module {
 
     // Pure Kotlin Core Engines (Multiplatform)
     single { CategoryEngine(get()) }
-    single { NotificationParser(get(), get(), get(), get(), get()) }
-    single { com.cashbuddy.domain.parser.KotlinNotificationParser(get(), get(), get(), get(), get()) }
     single { ScreenshotParserEngine(get()) }
     single { com.cashbuddy.core.prob.SourceDetector() }
     single { com.cashbuddy.core.prob.RecentStateRepository() }
