@@ -1,0 +1,39 @@
+CREATE TABLE learned_token (
+    token TEXT PRIMARY KEY NOT NULL,
+    transaction_count INTEGER NOT NULL DEFAULT 0,
+    non_transaction_count INTEGER NOT NULL DEFAULT 0,
+    first_seen INTEGER NOT NULL,
+    last_updated INTEGER NOT NULL
+);
+
+CREATE INDEX idx_learned_token_counts
+    ON learned_token(transaction_count, non_transaction_count);
+
+getByToken:
+SELECT * FROM learned_token WHERE token = ?;
+
+getAll:
+SELECT * FROM learned_token;
+
+getSignificant:
+SELECT * FROM learned_token
+WHERE transaction_count + non_transaction_count >= 5;
+
+incrementTransaction:
+INSERT INTO learned_token (token, transaction_count, non_transaction_count,
+                            first_seen, last_updated)
+VALUES (?, 1, 0, ?, ?)
+ON CONFLICT(token) DO UPDATE SET
+    transaction_count = transaction_count + 1,
+    last_updated = excluded.last_updated;
+
+incrementNonTransaction:
+INSERT INTO learned_token (token, transaction_count, non_transaction_count,
+                            first_seen, last_updated)
+VALUES (?, 0, 1, ?, ?)
+ON CONFLICT(token) DO UPDATE SET
+    non_transaction_count = non_transaction_count + 1,
+    last_updated = excluded.last_updated;
+
+deleteAll:
+DELETE FROM learned_token;
