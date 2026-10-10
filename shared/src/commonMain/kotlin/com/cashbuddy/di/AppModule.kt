@@ -130,7 +130,7 @@ val appModule = module {
     viewModelOf(::HomeViewModel)
     viewModelOf(::ReviewViewModel)
     viewModelOf(::TransactionListViewModel)
-    viewModel { (id: Long) -> TransactionDetailViewModel(id, get(), get(), get(), get()) }
+    viewModel { (id: Long) -> TransactionDetailViewModel(id, get(), get(), get(), get(), get()) }
     viewModelOf(::StatsViewModel)
     viewModel {
         BudgetViewModel(

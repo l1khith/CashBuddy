@@ -20,20 +20,26 @@ SELECT * FROM learned_token
 WHERE transaction_count + non_transaction_count >= 5;
 
 incrementTransaction:
-INSERT INTO learned_token (token, transaction_count, non_transaction_count,
-                            first_seen, last_updated)
-VALUES (?, 1, 0, ?, ?)
-ON CONFLICT(token) DO UPDATE SET
-    transaction_count = transaction_count + 1,
-    last_updated = excluded.last_updated;
+INSERT OR REPLACE INTO learned_token (token, transaction_count, non_transaction_count,
+                                      first_seen, last_updated)
+VALUES (
+    :token,
+    COALESCE((SELECT transaction_count FROM learned_token WHERE token = :token), 0) + 1,
+    COALESCE((SELECT non_transaction_count FROM learned_token WHERE token = :token), 0),
+    COALESCE((SELECT first_seen FROM learned_token WHERE token = :token), :first_seen),
+    :last_updated
+);
 
 incrementNonTransaction:
-INSERT INTO learned_token (token, transaction_count, non_transaction_count,
-                            first_seen, last_updated)
-VALUES (?, 0, 1, ?, ?)
-ON CONFLICT(token) DO UPDATE SET
-    non_transaction_count = non_transaction_count + 1,
-    last_updated = excluded.last_updated;
+INSERT OR REPLACE INTO learned_token (token, transaction_count, non_transaction_count,
+                                      first_seen, last_updated)
+VALUES (
+    :token,
+    COALESCE((SELECT transaction_count FROM learned_token WHERE token = :token), 0),
+    COALESCE((SELECT non_transaction_count FROM learned_token WHERE token = :token), 0) + 1,
+    COALESCE((SELECT first_seen FROM learned_token WHERE token = :token), :first_seen),
+    :last_updated
+);
 
 deleteAll:
 DELETE FROM learned_token;
