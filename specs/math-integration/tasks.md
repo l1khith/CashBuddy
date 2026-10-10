@@ -34,7 +34,7 @@
   - **Done when**:
     - All four `FraudDetectorTest` cases pass.
 
-- [ ] **T5 — MessagePipeline integration**
+- [x] **T5 — MessagePipeline integration**
   - **Files**:
     - Modify `shared/src/commonMain/sqldelight/com/cashbuddy/db/transactions.sq` (add `updateNotes`)
     - Modify `shared/src/commonMain/kotlin/com/cashbuddy/domain/repository/TransactionRepository.kt` (add `updateNotes`)

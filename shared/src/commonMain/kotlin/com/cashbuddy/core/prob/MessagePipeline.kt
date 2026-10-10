@@ -63,7 +63,8 @@ class MessagePipeline(
     private val debugLogger: DebugLogger? = null,
     private val recentStateRepository: RecentStateRepository? = null,
     private val settingsRepo: SettingsRepository? = null,
-    private val budgetAlertScheduler: com.cashbuddy.core.budget.BudgetAlertScheduler? = null
+    private val budgetAlertScheduler: com.cashbuddy.core.budget.BudgetAlertScheduler? = null,
+    private val fraudDetector: com.cashbuddy.core.FraudDetector = com.cashbuddy.core.FraudDetector(transactionRepo)
 ) {
     suspend fun ingest(raw: RawMessage): PipelineOutcome {
         recentStateRepository?.recordRaw(raw.timestamp, raw.packageName)
@@ -194,6 +195,16 @@ class MessagePipeline(
                                 )
                                 rawMessageRepo.updateResultingTx(raw.id, insertedId.toString())
 
+                                val anomaly = fraudDetector.checkAnomaly(
+                                    merchant = tx.merchant,
+                                    amount = tx.amount,
+                                    timestamp = tx.timestamp
+                                )
+                                if (anomaly.isAnomalous) {
+                                    val note = formatAnomalyNote(anomaly.score, anomaly.median, anomaly.mad)
+                                    transactionRepo.updateNotes(insertedId, note)
+                                }
+
                                 try {
                                     budgetAlertScheduler?.checkAndAlert(raw.timestamp)
                                 } catch (_: Throwable) {
@@ -259,5 +270,20 @@ class MessagePipeline(
             )
             throw t
         }
+    }
+
+    private fun format2Decimals(v: Double): String {
+        val isNegative = v < 0
+        val absVal = kotlin.math.abs(v)
+        val scaled = kotlin.math.round(absVal * 100.0).toLong()
+        val whole = scaled / 100
+        val fraction = scaled % 100
+        val prefix = if (isNegative) "-" else ""
+        val fracStr = if (fraction < 10) "0$fraction" else "$fraction"
+        return "$prefix$whole.$fracStr"
+    }
+
+    private fun formatAnomalyNote(score: Double, median: Double, mad: Double): String {
+        return "anomaly_score=${format2Decimals(score)} median=${format2Decimals(median)} mad=${format2Decimals(mad)}"
     }
 }

@@ -140,28 +140,30 @@ object MerchantMap {
         }
 
         // 3. Jaro-Winkler fuzzy match (Tier 3: confidence 0.85 * similarity)
-        var bestCategory: String? = null
-        var bestSimilarity = 0.0
+        if (norm.length >= 4) {
+            var bestCategory: String? = null
+            var bestSimilarity = 0.0
 
-        for ((key, cat) in MAP) {
-            var sim = JaroWinkler.similarity(norm, key)
-            if (norm.length > key.length && sim < FUZZY_THRESHOLD) {
-                val delimiters = charArrayOf(' ', '_', '*', '@', '-', '.')
-                for (sub in norm.split(*delimiters)) {
-                    if (sub.length >= 3) {
-                        val subSim = JaroWinkler.similarity(sub, key)
-                        if (subSim > sim) sim = subSim
+            for ((key, cat) in MAP) {
+                var sim = JaroWinkler.similarity(norm, key)
+                if (norm.length > key.length && sim < FUZZY_THRESHOLD) {
+                    val delimiters = charArrayOf(' ', '_', '*', '@', '-', '.')
+                    for (sub in norm.split(*delimiters)) {
+                        if (sub.length >= 4) {
+                            val subSim = JaroWinkler.similarity(sub, key)
+                            if (subSim > sim) sim = subSim
+                        }
                     }
                 }
+                if (sim >= FUZZY_THRESHOLD && sim > bestSimilarity) {
+                    bestSimilarity = sim
+                    bestCategory = cat
+                }
             }
-            if (sim >= FUZZY_THRESHOLD && sim > bestSimilarity) {
-                bestSimilarity = sim
-                bestCategory = cat
-            }
-        }
 
-        if (bestCategory != null) {
-            return CategoryMatch(bestCategory, 0.85f * bestSimilarity.toFloat(), CategorySource.MERCHANT_MAP)
+            if (bestCategory != null) {
+                return CategoryMatch(bestCategory, 0.85f * bestSimilarity.toFloat(), CategorySource.MERCHANT_MAP)
+            }
         }
 
         // 4. Generic keyword tier (Tier 4: confidence 0.70)

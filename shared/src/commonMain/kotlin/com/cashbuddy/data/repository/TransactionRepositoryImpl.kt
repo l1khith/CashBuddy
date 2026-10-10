@@ -240,6 +240,11 @@ class TransactionRepositoryImpl(
         ).executeAsList()
     }
 
+    override suspend fun updateNotes(id: Long, notes: String): Unit = withContext(dispatcher) {
+        val now = kotlinx.datetime.Clock.System.now().toEpochMilliseconds()
+        queries.updateNotes(notes = notes, updatedAt = now, id = id)
+    }
+
     private fun mapTransaction(
         id: Long,
         amount: Double,

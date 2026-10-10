@@ -290,5 +290,8 @@ WHERE type = 'DEBIT'
   AND timestamp <= :toTimestamp
 ORDER BY timestamp DESC;
 
+updateNotes:
+UPDATE transactions SET notes = :notes, updated_at = :updatedAt WHERE id = :id;
+
 
 
