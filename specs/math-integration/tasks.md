@@ -7,7 +7,7 @@
   - **Done when**:
     - All seven `JaroWinklerTest` cases pass with exact oracle tolerances.
 
-- [ ] **T2 — MerchantMap fuzzy tier**
+- [x] **T2 — MerchantMap fuzzy tier**
   - **Files**:
     - Modify `shared/src/commonMain/kotlin/com/cashbuddy/core/prob/MerchantMap.kt`
     - Create `shared/src/commonTest/kotlin/com/cashbuddy/core/prob/MerchantFuzzyTest.kt`
