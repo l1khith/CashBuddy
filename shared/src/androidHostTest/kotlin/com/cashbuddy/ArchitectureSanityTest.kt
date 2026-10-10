@@ -1,10 +1,10 @@
-package com.l1khith.cashbuddy
+package com.cashbuddy
 
 import java.io.File
 import kotlin.test.Test
 import kotlin.test.assertFalse
 
-class SharedLogicAndroidHostTest {
+class ArchitectureSanityTest {
 
     @Test
     fun `no hardcoded bank sender IDs anywhere in repo`() {
@@ -31,7 +31,7 @@ class SharedLogicAndroidHostTest {
                 .filter { it.isFile && (it.extension == "kt" || it.extension == "java") }
                 .forEach { file ->
                     // Exclude this guard test file itself
-                    if (file.name == "SharedLogicAndroidHostTest.kt") return@forEach
+                    if (file.name == "ArchitectureSanityTest.kt" || file.name == "SharedLogicAndroidHostTest.kt") return@forEach
 
                     val content = file.readText()
                     forbidden.forEach { token ->
