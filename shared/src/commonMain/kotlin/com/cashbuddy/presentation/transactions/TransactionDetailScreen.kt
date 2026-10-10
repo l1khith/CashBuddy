@@ -47,7 +47,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.cashbuddy.domain.model.TransactionType
-import com.cashbuddy.presentation.components.ConfidenceBadge
 import com.cashbuddy.presentation.theme.ExpenseCrimson
 import com.cashbuddy.presentation.theme.IncomeEmerald
 import com.cashbuddy.presentation.theme.TrustBluePrimary

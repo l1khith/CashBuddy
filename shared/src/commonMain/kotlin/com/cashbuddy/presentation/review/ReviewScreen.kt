@@ -64,7 +64,6 @@ import com.cashbuddy.presentation.theme.RadiusLarge
 import com.cashbuddy.presentation.theme.RadiusMedium
 import com.cashbuddy.presentation.theme.getCategoryColor
 import com.cashbuddy.domain.model.TransactionType
-import com.cashbuddy.presentation.components.ConfidenceBadge
 import com.cashbuddy.presentation.components.EmptyStateView
 import com.cashbuddy.presentation.theme.ExpenseCrimson
 import com.cashbuddy.presentation.theme.IncomeEmerald

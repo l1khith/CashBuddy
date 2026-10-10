@@ -18,7 +18,7 @@ import com.cashbuddy.presentation.addtransaction.AddTransactionScreen
 import com.cashbuddy.presentation.addtransaction.AddTransactionViewModel
 import com.cashbuddy.presentation.budget.BudgetDrilldownScreen
 import com.cashbuddy.presentation.budget.BudgetDrilldownViewModel
-import com.cashbuddy.presentation.budget.BudgetScreen
+import com.cashbuddy.presentation.budget.BudgetListScreen
 import com.cashbuddy.presentation.budget.BudgetViewModel
 import com.cashbuddy.presentation.components.CashBuddyBottomBar
 import com.cashbuddy.presentation.goals.GoalsScreen
@@ -174,7 +174,7 @@ fun CashBuddyApp(
 
                 composable<ScreenRoute.Budgets> {
                     val budgetViewModel: BudgetViewModel = koinViewModel()
-                    BudgetScreen(
+                    BudgetListScreen(
                         viewModel = budgetViewModel,
                         onBudgetClick = { status ->
                             navController.navigate(
