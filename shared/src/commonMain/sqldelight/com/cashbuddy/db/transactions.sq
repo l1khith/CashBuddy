@@ -279,5 +279,19 @@ WHERE type = :type
   AND timestamp <= :endTime
   AND is_merged = 0;
 
+getAmountsAtMerchant:
+SELECT amount
+FROM transactions
+WHERE type = 'DEBIT'
+  AND status IN ('CONFIRMED', 'PENDING')
+  AND is_merged = 0
+  AND merchant = :merchant
+  AND timestamp >= :fromTimestamp
+  AND timestamp <= :toTimestamp
+ORDER BY timestamp DESC;
+
+updateNotes:
+UPDATE transactions SET notes = :notes, updated_at = :updatedAt WHERE id = :id;
+
 
 

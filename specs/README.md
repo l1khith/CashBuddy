@@ -14,5 +14,10 @@ This directory contains specifications, architectural plans, and task breakdowns
 - **Execution Plan (L2)**: [plan-global.md](budgets/plan-global.md)
 - **Task Breakdown (L3)**: [tasks-global.md](budgets/tasks-global.md)
 
+### 3. Mathematical Foundations & Integration
+- **Specification (L1)**: [spec.md](math-integration/spec.md)
+- **Execution Plan (L2)**: [plan.md](math-integration/plan.md)
+- **Task Breakdown (L3)**: [tasks.md](math-integration/tasks.md)
+
 ## Governing Documents
 - **Constitution (L0)**: [docs/constitution.md](../docs/constitution.md)

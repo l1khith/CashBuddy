@@ -118,16 +118,18 @@ object MerchantMap {
         "smallcase" to "Financial Services & Investments"
     )
 
-    fun lookup(normalizedMerchant: String): CategoryMatch {
-        val norm = normalizedMerchant.trim()
-        if (norm.isEmpty()) return CategoryMatch("Unknown", 0.50f, CategorySource.FALLBACK)
+    private const val FUZZY_THRESHOLD = 0.88
 
-        // 1. Direct exact lookup
+    fun lookup(normalizedMerchant: String): CategoryMatch {
+        val norm = normalizedMerchant.trim().lowercase()
+        if (norm.isEmpty()) return CategoryMatch("Unknown", 0.0f, CategorySource.FALLBACK)
+
+        // 1. Direct exact lookup (Tier 1: confidence 0.95)
         MAP[norm]?.let {
-            return CategoryMatch(it, 0.90f, CategorySource.MERCHANT_MAP)
+            return CategoryMatch(it, 0.95f, CategorySource.MERCHANT_MAP)
         }
 
-        // 2. Token lookup
+        // 2. Token lookup on space (Tier 2: confidence 0.90)
         val tokens = norm.split(" ")
         for (token in tokens) {
             if (token.length >= 3) {
@@ -137,7 +139,42 @@ object MerchantMap {
             }
         }
 
-        return CategoryMatch("Unknown", 0.50f, CategorySource.FALLBACK)
+        // 3. Jaro-Winkler fuzzy match (Tier 3: confidence 0.85 * similarity)
+        if (norm.length >= 4) {
+            var bestCategory: String? = null
+            var bestSimilarity = 0.0
+
+            for ((key, cat) in MAP) {
+                var sim = JaroWinkler.similarity(norm, key)
+                if (norm.length > key.length && sim < FUZZY_THRESHOLD) {
+                    val delimiters = charArrayOf(' ', '_', '*', '@', '-', '.')
+                    for (sub in norm.split(*delimiters)) {
+                        if (sub.length >= 4) {
+                            val subSim = JaroWinkler.similarity(sub, key)
+                            if (subSim > sim) sim = subSim
+                        }
+                    }
+                }
+                if (sim >= FUZZY_THRESHOLD && sim > bestSimilarity) {
+                    bestSimilarity = sim
+                    bestCategory = cat
+                }
+            }
+
+            if (bestCategory != null) {
+                return CategoryMatch(bestCategory, 0.85f * bestSimilarity.toFloat(), CategorySource.MERCHANT_MAP)
+            }
+        }
+
+        // 4. Generic keyword tier (Tier 4: confidence 0.70)
+        for ((key, cat) in MAP) {
+            if (key.length >= 4 && norm.contains(key)) {
+                return CategoryMatch(cat, 0.70f, CategorySource.MERCHANT_MAP)
+            }
+        }
+
+        // 5. Fallback (Tier 5: confidence 0.0)
+        return CategoryMatch("Unknown", 0.0f, CategorySource.FALLBACK)
     }
 
     data class CategoryMatch(val category: String, val confidence: Float, val source: CategorySource)
