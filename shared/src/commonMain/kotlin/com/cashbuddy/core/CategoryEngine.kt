@@ -3,31 +3,9 @@ package com.cashbuddy.core
 
 import com.cashbuddy.core.prob.ConcurrentHashMap
 import com.cashbuddy.core.prob.MerchantMap
-import com.cashbuddy.domain.repository.UserRuleRepository
-
-/**
- * Categorization Engine for CashBuddy:
- * 1. User learned rules (Confidence: 1.0, Source: "UserRule")
- * 2. Curated Indian merchant keyword dictionary (Confidence: 0.90, Source: "KeywordMap")
- * 3. Fallback / Unknown (Confidence: 0.50, Source: "Fallback")
- */
-class CategoryEngine(
-    private val userRuleRepository: UserRuleRepository? = null
-) {
+class CategoryEngine {
     private val userRules = ConcurrentHashMap<String, String>()
     private val cache = ConcurrentHashMap<String, CategoryMatch>()
-
-    suspend fun loadRules() {
-        val repo = userRuleRepository ?: return
-        userRules.clear()
-        cache.clear()
-        repo.getAll().forEach {
-            val norm = normalize(it.merchantNormalized)
-            if (norm.isNotEmpty()) {
-                userRules[norm] = it.category
-            }
-        }
-    }
 
     fun loadUserRules(rules: List<MerchantRuleEntry>) {
         userRules.clear()

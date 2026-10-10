@@ -227,14 +227,6 @@ fun ensureSchema(driver: SqlDriver) {
             FOREIGN KEY (merged_id) REFERENCES transactions(id)
         )
         """.trimIndent(),
-        """
-        CREATE TABLE IF NOT EXISTS user_rules (
-            merchant_normalized TEXT PRIMARY KEY NOT NULL,
-            category TEXT NOT NULL,
-            updated_at INTEGER NOT NULL,
-            source TEXT NOT NULL
-        )
-        """.trimIndent(),
         "CREATE INDEX IF NOT EXISTS idx_debug_log_timestamp ON debug_log(timestamp DESC)",
         "CREATE INDEX IF NOT EXISTS idx_debug_log_policy ON debug_log(policy_action)",
         "CREATE INDEX IF NOT EXISTS idx_debug_log_package ON debug_log(package_name)",
