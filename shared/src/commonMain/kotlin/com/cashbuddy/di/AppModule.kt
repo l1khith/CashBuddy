@@ -7,6 +7,7 @@ import com.cashbuddy.data.repository.AccountRepositoryImpl
 import com.cashbuddy.data.repository.SqlDelightBudgetRepository
 import com.cashbuddy.data.repository.CategoryRepositoryImpl
 import com.cashbuddy.data.repository.DebugLogRepositoryImpl
+import com.cashbuddy.data.repository.LearnedTokenRepositoryImpl
 import com.cashbuddy.data.repository.MerchantRuleRepositoryImpl
 import com.cashbuddy.data.repository.RawMessageRepositoryImpl
 import com.cashbuddy.data.repository.SettingsRepositoryImpl
@@ -19,6 +20,7 @@ import com.cashbuddy.domain.repository.AccountRepository
 import com.cashbuddy.domain.repository.BudgetRepository
 import com.cashbuddy.domain.repository.CategoryRepository
 import com.cashbuddy.domain.repository.DebugLogRepository
+import com.cashbuddy.domain.repository.LearnedTokenRepository
 import com.cashbuddy.presentation.debug.DebugLogViewModel
 import com.cashbuddy.domain.repository.MerchantRuleRepository
 import com.cashbuddy.domain.repository.RawMessageRepository
@@ -107,6 +109,7 @@ val appModule = module {
     singleOf(::SettingsRepositoryImpl) bind SettingsRepository::class
     singleOf(::MerchantRuleRepositoryImpl) bind MerchantRuleRepository::class
     singleOf(::TrainingDataRepositoryImpl) bind TrainingDataRepository::class
+    singleOf(::LearnedTokenRepositoryImpl) bind LearnedTokenRepository::class
 
     // Use Cases
     factoryOf(::CalculateBalanceUseCase)
