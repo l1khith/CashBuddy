@@ -12,14 +12,9 @@ import android.util.Log
 import androidx.core.app.NotificationCompat
 import com.cashbuddy.core.CategoryEngine
 import com.cashbuddy.core.MerchantRuleEntry
-import com.cashbuddy.core.NotificationParser
-import com.cashbuddy.core.RawNotification
 import com.cashbuddy.domain.model.Transaction
 import com.cashbuddy.domain.model.TransactionStatus
 import com.cashbuddy.domain.model.TransactionType
-import com.cashbuddy.domain.parser.KotlinNotificationParser
-import com.cashbuddy.domain.parser.ParsedNotificationResult
-import com.cashbuddy.domain.parser.RawNotificationData
 import com.cashbuddy.domain.repository.AccountRepository
 import com.cashbuddy.domain.repository.CategoryRepository
 import com.cashbuddy.domain.repository.MerchantRuleRepository
@@ -46,8 +41,6 @@ class TransactionNotificationListener : NotificationListenerService(), KoinCompo
     private val trainingDataRepository: TrainingDataRepository by inject()
     private val merchantRuleRepository: MerchantRuleRepository by inject()
     private val categoryEngine: CategoryEngine by inject()
-    private val notificationParser: NotificationParser by inject()
-    private val kotlinParser: KotlinNotificationParser by inject()
     private val sourceDetector: com.cashbuddy.core.prob.SourceDetector by inject()
     private val messagePipeline: com.cashbuddy.core.prob.MessagePipeline by inject()
 
@@ -214,52 +207,6 @@ class TransactionNotificationListener : NotificationListenerService(), KoinCompo
                 Log.e(TAG, "Failed to process notification from ${activeSbn.packageName}", e)
             }
         }
-    }
-
-    private fun parseNotification(
-        packageName: String,
-        title: String,
-        text: String,
-        postTime: Long
-    ): ParsedNotificationResult? {
-        try {
-            val raw = RawNotification(
-                packageName = packageName,
-                title = title,
-                text = text,
-                timestamp = postTime
-            )
-            val parsed = notificationParser.parse(raw)
-            if (parsed != null) {
-                return ParsedNotificationResult(
-                    amount = parsed.amount,
-                    type = if (parsed.transactionType == com.cashbuddy.core.TransactionType.DEBIT) {
-                        TransactionType.DEBIT
-                    } else {
-                        TransactionType.CREDIT
-                    },
-                    categoryName = parsed.category.name,
-                    merchant = parsed.merchant,
-                    accountId = parsed.accountId,
-                    sourceApp = parsed.sourceApp,
-                    rawText = parsed.rawText,
-                    confidence = parsed.confidence,
-                    timestamp = parsed.timestamp
-                )
-            }
-        } catch (e: Throwable) {
-            Log.w(TAG, "NotificationParser failed for $packageName, falling back to KotlinNotificationParser", e)
-        }
-
-        // Secondary fallback
-        return kotlinParser.parse(
-            RawNotificationData(
-                packageName = packageName,
-                title = title,
-                text = text,
-                timestamp = postTime
-            )
-        )
     }
 
     private fun createNotificationChannel() {
