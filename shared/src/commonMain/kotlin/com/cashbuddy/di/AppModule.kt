@@ -67,7 +67,8 @@ val appModule = module {
     single { ScreenshotParserEngine(get()) }
     single { com.cashbuddy.core.prob.SourceDetector() }
     single { com.cashbuddy.core.prob.RecentStateRepository() }
-    single { com.cashbuddy.core.prob.EvidenceExtractor(recentStateRepository = get()) }
+    single { com.cashbuddy.core.prob.TokenEvidenceExtractor(get()) }
+    single { com.cashbuddy.core.prob.EvidenceExtractor(recentStateRepository = get(), tokenEvidenceExtractor = get()) }
     single { com.cashbuddy.core.prob.FieldConfidenceEstimator() }
     single { com.cashbuddy.core.prob.PolicyEngine() }
     single { com.cashbuddy.core.prob.DedupEngine }

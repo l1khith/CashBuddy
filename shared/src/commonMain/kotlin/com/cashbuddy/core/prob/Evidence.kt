@@ -28,7 +28,10 @@ data class Evidence(
     // Time-based signals
     val recentSimilarAmount: Boolean = false,
     val recentSameMerchant: Boolean = false,
-    val burstDetected: Boolean = false
+    val burstDetected: Boolean = false,
+
+    // Learned token Naive Bayes log-odds
+    val tokenLogOdds: Double = 0.0
 ) {
     val hasDebit: Boolean get() = amountAndDebitSameSentence
     val hasCredit: Boolean get() = amountAndCreditSameSentence
