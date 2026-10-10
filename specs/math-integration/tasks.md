@@ -24,7 +24,7 @@
     - Final threshold selected and hardcoded.
     - Precision regression = 0.
 
-- [ ] **T4 — FraudDetector MAD implementation**
+- [x] **T4 — FraudDetector MAD implementation**
   - **Files**:
     - Modify `shared/src/commonMain/sqldelight/com/cashbuddy/db/transactions.sq` (add `getAmountsAtMerchant`)
     - Modify `shared/src/commonMain/kotlin/com/cashbuddy/domain/repository/TransactionRepository.kt`

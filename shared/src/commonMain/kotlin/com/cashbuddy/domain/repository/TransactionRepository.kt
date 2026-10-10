@@ -51,6 +51,7 @@ interface TransactionRepository {
     suspend fun sumByCategory(category: String, startTime: Long, endTime: Long): Double
     fun getByCategoryAndPeriod(category: String, startTime: Long, endTime: Long): Flow<List<Transaction>>
     suspend fun sumAll(startTime: Long, endTime: Long, type: TransactionType = TransactionType.DEBIT): Double = 0.0
+    suspend fun getAmountsAtMerchant(merchant: String, fromTimestamp: Long, toTimestamp: Long): List<Double> = emptyList()
 }
 
 data class MergeLogEntry(

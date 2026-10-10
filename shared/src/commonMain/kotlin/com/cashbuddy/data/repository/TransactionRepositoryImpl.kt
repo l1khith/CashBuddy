@@ -228,6 +228,18 @@ class TransactionRepositoryImpl(
             mapper = ::mapTransaction
         ).asFlow().mapToList(dispatcher).distinctUntilChanged()
 
+    override suspend fun getAmountsAtMerchant(
+        merchant: String,
+        fromTimestamp: Long,
+        toTimestamp: Long
+    ): List<Double> = withContext(dispatcher) {
+        queries.getAmountsAtMerchant(
+            merchant = merchant,
+            fromTimestamp = fromTimestamp,
+            toTimestamp = toTimestamp
+        ).executeAsList()
+    }
+
     private fun mapTransaction(
         id: Long,
         amount: Double,
