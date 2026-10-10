@@ -19,16 +19,10 @@ sealed interface ScreenRoute {
     data object Stats : ScreenRoute
 
     @Serializable
-    data object Accounts : ScreenRoute
-
-    @Serializable
     data object Budgets : ScreenRoute
 
     @Serializable
     data class BudgetDrilldown(val category: String, val period: String) : ScreenRoute
-
-    @Serializable
-    data object Goals : ScreenRoute
 
     @Serializable
     data object Settings : ScreenRoute

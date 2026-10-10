@@ -7,7 +7,6 @@ import com.cashbuddy.data.repository.AccountRepositoryImpl
 import com.cashbuddy.data.repository.SqlDelightBudgetRepository
 import com.cashbuddy.data.repository.CategoryRepositoryImpl
 import com.cashbuddy.data.repository.DebugLogRepositoryImpl
-import com.cashbuddy.data.repository.GoalRepositoryImpl
 import com.cashbuddy.data.repository.MerchantRuleRepositoryImpl
 import com.cashbuddy.data.repository.RawMessageRepositoryImpl
 import com.cashbuddy.data.repository.SettingsRepositoryImpl
@@ -21,7 +20,6 @@ import com.cashbuddy.domain.repository.BudgetRepository
 import com.cashbuddy.domain.repository.CategoryRepository
 import com.cashbuddy.domain.repository.DebugLogRepository
 import com.cashbuddy.presentation.debug.DebugLogViewModel
-import com.cashbuddy.domain.repository.GoalRepository
 import com.cashbuddy.domain.repository.MerchantRuleRepository
 import com.cashbuddy.domain.repository.RawMessageRepository
 import com.cashbuddy.domain.repository.SettingsRepository
@@ -40,10 +38,8 @@ import com.cashbuddy.domain.usecase.ManualAddTransactionUseCase
 import com.cashbuddy.domain.usecase.ModifyTransactionUseCase
 import com.cashbuddy.domain.usecase.RejectTransactionUseCase
 import com.cashbuddy.presentation.review.ReviewReducer
-import com.cashbuddy.presentation.accounts.AccountsViewModel
 import com.cashbuddy.presentation.addtransaction.AddTransactionViewModel
 import com.cashbuddy.presentation.budget.BudgetViewModel
-import com.cashbuddy.presentation.goals.GoalsViewModel
 import com.cashbuddy.presentation.home.HomeViewModel
 import com.cashbuddy.presentation.personalization.PersonalizationViewModel
 import com.cashbuddy.presentation.review.ReviewViewModel
@@ -108,7 +104,6 @@ val appModule = module {
     singleOf(::AccountRepositoryImpl) bind AccountRepository::class
     singleOf(::CategoryRepositoryImpl) bind CategoryRepository::class
     singleOf(::SqlDelightBudgetRepository) bind BudgetRepository::class
-    singleOf(::GoalRepositoryImpl) bind GoalRepository::class
     singleOf(::SettingsRepositoryImpl) bind SettingsRepository::class
     singleOf(::MerchantRuleRepositoryImpl) bind MerchantRuleRepository::class
     singleOf(::TrainingDataRepositoryImpl) bind TrainingDataRepository::class
@@ -133,7 +128,6 @@ val appModule = module {
     viewModelOf(::TransactionListViewModel)
     viewModel { (id: Long) -> TransactionDetailViewModel(id, get(), get(), get(), get()) }
     viewModelOf(::StatsViewModel)
-    viewModelOf(::AccountsViewModel)
     viewModel {
         BudgetViewModel(
             budgetRepository = get(),
@@ -149,7 +143,6 @@ val appModule = module {
             budgetEngine = get()
         )
     }
-    viewModelOf(::GoalsViewModel)
     viewModel { SettingsViewModel(get(), get(), get(), get(), get(), getOrNull(), getOrNull(), getOrNull()) }
     viewModel { PersonalizationViewModel(get(), get(), get(), get(), getOrNull()) }
     viewModelOf(::AddTransactionViewModel)
