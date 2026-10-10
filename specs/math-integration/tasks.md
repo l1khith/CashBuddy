@@ -15,7 +15,7 @@
     - All six `MerchantFuzzyTest` cases pass.
     - `AccuracyHarnessTest` precision remains 100%.
 
-- [ ] **T3 — Threshold sweep**
+- [x] **T3 — Threshold sweep**
   - **Files**:
     - Modify `shared/src/commonMain/kotlin/com/cashbuddy/core/prob/MerchantMap.kt` (threshold sweep evaluation)
     - Modify `docs/accuracy/accuracy_report.md` (add sweep table)

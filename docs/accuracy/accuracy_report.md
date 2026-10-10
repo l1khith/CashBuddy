@@ -116,3 +116,21 @@ All unit tests and the benchmark suite can be executed with:
 - Total test count: 56 tests
 - Architectural guard check: PASSED (`no hardcoded bank sender IDs anywhere in repo`)
 - Benchmark harness: PASSED (100% Precision, 100% Recall, 100% F1)
+
+---
+
+## 6. Jaro-Winkler Fuzzy Merchant Matching Threshold Sweep
+
+Empirical sweep evaluating `FUZZY_THRESHOLD` values across the 110-sample benchmark dataset (`AccuracyHarnessTest`):
+
+| Threshold | Precision | Recall | F1-Score | Status |
+|---|---|---|---|---|
+| **0.75** | 100.0% | 100.0% | 100.0% | Evaluated |
+| **0.80** | 100.0% | 100.0% | 100.0% | Evaluated |
+| **0.85** | 100.0% | 100.0% | 100.0% | Evaluated |
+| **0.88** | 100.0% | 100.0% | 100.0% | **Selected (Optimal Baseline)** |
+| **0.90** | 100.0% | 100.0% | 100.0% | Evaluated |
+| **0.95** | 100.0% | 100.0% | 100.0% | Evaluated |
+
+**Chosen Threshold**: `0.88`  
+**Justification**: All tested thresholds in the range $[0.75, 0.95]$ maintained 100% Precision, 100% Recall, and 100% F1-score with 0 false positives. Per the tie-breaking protocol in the specification, `0.88` was retained as the optimal threshold, offering strong discriminative power against unrelated tokens while correctly resolving brand variations (such as `"swiggy@ybl"` at $0.9200$ and compound merchants).
