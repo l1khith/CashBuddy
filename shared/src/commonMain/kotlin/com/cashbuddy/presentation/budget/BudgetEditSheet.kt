@@ -16,8 +16,10 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowDropDown
-import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Public
+import cashbuddy.shared.generated.resources.Res
+import cashbuddy.shared.generated.resources.ic_delete_forever
+import org.jetbrains.compose.resources.painterResource
 import com.cashbuddy.domain.model.BudgetCategories
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -279,8 +281,9 @@ fun BudgetEditSheet(
                         modifier = Modifier.weight(1f)
                     ) {
                         Icon(
-                            imageVector = Icons.Default.Delete,
+                            painter = painterResource(Res.drawable.ic_delete_forever),
                             contentDescription = "Delete Budget",
+                            tint = DangerRed,
                             modifier = Modifier.size(16.dp)
                         )
                         Spacer(modifier = Modifier.width(4.dp))

@@ -19,7 +19,9 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Receipt
+import cashbuddy.shared.generated.resources.Res
+import cashbuddy.shared.generated.resources.ic_receipt_long
+import org.jetbrains.compose.resources.painterResource
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -42,7 +44,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.cashbuddy.presentation.components.EmptyStateView
 import com.cashbuddy.presentation.components.TransactionItemCard
 import com.cashbuddy.presentation.components.formatCurrency
-import com.cashbuddy.presentation.components.getCategoryIcon
+import com.cashbuddy.presentation.components.getCategoryDrawable
 import com.cashbuddy.presentation.theme.CashBuddyTypography
 import com.cashbuddy.presentation.theme.RadiusLarge
 import com.cashbuddy.presentation.theme.TrustBluePrimary
@@ -133,7 +135,7 @@ fun BudgetDrilldownContent(
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
-                            imageVector = getCategoryIcon(state.category, isDebit = true),
+                            painter = painterResource(getCategoryDrawable(state.category, isDebit = true)),
                             contentDescription = state.category,
                             tint = categoryColor,
                             modifier = Modifier.size(24.dp)
@@ -179,7 +181,7 @@ fun BudgetDrilldownContent(
                 }
                 state.transactions.isEmpty() -> {
                     EmptyStateView(
-                        imageVector = Icons.Default.Receipt,
+                        painter = painterResource(Res.drawable.ic_receipt_long),
                         title = "No transactions found",
                         subtitle = "No spending recorded for ${state.category} in this period.",
                         modifier = Modifier

@@ -12,17 +12,13 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.toRoute
-import com.cashbuddy.presentation.accounts.AccountsScreen
-import com.cashbuddy.presentation.accounts.AccountsViewModel
 import com.cashbuddy.presentation.addtransaction.AddTransactionScreen
 import com.cashbuddy.presentation.addtransaction.AddTransactionViewModel
 import com.cashbuddy.presentation.budget.BudgetDrilldownScreen
 import com.cashbuddy.presentation.budget.BudgetDrilldownViewModel
-import com.cashbuddy.presentation.budget.BudgetScreen
+import com.cashbuddy.presentation.budget.BudgetListScreen
 import com.cashbuddy.presentation.budget.BudgetViewModel
 import com.cashbuddy.presentation.components.CashBuddyBottomBar
-import com.cashbuddy.presentation.goals.GoalsScreen
-import com.cashbuddy.presentation.goals.GoalsViewModel
 import com.cashbuddy.presentation.home.HomeScreen
 import com.cashbuddy.presentation.home.HomeViewModel
 import com.cashbuddy.presentation.navigation.ScreenRoute
@@ -167,14 +163,9 @@ fun CashBuddyApp(
                     StatsScreen(viewModel = statsViewModel)
                 }
 
-                composable<ScreenRoute.Accounts> {
-                    val accountsViewModel: AccountsViewModel = koinViewModel()
-                    AccountsScreen(viewModel = accountsViewModel)
-                }
-
                 composable<ScreenRoute.Budgets> {
                     val budgetViewModel: BudgetViewModel = koinViewModel()
-                    BudgetScreen(
+                    BudgetListScreen(
                         viewModel = budgetViewModel,
                         onBudgetClick = { status ->
                             navController.navigate(
@@ -197,11 +188,6 @@ fun CashBuddyApp(
                         onNavigateBack = { navController.popBackStack() },
                         onTransactionClick = { txId -> navController.navigate(ScreenRoute.TransactionDetail(txId)) }
                     )
-                }
-
-                composable<ScreenRoute.Goals> {
-                    val goalsViewModel: GoalsViewModel = koinViewModel()
-                    GoalsScreen(viewModel = goalsViewModel)
                 }
 
                 composable<ScreenRoute.Settings> {

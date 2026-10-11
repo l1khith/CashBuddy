@@ -20,9 +20,11 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.CalendarToday
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.Search
+import cashbuddy.shared.generated.resources.Res
+import cashbuddy.shared.generated.resources.ic_calendar_today
+import cashbuddy.shared.generated.resources.ic_search
+import org.jetbrains.compose.resources.painterResource
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
@@ -115,8 +117,8 @@ fun TransactionListScreen(
                         placeholder = { Text("Search merchant, note, or raw text...", style = CashBuddyTypography.bodyMedium) },
                         leadingIcon = {
                             Icon(
-                                imageVector = Icons.Default.Search,
-                                contentDescription = null,
+                                painter = painterResource(Res.drawable.ic_search),
+                                contentDescription = "Search",
                                 tint = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         },
@@ -162,9 +164,10 @@ fun TransactionListScreen(
                                 leadingIcon = if (period == TimePeriod.CUSTOM) {
                                     {
                                         Icon(
-                                            imageVector = Icons.Default.CalendarToday,
-                                            contentDescription = null,
-                                            modifier = Modifier.size(14.dp)
+                                            painter = painterResource(Res.drawable.ic_calendar_today),
+                                            contentDescription = "Custom Date Range",
+                                            modifier = Modifier.size(14.dp),
+                                            tint = MaterialTheme.colorScheme.primary
                                         )
                                     }
                                 } else null
@@ -249,7 +252,7 @@ fun TransactionListScreen(
                         contentAlignment = Alignment.Center
                     ) {
                         EmptyStateView(
-                            imageVector = Icons.Default.Search,
+                            painter = painterResource(Res.drawable.ic_search),
                             title = "No matching transactions",
                             subtitle = "Try adjusting your search query, type filter, or selected time period."
                         )
@@ -391,8 +394,8 @@ private fun CustomDateRangeDialog(
                             Spacer(modifier = Modifier.height(4.dp))
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Icon(
-                                    imageVector = Icons.Default.CalendarToday,
-                                    contentDescription = null,
+                                    painter = painterResource(Res.drawable.ic_calendar_today),
+                                    contentDescription = "From Date",
                                     modifier = Modifier.size(14.dp),
                                     tint = MaterialTheme.colorScheme.primary
                                 )
@@ -421,8 +424,8 @@ private fun CustomDateRangeDialog(
                             Spacer(modifier = Modifier.height(4.dp))
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Icon(
-                                    imageVector = Icons.Default.CalendarToday,
-                                    contentDescription = null,
+                                    painter = painterResource(Res.drawable.ic_calendar_today),
+                                    contentDescription = "To Date",
                                     modifier = Modifier.size(14.dp),
                                     tint = MaterialTheme.colorScheme.primary
                                 )

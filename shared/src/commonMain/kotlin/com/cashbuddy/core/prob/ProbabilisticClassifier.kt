@@ -82,6 +82,11 @@ class ProbabilisticClassifier(
         apply("recent_same_merchant", evidence.recentSameMerchant, LikelihoodRatios.RECENT_SAME_MERCHANT)
         apply("burst_detected", evidence.burstDetected, LikelihoodRatios.BURST_DETECTED)
 
+        if (evidence.tokenLogOdds != 0.0) {
+            logit += evidence.tokenLogOdds
+            contributions.add(Contribution("learned_tokens", evidence.tokenLogOdds, exp(evidence.tokenLogOdds)))
+        }
+
         val p = 1.0 / (1.0 + exp(-logit))
 
         val amount = evidenceExtractor.extractAmount(rawText)
@@ -149,6 +154,11 @@ class ProbabilisticClassifier(
         apply("recent_similar_amount", evidence.recentSimilarAmount, LikelihoodRatios.RECENT_SIMILAR_AMOUNT)
         apply("recent_same_merchant", evidence.recentSameMerchant, LikelihoodRatios.RECENT_SAME_MERCHANT)
         apply("burst_detected", evidence.burstDetected, LikelihoodRatios.BURST_DETECTED)
+
+        if (evidence.tokenLogOdds != 0.0) {
+            logit += evidence.tokenLogOdds
+            contributions.add(Contribution("learned_tokens", evidence.tokenLogOdds, exp(evidence.tokenLogOdds)))
+        }
 
         val p = 1.0 / (1.0 + exp(-logit))
 

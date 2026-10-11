@@ -15,8 +15,9 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.BarChart
+import cashbuddy.shared.generated.resources.Res
+import cashbuddy.shared.generated.resources.ic_monitoring
+import org.jetbrains.compose.resources.painterResource
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -177,7 +178,7 @@ fun StatsScreen(
                 if (state.categoryBreakdowns.isEmpty()) {
                     item {
                         EmptyStateView(
-                            imageVector = Icons.Default.BarChart,
+                            painter = painterResource(Res.drawable.ic_monitoring),
                             title = "No category data yet",
                             subtitle = "Confirmed transactions will generate spending analytics automatically."
                         )

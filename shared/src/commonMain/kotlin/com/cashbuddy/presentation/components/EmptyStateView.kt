@@ -16,6 +16,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -23,7 +24,8 @@ import androidx.compose.ui.unit.dp
 
 @Composable
 fun EmptyStateView(
-    imageVector: ImageVector = Icons.Default.Inbox,
+    painter: Painter? = null,
+    imageVector: ImageVector? = if (painter == null) Icons.Default.Inbox else null,
     title: String,
     subtitle: String,
     actionButtonText: String? = null,
@@ -37,12 +39,21 @@ fun EmptyStateView(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
-        Icon(
-            imageVector = imageVector,
-            contentDescription = null,
-            modifier = Modifier.size(56.dp),
-            tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
-        )
+        if (painter != null) {
+            Icon(
+                painter = painter,
+                contentDescription = null,
+                modifier = Modifier.size(56.dp),
+                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+            )
+        } else if (imageVector != null) {
+            Icon(
+                imageVector = imageVector,
+                contentDescription = null,
+                modifier = Modifier.size(56.dp),
+                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+            )
+        }
         Spacer(modifier = Modifier.height(16.dp))
         Text(
             text = title,

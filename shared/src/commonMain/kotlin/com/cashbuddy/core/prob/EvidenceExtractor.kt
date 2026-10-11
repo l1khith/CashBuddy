@@ -4,7 +4,8 @@ package com.cashbuddy.core.prob
 import com.cashbuddy.domain.model.TransactionType
 
 class EvidenceExtractor(
-    private val recentStateRepository: RecentStateRepository? = null
+    private val recentStateRepository: RecentStateRepository? = null,
+    private val tokenEvidenceExtractor: TokenEvidenceExtractor? = null
 ) {
     companion object {
         private val DEBIT_VERBS = Regex("""(?i)\b(debited|withdrawn|spent|paid(?!\s+(?:to\s+)?you\b)|sent(?!\s+you\b)|transferred(?!\s+to\s+you\b)|deducted|charged)\b""")
@@ -35,6 +36,10 @@ class EvidenceExtractor(
             Regex("""\b(?:stipend|salary)\s+(?:up\s*to\s+)?$CURR\s*\d""", RegexOption.IGNORE_CASE)
         )
 
+        // Structural, not a phrase list
+        private val CURRENCY_NEAR_PAID = Regex(
+            """(?i)\bpaid\b[^.!?\n]{0,30}(?:₹|Rs\.?|INR|\$|€|£)|(?:₹|Rs\.?|INR|\$|€|£)[^.!?\n]{0,30}\bpaid\b"""
+        )
         private val JOB_PAID_MARKER = Regex("""(?i)\b(?:intern(?:ship)?\s*\(\s*paid\s*\)|\(\s*paid\s*(?:intern(?:ship)?)?\s*\)|paid\s+intern(?:ship)?|(?:engineer|developer|role|position)\s*\(\s*paid\s*\))\b""")
     }
 
@@ -113,6 +118,7 @@ class EvidenceExtractor(
         val calcRecentSimilar = recentStateRepository?.recentSimilarAmount(amt, merch, raw.packageName, now) ?: recentSameAmount
         val calcRecentMerchant = recentStateRepository?.recentSameMerchant(merch, now) ?: recentSameMerchant
         val calcBurst = recentStateRepository?.burstDetected(now) ?: velocityHigh
+        val tokenLogOdds = tokenEvidenceExtractor?.extractSync(fullText)?.tokenLogOdds ?: 0.0
 
         return Evidence(
             hasAmount = hasAmount,
@@ -132,7 +138,8 @@ class EvidenceExtractor(
             amountHasForbiddenShape = forbiddenShape,
             recentSimilarAmount = calcRecentSimilar,
             recentSameMerchant = calcRecentMerchant,
-            burstDetected = calcBurst
+            burstDetected = calcBurst,
+            tokenLogOdds = tokenLogOdds
         )
     }
 

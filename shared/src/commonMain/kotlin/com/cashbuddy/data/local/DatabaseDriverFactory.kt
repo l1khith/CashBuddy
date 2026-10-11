@@ -227,14 +227,6 @@ fun ensureSchema(driver: SqlDriver) {
             FOREIGN KEY (merged_id) REFERENCES transactions(id)
         )
         """.trimIndent(),
-        """
-        CREATE TABLE IF NOT EXISTS user_rules (
-            merchant_normalized TEXT PRIMARY KEY NOT NULL,
-            category TEXT NOT NULL,
-            updated_at INTEGER NOT NULL,
-            source TEXT NOT NULL
-        )
-        """.trimIndent(),
         "CREATE INDEX IF NOT EXISTS idx_debug_log_timestamp ON debug_log(timestamp DESC)",
         "CREATE INDEX IF NOT EXISTS idx_debug_log_policy ON debug_log(policy_action)",
         "CREATE INDEX IF NOT EXISTS idx_debug_log_package ON debug_log(package_name)",
@@ -373,5 +365,16 @@ private fun runMigrations(driver: SqlDriver) {
         executeQuietly(driver, "CREATE INDEX IF NOT EXISTS idx_budgets_category ON budgets(category);")
         executeQuietly(driver, "CREATE INDEX IF NOT EXISTS idx_budgets_is_active ON budgets(is_active);")
     }
+
+    executeQuietly(driver, """
+        CREATE TABLE IF NOT EXISTS learned_token (
+            token TEXT PRIMARY KEY NOT NULL,
+            transaction_count INTEGER NOT NULL DEFAULT 0,
+            non_transaction_count INTEGER NOT NULL DEFAULT 0,
+            first_seen INTEGER NOT NULL,
+            last_updated INTEGER NOT NULL
+        );
+    """.trimIndent())
+    executeQuietly(driver, "CREATE INDEX IF NOT EXISTS idx_learned_token_counts ON learned_token(transaction_count, non_transaction_count);")
 }
 

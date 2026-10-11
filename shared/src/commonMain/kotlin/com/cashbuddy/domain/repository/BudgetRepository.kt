@@ -18,5 +18,5 @@ interface BudgetRepository {
     // Flow & transitional support for reactive UI and compatibility
     fun getAll(): Flow<List<Budget>>
     suspend fun insert(budget: Budget): Long = 0L
-    suspend fun deleteById(id: Long) = delete(id.toString())
 }
+

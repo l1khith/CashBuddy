@@ -13,11 +13,13 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowDownward
-import androidx.compose.material.icons.filled.ArrowUpward
-import androidx.compose.material.icons.filled.Visibility
-import androidx.compose.material.icons.filled.VisibilityOff
+import cashbuddy.shared.generated.resources.Res
+import cashbuddy.shared.generated.resources.ic_trending_down
+import cashbuddy.shared.generated.resources.ic_trending_up
+import cashbuddy.shared.generated.resources.ic_visibility
+import cashbuddy.shared.generated.resources.ic_visibility_off
+import org.jetbrains.compose.resources.DrawableResource
+import org.jetbrains.compose.resources.painterResource
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
@@ -107,7 +109,7 @@ fun BalanceHeader(
                             .padding(4.dp)
                     ) {
                         Icon(
-                            imageVector = if (isBalanceVisible) Icons.Default.VisibilityOff else Icons.Default.Visibility,
+                            painter = painterResource(if (isBalanceVisible) Res.drawable.ic_visibility_off else Res.drawable.ic_visibility),
                             contentDescription = if (isBalanceVisible) "Hide" else "Show",
                             tint = MaterialTheme.colorScheme.primary,
                             modifier = Modifier.size(16.dp)
@@ -139,7 +141,7 @@ fun BalanceHeader(
                     BalanceMetricCard(
                         label = "${selectedPeriod.displayName} In",
                         amount = monthlyIncome,
-                        icon = Icons.Default.ArrowUpward,
+                        icon = Res.drawable.ic_trending_up,
                         accentColor = AccentEmerald,
                         modifier = Modifier.weight(1f)
                     )
@@ -148,7 +150,7 @@ fun BalanceHeader(
                     BalanceMetricCard(
                         label = "${selectedPeriod.displayName} Out",
                         amount = monthlyExpense,
-                        icon = Icons.Default.ArrowDownward,
+                        icon = Res.drawable.ic_trending_down,
                         accentColor = DangerRed,
                         modifier = Modifier.weight(1f)
                     )
@@ -162,7 +164,7 @@ fun BalanceHeader(
 private fun BalanceMetricCard(
     label: String,
     amount: Double,
-    icon: ImageVector,
+    icon: DrawableResource,
     accentColor: Color,
     modifier: Modifier = Modifier
 ) {
@@ -189,7 +191,7 @@ private fun BalanceMetricCard(
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
-                    imageVector = icon,
+                    painter = painterResource(icon),
                     contentDescription = label,
                     tint = accentColor,
                     modifier = Modifier.size(18.dp)

@@ -10,9 +10,10 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.PieChart
+import cashbuddy.shared.generated.resources.Res
+import cashbuddy.shared.generated.resources.ic_add
+import cashbuddy.shared.generated.resources.ic_pie_chart
+import org.jetbrains.compose.resources.painterResource
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -183,8 +184,9 @@ fun BudgetListContent(
                 contentColor = Color.White
             ) {
                 Icon(
-                    imageVector = Icons.Default.Add,
-                    contentDescription = "Add Budget"
+                    painter = painterResource(Res.drawable.ic_add),
+                    contentDescription = "Add Budget",
+                    tint = Color.White
                 )
             }
         }
@@ -206,7 +208,7 @@ fun BudgetListContent(
                 contentAlignment = Alignment.Center
             ) {
                 EmptyStateView(
-                    imageVector = Icons.Default.PieChart,
+                    painter = painterResource(Res.drawable.ic_pie_chart),
                     title = "No Budgets Yet",
                     subtitle = "Set spending limits for categories to stay in control of your monthly expenses.",
                     actionButtonText = "Set First Budget",

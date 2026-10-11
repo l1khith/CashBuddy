@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1400" height="420" viewBox="0 0 1400 420" role="img" aria-labelledby="title desc">
+<title id="title">CashBuddy horizontal wordmark for dark backgrounds</title><desc id="desc">Wallet icon followed by the CashBuddy wordmark and tagline.</desc>
+
+<g transform="translate(20 14) scale(.38)">
+  <rect x="168" y="168" width="688" height="688" rx="156" fill="url(#tile)"/>
+  <defs><linearGradient id="tile" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#176BFF"/><stop offset=".5" stop-color="#2A28E9"/><stop offset="1" stop-color="#4B14CE"/></linearGradient><linearGradient id="teal" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#5CFFE8"/><stop offset="1" stop-color="#068EAD"/></linearGradient><linearGradient id="pink" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#FF84D8"/><stop offset="1" stop-color="#A91DD9"/></linearGradient><linearGradient id="wallet" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#42D6FF"/><stop offset=".55" stop-color="#243AF3"/><stop offset="1" stop-color="#3921C9"/></linearGradient></defs>
+  <path d="M356 386 L627 300 C654 292 677 306 683 332 L702 392 L365 490 L343 435 C337 415 340 398 356 386 Z" fill="url(#teal)"/><path d="M359 427 L675 347 C704 339 724 353 731 379 L746 425 L368 523 L345 470 C337 450 341 435 359 427 Z" fill="url(#pink)"/><path d="M292 398 L724 475 C748 479 765 500 765 525 L765 654 C765 685 741 707 709 705 L355 667 C316 663 290 638 290 601 L290 432 C290 414 291 404 292 398 Z" fill="#3537EF"/><path d="M282 403 C282 377 303 364 328 369 L704 437 C730 442 748 462 748 490 L748 638 C748 675 723 704 688 701 L333 662 C297 658 278 632 278 599 L278 428 C278 416 279 408 282 403 Z" fill="url(#wallet)"/><text x="456" y="667" font-family="Roboto, 'Noto Sans Devanagari', Arial, sans-serif" font-size="218" font-weight="700" fill="#FAFBFC" text-anchor="middle">₹</text><path d="M644 548 C647 525 666 510 692 505 L778 494 C800 491 814 506 814 528 L814 614 C814 637 800 652 779 656 L689 669 C662 673 642 657 639 634 Z" fill="#4F43F5"/><circle cx="714" cy="584" r="29" fill="#FAFBFC"/>
+</g>
+<text x="430" y="188" font-family="Roboto, Arial, sans-serif" font-size="98" font-weight="500" letter-spacing="1" fill="#FAFBFC">CashBuddy</text>
+<text x="434" y="254" font-family="Roboto, Arial, sans-serif" font-size="34" font-weight="400" fill="#B9C1D1">Your money. Your phone.</text>
+<text x="434" y="305" font-family="Roboto, Arial, sans-serif" font-size="27" font-weight="500" fill="#34A853">No cloud. No tracking.</text>
+</svg>

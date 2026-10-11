@@ -30,17 +30,19 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.BugReport
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.ContentCopy
-import androidx.compose.material.icons.filled.DeleteSweep
 import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
-import androidx.compose.material.icons.filled.FileDownload
 import androidx.compose.material.icons.filled.FiberManualRecord
-import androidx.compose.material.icons.filled.Refresh
-import androidx.compose.material.icons.filled.Search
+import cashbuddy.shared.generated.resources.Res
+import cashbuddy.shared.generated.resources.ic_bug_report
+import cashbuddy.shared.generated.resources.ic_delete_forever
+import cashbuddy.shared.generated.resources.ic_file_download
+import cashbuddy.shared.generated.resources.ic_refresh
+import cashbuddy.shared.generated.resources.ic_search
+import org.jetbrains.compose.resources.painterResource
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -144,8 +146,9 @@ fun DebugLogScreen(
                 actions = {
                     IconButton(onClick = { viewModel.loadLogs() }) {
                         Icon(
-                            imageVector = Icons.Default.Refresh,
-                            contentDescription = "Refresh"
+                            painter = painterResource(Res.drawable.ic_refresh),
+                            contentDescription = "Refresh",
+                            tint = MaterialTheme.colorScheme.onSurface
                         )
                     }
                 },
@@ -186,8 +189,9 @@ fun DebugLogScreen(
                 placeholder = { Text("Search package, sender, text...", fontSize = 13.sp) },
                 leadingIcon = {
                     Icon(
-                        imageVector = Icons.Default.Search,
+                        painter = painterResource(Res.drawable.ic_search),
                         contentDescription = "Search",
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.size(18.dp)
                     )
                 },
@@ -260,8 +264,8 @@ fun DebugLogScreen(
                 ) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         Icon(
-                            imageVector = Icons.Default.BugReport,
-                            contentDescription = null,
+                            painter = painterResource(Res.drawable.ic_bug_report),
+                            contentDescription = "Debug",
                             tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
                             modifier = Modifier.size(48.dp)
                         )
@@ -757,7 +761,12 @@ private fun DebugLogBottomBar(
             modifier = Modifier.weight(1f),
             shape = RoundedCornerShape(10.dp)
         ) {
-            Icon(Icons.Default.FileDownload, contentDescription = null, modifier = Modifier.size(16.dp))
+            Icon(
+                painter = painterResource(Res.drawable.ic_file_download),
+                contentDescription = "Export CSV",
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(16.dp)
+            )
             Spacer(modifier = Modifier.width(4.dp))
             Text("Export CSV", fontSize = 12.sp)
         }
@@ -778,7 +787,12 @@ private fun DebugLogBottomBar(
             modifier = Modifier.weight(1f),
             shape = RoundedCornerShape(10.dp)
         ) {
-            Icon(Icons.Default.DeleteSweep, contentDescription = null, modifier = Modifier.size(16.dp))
+            Icon(
+                painter = painterResource(Res.drawable.ic_delete_forever),
+                contentDescription = "Clear",
+                tint = MaterialTheme.colorScheme.onError,
+                modifier = Modifier.size(16.dp)
+            )
             Spacer(modifier = Modifier.width(4.dp))
             Text("Clear", fontSize = 12.sp)
         }

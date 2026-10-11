@@ -3,13 +3,9 @@ package com.cashbuddy.screenshot
 import android.content.Context
 import android.net.Uri
 import android.util.Log
-import com.cashbuddy.core.isDuplicateTransaction
 import com.cashbuddy.domain.model.Transaction
 import com.cashbuddy.domain.model.TransactionStatus
-import com.cashbuddy.domain.model.TransactionType
-import com.cashbuddy.domain.repository.AccountRepository
 import com.cashbuddy.domain.repository.CategoryRepository
-import com.cashbuddy.domain.repository.SettingsRepository
 import com.cashbuddy.domain.repository.TrainingDataRepository
 import com.cashbuddy.domain.repository.TransactionRepository
 import kotlinx.coroutines.Dispatchers
@@ -24,8 +20,8 @@ class ScreenshotHandler(private val context: Context) : KoinComponent {
 
     private val transactionRepository: TransactionRepository by inject()
     private val categoryRepository: CategoryRepository by inject()
-    private val accountRepository: AccountRepository by inject()
-    private val settingsRepository: SettingsRepository by inject()
+    // private val accountRepository: AccountRepository by inject()
+    // private val settingsRepository: SettingsRepository by inject()
     private val trainingDataRepository: TrainingDataRepository by inject()
     private val pipeline: com.cashbuddy.core.prob.MessagePipeline by inject()
     private val parser = ScreenshotParser(context)
@@ -40,6 +36,10 @@ class ScreenshotHandler(private val context: Context) : KoinComponent {
      * synchronously during intent handling before content URI access expires.
      */
     fun copyUriToCache(uri: Uri): File? {
+        if (uri.scheme != android.content.ContentResolver.SCHEME_CONTENT) {
+            Log.w(TAG, "Rejected non-content screenshot URI scheme: ${uri.scheme}")
+            return null
+        }
         val cacheFolder = File(context.cacheDir, "screenshots").apply { mkdirs() }
         val destFile = File(cacheFolder, "screenshot_${System.currentTimeMillis()}_${(1000..9999).random()}.jpg")
         var delayMs = 150L

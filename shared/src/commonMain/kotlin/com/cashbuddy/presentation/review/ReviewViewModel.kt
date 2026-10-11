@@ -2,9 +2,11 @@ package com.cashbuddy.presentation.review
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.cashbuddy.core.prob.Tokenizer
 import com.cashbuddy.domain.model.TransactionStatus
 import com.cashbuddy.domain.model.TransactionType
 import com.cashbuddy.domain.repository.CategoryRepository
+import com.cashbuddy.domain.repository.LearnedTokenRepository
 import com.cashbuddy.domain.repository.TransactionRepository
 import com.cashbuddy.domain.usecase.ConfirmTransactionUseCase
 import com.cashbuddy.domain.usecase.ModifyTransactionUseCase
@@ -24,7 +26,8 @@ class ReviewViewModel(
     private val confirmTransactionUseCase: ConfirmTransactionUseCase,
     private val rejectTransactionUseCase: RejectTransactionUseCase,
     private val modifyTransactionUseCase: ModifyTransactionUseCase,
-    private val reducer: ReviewReducer = ReviewReducer()
+    private val reducer: ReviewReducer = ReviewReducer(),
+    private val learnedTokenRepository: LearnedTokenRepository? = null
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(ReviewState())
@@ -35,6 +38,14 @@ class ReviewViewModel(
 
     init {
         processIntent(ReviewIntent.LoadPending)
+    }
+
+    private suspend fun recordTokens(rawText: String, isTransaction: Boolean) {
+        val learnedTokenRepository = learnedTokenRepository ?: return
+        val tokens = Tokenizer.tokenize(rawText)
+        if (tokens.isNotEmpty()) {
+            learnedTokenRepository.record(isTransaction = isTransaction, tokens = tokens)
+        }
     }
 
     fun processIntent(intent: ReviewIntent) {
@@ -69,7 +80,11 @@ class ReviewViewModel(
 
     private fun confirmTransaction(transactionId: Long) {
         viewModelScope.launch {
+            val tx = _uiState.value.transactions.find { it.id == transactionId }
             confirmTransactionUseCase(transactionId)
+            if (tx != null) {
+                recordTokens(tx.rawText, isTransaction = true)
+            }
             _uiState.value = reducer.reduce(_uiState.value, ReviewResult.TransactionConfirmed(transactionId))
             _effects.emit(ReviewEffect.ShowSnackbar("Transaction confirmed"))
         }
@@ -77,7 +92,11 @@ class ReviewViewModel(
 
     private fun rejectTransaction(transactionId: Long) {
         viewModelScope.launch {
+            val tx = _uiState.value.transactions.find { it.id == transactionId }
             rejectTransactionUseCase(transactionId)
+            if (tx != null) {
+                recordTokens(tx.rawText, isTransaction = false)
+            }
             _uiState.value = reducer.reduce(_uiState.value, ReviewResult.TransactionRejected(transactionId))
             _effects.emit(ReviewEffect.ShowSnackbar("Transaction discarded"))
         }
@@ -98,6 +117,7 @@ class ReviewViewModel(
                 oldCategoryName = oldCategoryName,
                 newCategoryName = newCategory?.name
             )
+            recordTokens(tx.rawText, isTransaction = true)
             _uiState.value = reducer.reduce(_uiState.value, ReviewResult.CategoryModified(transactionId, newCategoryId))
         }
     }
@@ -111,6 +131,7 @@ class ReviewViewModel(
             val highConfidence = _uiState.value.transactions.filter { it.confidence >= 0.85f }
             highConfidence.forEach { tx ->
                 confirmTransactionUseCase(tx.id)
+                recordTokens(tx.rawText, isTransaction = true)
             }
             _uiState.value = reducer.reduce(_uiState.value, ReviewResult.AllHighConfidenceConfirmed)
             _effects.emit(ReviewEffect.ShowSnackbar("Confirmed ${highConfidence.size} high-confidence transactions"))
@@ -142,6 +163,7 @@ class ReviewViewModel(
                 oldCategoryName = oldCategoryName,
                 newCategoryName = newCategory?.name
             )
+            recordTokens(tx.rawText, isTransaction = true)
             _uiState.value = reducer.reduce(_uiState.value, ReviewResult.TransactionUpdated(updatedTx))
             _effects.emit(ReviewEffect.ShowSnackbar("Pending transaction updated"))
         }
@@ -172,6 +194,7 @@ class ReviewViewModel(
                 oldCategoryName = oldCategoryName,
                 newCategoryName = newCategory?.name
             )
+            recordTokens(tx.rawText, isTransaction = true)
             _uiState.value = reducer.reduce(_uiState.value, ReviewResult.TransactionConfirmed(transactionId))
             _effects.emit(ReviewEffect.ShowSnackbar("Transaction updated and confirmed"))
         }

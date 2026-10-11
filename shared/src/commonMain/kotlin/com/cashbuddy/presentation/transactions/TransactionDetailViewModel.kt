@@ -2,10 +2,12 @@ package com.cashbuddy.presentation.transactions
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.cashbuddy.core.prob.Tokenizer
 import com.cashbuddy.domain.model.Category
 import com.cashbuddy.domain.model.Transaction
 import com.cashbuddy.domain.model.TransactionType
 import com.cashbuddy.domain.repository.CategoryRepository
+import com.cashbuddy.domain.repository.LearnedTokenRepository
 import com.cashbuddy.domain.repository.MerchantRuleRepository
 import com.cashbuddy.domain.repository.TrainingDataRepository
 import com.cashbuddy.domain.repository.TransactionRepository
@@ -32,7 +34,8 @@ class TransactionDetailViewModel(
     private val transactionRepository: TransactionRepository,
     private val categoryRepository: CategoryRepository,
     private val trainingDataRepository: TrainingDataRepository,
-    private val merchantRuleRepository: MerchantRuleRepository
+    private val merchantRuleRepository: MerchantRuleRepository,
+    private val learnedTokenRepository: LearnedTokenRepository? = null
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(TransactionDetailUiState())
@@ -40,6 +43,14 @@ class TransactionDetailViewModel(
 
     private val _navBackEffect = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
     val navBackEffect: SharedFlow<Unit> = _navBackEffect.asSharedFlow()
+
+    private suspend fun recordTokens(rawText: String, isTransaction: Boolean) {
+        val learnedTokenRepository = learnedTokenRepository ?: return
+        val tokens = Tokenizer.tokenize(rawText)
+        if (tokens.isNotEmpty()) {
+            learnedTokenRepository.record(isTransaction = isTransaction, tokens = tokens)
+        }
+    }
 
     init {
         viewModelScope.launch {
@@ -70,6 +81,7 @@ class TransactionDetailViewModel(
             )
             transactionRepository.update(updated)
             _uiState.value = _uiState.value.copy(transaction = updated)
+            recordTokens(tx.rawText, isTransaction = true)
 
             val targetLabel = newCategory?.name ?: return@launch
             if (!targetLabel.equals(oldCategoryName, ignoreCase = true)) {
@@ -110,6 +122,7 @@ class TransactionDetailViewModel(
             )
             transactionRepository.update(updated)
             _uiState.value = _uiState.value.copy(transaction = updated)
+            recordTokens(tx.rawText, isTransaction = true)
 
             val targetLabel = newCategory?.name
             if (targetLabel != null && !targetLabel.equals(oldCategoryName, ignoreCase = true)) {

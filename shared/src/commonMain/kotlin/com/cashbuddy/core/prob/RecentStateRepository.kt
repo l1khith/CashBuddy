@@ -28,9 +28,6 @@ class RecentStateRepository(private val maxEntries: Int = 20) {
         }
     }
 
-    fun record(amount: Double, merchant: String?, sourcePackage: String?, timestamp: Long = currentTimeMillis()) {
-        record(RecentTx(amount, merchant, sourcePackage, timestamp))
-    }
 
     fun recordRaw(timestamp: Long, packageName: String?) {
         rawTimestamps[timestamp] = packageName ?: ""

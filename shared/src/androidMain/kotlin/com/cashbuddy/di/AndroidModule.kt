@@ -4,7 +4,6 @@ import app.cash.sqldelight.db.SqlDriver
 import com.cashbuddy.data.local.DatabaseDriverFactory
 import com.cashbuddy.data.local.createDatabase
 import com.cashbuddy.db.AppDatabase
-import com.cashbuddy.domain.parser.KotlinNotificationParser
 import org.koin.dsl.module
 
 val androidModule = module {
@@ -14,7 +13,5 @@ val androidModule = module {
     single { DatabaseDriverFactory(get()) }
     single<SqlDriver> { get<DatabaseDriverFactory>().createDriver() }
     single<AppDatabase> { createDatabase(get<SqlDriver>()) }
-
-    // Domain Parsers
-    single { KotlinNotificationParser() }
 }
+
