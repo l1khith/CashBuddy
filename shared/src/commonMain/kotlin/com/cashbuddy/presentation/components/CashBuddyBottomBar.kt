@@ -16,12 +16,14 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ReceiptLong
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.BarChart
-import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.filled.Settings
+import cashbuddy.shared.generated.resources.Res
+import cashbuddy.shared.generated.resources.ic_add
+import cashbuddy.shared.generated.resources.ic_home
+import cashbuddy.shared.generated.resources.ic_monitoring
+import cashbuddy.shared.generated.resources.ic_receipt_long
+import cashbuddy.shared.generated.resources.ic_settings
+import org.jetbrains.compose.resources.DrawableResource
+import org.jetbrains.compose.resources.painterResource
 import androidx.compose.material3.Badge
 import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.FloatingActionButton
@@ -82,7 +84,7 @@ fun CashBuddyBottomBar(
         ) {
             // Home
             BarNavItem(
-                icon = Icons.Default.Home,
+                icon = Res.drawable.ic_home,
                 label = "Home",
                 selected = currentRoute.contains("Home", ignoreCase = true),
                 onClick = onNavigateToHome
@@ -90,7 +92,7 @@ fun CashBuddyBottomBar(
 
             // Transactions
             BarNavItem(
-                icon = Icons.AutoMirrored.Filled.ReceiptLong,
+                icon = Res.drawable.ic_receipt_long,
                 label = "History",
                 selected = currentRoute.contains("Transactions", ignoreCase = true),
                 onClick = onNavigateToTransactions
@@ -108,7 +110,7 @@ fun CashBuddyBottomBar(
                     .offset(y = (-4).dp)
             ) {
                 Icon(
-                    imageVector = Icons.Default.Add,
+                    painter = painterResource(Res.drawable.ic_add),
                     contentDescription = "Add Transaction",
                     tint = Color.White,
                     modifier = Modifier.size(28.dp)
@@ -117,7 +119,7 @@ fun CashBuddyBottomBar(
 
             // Stats
             BarNavItem(
-                icon = Icons.Default.BarChart,
+                icon = Res.drawable.ic_monitoring,
                 label = "Stats",
                 selected = currentRoute.contains("Stats", ignoreCase = true),
                 onClick = onNavigateToStats
@@ -125,7 +127,7 @@ fun CashBuddyBottomBar(
 
             // Settings
             BarNavItem(
-                icon = Icons.Default.Settings,
+                icon = Res.drawable.ic_settings,
                 label = "Settings",
                 selected = currentRoute.contains("Settings", ignoreCase = true),
                 onClick = onNavigateToSettings
@@ -136,7 +138,7 @@ fun CashBuddyBottomBar(
 
 @Composable
 private fun BarNavItem(
-    icon: ImageVector,
+    icon: DrawableResource,
     label: String,
     selected: Boolean,
     onClick: () -> Unit
@@ -158,7 +160,7 @@ private fun BarNavItem(
             .padding(horizontal = 10.dp, vertical = 6.dp)
     ) {
         Icon(
-            imageVector = icon,
+            painter = painterResource(icon),
             contentDescription = label,
             modifier = Modifier.size(24.dp),
             tint = color

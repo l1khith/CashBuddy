@@ -1,5 +1,6 @@
 package com.cashbuddy.presentation.settings
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -17,15 +18,17 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.BugReport
-import androidx.compose.material.icons.filled.DeleteForever
-import androidx.compose.material.icons.filled.DeleteSweep
-import androidx.compose.material.icons.filled.Download
-import androidx.compose.material.icons.filled.FileDownload
 import androidx.compose.material.icons.automirrored.filled.MergeType
 import androidx.compose.material.icons.automirrored.filled.Undo
-import androidx.compose.material.icons.filled.Tune
-import androidx.compose.material.icons.filled.Visibility
+import cashbuddy.shared.generated.resources.Res
+import cashbuddy.shared.generated.resources.ic_bug_report
+import cashbuddy.shared.generated.resources.ic_cashbuddy_logo
+import cashbuddy.shared.generated.resources.ic_delete_forever
+import cashbuddy.shared.generated.resources.ic_download
+import cashbuddy.shared.generated.resources.ic_file_download
+import cashbuddy.shared.generated.resources.ic_tune
+import cashbuddy.shared.generated.resources.ic_visibility
+import org.jetbrains.compose.resources.painterResource
 import com.cashbuddy.presentation.settings.components.DuplicateReconciliationDialog
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -61,6 +64,8 @@ import com.cashbuddy.presentation.theme.TealMintSecondary
 import com.cashbuddy.presentation.theme.TrustBluePrimary
 import kotlinx.coroutines.flow.collectLatest
 
+import androidx.compose.ui.platform.LocalUriHandler
+import com.cashbuddy.platform.getAppVersionDisplay
 import com.cashbuddy.presentation.theme.AccentEmerald
 import com.cashbuddy.presentation.theme.CashBuddyTypography
 import com.cashbuddy.presentation.theme.DangerRed
@@ -78,6 +83,7 @@ fun SettingsScreen(
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
+    val uriHandler = LocalUriHandler.current
     var showClearDialog by remember { mutableStateOf(false) }
     var showClearTrainingDialog by remember { mutableStateOf(false) }
     var showDuplicateDialog by remember { mutableStateOf(false) }
@@ -169,8 +175,9 @@ fun SettingsScreen(
                                 shape = RoundedCornerShape(10.dp)
                             ) {
                                 Icon(
-                                    imageVector = Icons.Default.Tune,
-                                    contentDescription = null,
+                                    painter = painterResource(Res.drawable.ic_tune),
+                                    contentDescription = "Notification Settings",
+                                    tint = MaterialTheme.colorScheme.primary,
                                     modifier = Modifier.size(18.dp)
                                 )
                                 Spacer(modifier = Modifier.width(8.dp))
@@ -305,8 +312,9 @@ fun SettingsScreen(
                                 colors = ButtonDefaults.buttonColors(containerColor = PrimaryIndigo)
                             ) {
                                 Icon(
-                                    imageVector = Icons.Default.Tune,
-                                    contentDescription = null,
+                                    painter = painterResource(Res.drawable.ic_tune),
+                                    contentDescription = "Personalization Dashboard",
+                                    tint = Color.White,
                                     modifier = Modifier.size(18.dp)
                                 )
                                 Spacer(modifier = Modifier.width(8.dp))
@@ -319,8 +327,9 @@ fun SettingsScreen(
                                 shape = RadiusMedium
                             ) {
                                 Icon(
-                                    imageVector = Icons.Default.FileDownload,
-                                    contentDescription = null,
+                                    painter = painterResource(Res.drawable.ic_file_download),
+                                    contentDescription = "Export Dataset",
+                                    tint = MaterialTheme.colorScheme.primary,
                                     modifier = Modifier.size(18.dp)
                                 )
                                 Spacer(modifier = Modifier.width(8.dp))
@@ -334,8 +343,9 @@ fun SettingsScreen(
                                 colors = ButtonDefaults.outlinedButtonColors(contentColor = DangerRed)
                             ) {
                                 Icon(
-                                    imageVector = Icons.Default.DeleteSweep,
-                                    contentDescription = null,
+                                    painter = painterResource(Res.drawable.ic_delete_forever),
+                                    contentDescription = "Reset Training Data",
+                                    tint = DangerRed,
                                     modifier = Modifier.size(18.dp)
                                 )
                                 Spacer(modifier = Modifier.width(8.dp))
@@ -369,8 +379,9 @@ fun SettingsScreen(
                                 shape = RoundedCornerShape(10.dp)
                             ) {
                                 Icon(
-                                    imageVector = Icons.Default.Download,
-                                    contentDescription = null,
+                                    painter = painterResource(Res.drawable.ic_download),
+                                    contentDescription = "Export Transactions",
+                                    tint = MaterialTheme.colorScheme.primary,
                                     modifier = Modifier.size(18.dp)
                                 )
                                 Spacer(modifier = Modifier.width(8.dp))
@@ -421,8 +432,8 @@ fun SettingsScreen(
                                 shape = RoundedCornerShape(10.dp)
                             ) {
                                 Icon(
-                                    imageVector = Icons.Default.DeleteForever,
-                                    contentDescription = null,
+                                    painter = painterResource(Res.drawable.ic_delete_forever),
+                                    contentDescription = "Clear All Data",
                                     tint = Color.White,
                                     modifier = Modifier.size(18.dp)
                                 )
@@ -476,8 +487,8 @@ fun SettingsScreen(
                                         contentAlignment = Alignment.Center
                                     ) {
                                         Icon(
-                                            imageVector = Icons.Default.BugReport,
-                                            contentDescription = null,
+                                            painter = painterResource(Res.drawable.ic_bug_report),
+                                            contentDescription = "Debug Log",
                                             tint = if (state.isDebugLogEnabled) PrimaryIndigo else MaterialTheme.colorScheme.onSurfaceVariant,
                                             modifier = Modifier.size(24.dp)
                                         )
@@ -527,8 +538,9 @@ fun SettingsScreen(
                                     shape = RoundedCornerShape(10.dp)
                                 ) {
                                     Icon(
-                                        imageVector = Icons.Default.Visibility,
-                                        contentDescription = null,
+                                        painter = painterResource(Res.drawable.ic_visibility),
+                                        contentDescription = "Open Log Viewer",
+                                        tint = MaterialTheme.colorScheme.onPrimary,
                                         modifier = Modifier.size(18.dp)
                                     )
                                     Spacer(modifier = Modifier.width(8.dp))
@@ -546,7 +558,72 @@ fun SettingsScreen(
                     }
                 }
 
-                // Version Footer
+                // About, Privacy Policy & Terms of Service
+                item {
+                    Text(
+                        text = "About, Privacy Policy & Legal",
+                        style = CashBuddyTypography.titleLarge,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+
+                item {
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RadiusLarge,
+                        colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.surface
+                        ),
+                        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+                    ) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(18.dp),
+                            verticalArrangement = Arrangement.spacedBy(10.dp)
+                        ) {
+                            Text(
+                                text = "Read CashBuddy's 100% offline architecture philosophy, core capabilities, privacy policy, and terms of service.",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+
+                            OutlinedButton(
+                                onClick = { uriHandler.openUri("https://l1khith.github.io/CashBuddy/#2-privacy-policy") },
+                                modifier = Modifier.fillMaxWidth(),
+                                shape = RoundedCornerShape(10.dp)
+                            ) {
+                                Text("Privacy Policy")
+                            }
+
+                            OutlinedButton(
+                                onClick = { uriHandler.openUri("https://l1khith.github.io/CashBuddy/#3-terms-of-service") },
+                                modifier = Modifier.fillMaxWidth(),
+                                shape = RoundedCornerShape(10.dp)
+                            ) {
+                                Text("Terms of Service")
+                            }
+
+                            OutlinedButton(
+                                onClick = { uriHandler.openUri("https://l1khith.github.io/CashBuddy/") },
+                                modifier = Modifier.fillMaxWidth(),
+                                shape = RoundedCornerShape(10.dp)
+                            ) {
+                                Text("About CashBuddy (Official Website)")
+                            }
+
+                            OutlinedButton(
+                                onClick = { uriHandler.openUri("https://github.com/l1khith/CashBuddy") },
+                                modifier = Modifier.fillMaxWidth(),
+                                shape = RoundedCornerShape(10.dp)
+                            ) {
+                                Text("GitHub Repository")
+                            }
+                        }
+                    }
+                }
+
+                // Version Footer & License Attribution
                 item {
                     Column(
                         modifier = Modifier
@@ -554,8 +631,16 @@ fun SettingsScreen(
                             .padding(vertical = 16.dp),
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
+                        Image(
+                            painter = painterResource(Res.drawable.ic_cashbuddy_logo),
+                            contentDescription = "CashBuddy Logo",
+                            modifier = Modifier
+                                .size(48.dp)
+                                .clip(RoundedCornerShape(12.dp))
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
                         Text(
-                            text = "CashBuddy v1.0.0",
+                            text = getAppVersionDisplay(),
                             style = MaterialTheme.typography.bodyMedium,
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -564,7 +649,14 @@ fun SettingsScreen(
                                 .clickable { viewModel.onVersionClicked() }
                                 .padding(horizontal = 12.dp, vertical = 6.dp)
                         )
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            text = "Typography: Roboto (Apache License 2.0)",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                        )
                         if (state.isDebugLogEnabled) {
+                            Spacer(modifier = Modifier.height(4.dp))
                             Text(
                                 text = "Debug Logging Active",
                                 style = MaterialTheme.typography.labelSmall,

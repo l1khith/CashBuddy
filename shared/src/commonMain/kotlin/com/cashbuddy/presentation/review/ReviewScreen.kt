@@ -24,7 +24,9 @@ import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.DoneAll
-import androidx.compose.material.icons.filled.Edit
+import cashbuddy.shared.generated.resources.Res
+import cashbuddy.shared.generated.resources.ic_edit
+import org.jetbrains.compose.resources.painterResource
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -408,8 +410,8 @@ private fun PendingReviewCard(
                     shape = RadiusMedium
                 ) {
                     Icon(
-                        imageVector = Icons.Default.Edit,
-                        contentDescription = null,
+                        painter = painterResource(Res.drawable.ic_edit),
+                        contentDescription = "Edit",
                         modifier = Modifier.size(16.dp),
                         tint = MaterialTheme.colorScheme.primary
                     )

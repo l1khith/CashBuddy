@@ -2,7 +2,6 @@
 package com.cashbuddy.core.budget
 
 import com.cashbuddy.domain.model.AlertState
-import com.cashbuddy.domain.model.Budget
 import com.cashbuddy.domain.model.BudgetCategories
 import com.cashbuddy.domain.repository.BudgetRepository
 import com.cashbuddy.platform.currentTimeMillis

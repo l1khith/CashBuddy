@@ -1,5 +1,6 @@
 package com.cashbuddy.presentation.home
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -20,8 +21,12 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
-import androidx.compose.material.icons.automirrored.filled.ReceiptLong
-import androidx.compose.material.icons.filled.Warning
+import cashbuddy.shared.generated.resources.Res
+import cashbuddy.shared.generated.resources.ic_cashbuddy_logo
+import cashbuddy.shared.generated.resources.ic_pie_chart
+import cashbuddy.shared.generated.resources.ic_receipt_long
+import cashbuddy.shared.generated.resources.ic_warning
+import org.jetbrains.compose.resources.painterResource
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -98,9 +103,17 @@ fun HomeScreen(
                 item {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
+                        horizontalArrangement = Arrangement.Start,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
+                        Image(
+                            painter = painterResource(Res.drawable.ic_cashbuddy_logo),
+                            contentDescription = "CashBuddy Logo",
+                            modifier = Modifier
+                                .size(40.dp)
+                                .clip(RoundedCornerShape(10.dp))
+                        )
+                        Spacer(modifier = Modifier.width(12.dp))
                         Column {
                             Text(
                                 text = "CashBuddy",
@@ -158,7 +171,7 @@ fun HomeScreen(
                                     contentAlignment = Alignment.Center
                                 ) {
                                     Icon(
-                                        imageVector = Icons.Default.PieChart,
+                                        painter = painterResource(Res.drawable.ic_pie_chart),
                                         contentDescription = "Budgets",
                                         tint = PrimaryIndigo,
                                         modifier = Modifier.size(22.dp)
@@ -213,8 +226,8 @@ fun HomeScreen(
                                     modifier = Modifier.weight(1f)
                                 ) {
                                     Icon(
-                                        imageVector = Icons.Default.Warning,
-                                        contentDescription = null,
+                                        painter = painterResource(Res.drawable.ic_warning),
+                                        contentDescription = "Warning",
                                         tint = WarningAmber,
                                         modifier = Modifier.size(24.dp)
                                     )
@@ -290,7 +303,7 @@ fun HomeScreen(
                 if (state.recentTransactions.isEmpty()) {
                     item {
                         EmptyStateView(
-                            imageVector = Icons.AutoMirrored.Filled.ReceiptLong,
+                            painter = painterResource(Res.drawable.ic_receipt_long),
                             title = "No activity for ${state.selectedPeriod.displayName.lowercase()}",
                             subtitle = "Transactions from bank and UPI notifications will appear here automatically.",
                             actionButtonText = "Add First Transaction",

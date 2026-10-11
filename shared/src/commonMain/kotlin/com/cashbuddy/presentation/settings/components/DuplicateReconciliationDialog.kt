@@ -21,7 +21,9 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.ContentCopy
-import androidx.compose.material.icons.filled.Download
+import cashbuddy.shared.generated.resources.Res
+import cashbuddy.shared.generated.resources.ic_download
+import org.jetbrains.compose.resources.painterResource
 import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.automirrored.filled.MergeType
@@ -195,8 +197,9 @@ fun DuplicateReconciliationDialog(
                         shape = RadiusMedium
                     ) {
                         Icon(
-                            imageVector = Icons.Default.Download,
-                            contentDescription = null,
+                            painter = painterResource(Res.drawable.ic_download),
+                            contentDescription = "Preview CSV",
+                            tint = MaterialTheme.colorScheme.primary,
                             modifier = Modifier.size(16.dp)
                         )
                         Spacer(modifier = Modifier.width(4.dp))

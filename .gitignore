@@ -27,6 +27,11 @@ captures/
 *.apk
 *.aab
 *.ap_
+*.jks
+*.keystore
+keystore.properties
+KEYSTORE_CREDENTIALS.md
+androidApp/release/
 output-metadata.json
 
 # --------------------------------------------------------------------

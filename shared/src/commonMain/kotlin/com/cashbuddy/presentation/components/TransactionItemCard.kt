@@ -15,22 +15,22 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.AccountBalance
-import androidx.compose.material.icons.filled.ArrowDownward
-import androidx.compose.material.icons.filled.ArrowUpward
-import androidx.compose.material.icons.filled.CardGiftcard
-import androidx.compose.material.icons.filled.DirectionsCar
-import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.filled.LocalHospital
-import androidx.compose.material.icons.filled.Movie
-import androidx.compose.material.icons.filled.Receipt
-import androidx.compose.material.icons.filled.Replay
-import androidx.compose.material.icons.filled.Restaurant
-import androidx.compose.material.icons.filled.School
-import androidx.compose.material.icons.filled.Security
-import androidx.compose.material.icons.automirrored.filled.TrendingUp
-import androidx.compose.material.icons.filled.ShoppingBag
+import cashbuddy.shared.generated.resources.Res
+import cashbuddy.shared.generated.resources.ic_account_balance_wallet
+import cashbuddy.shared.generated.resources.ic_attach_money
+import cashbuddy.shared.generated.resources.ic_category
+import cashbuddy.shared.generated.resources.ic_directions_bus
+import cashbuddy.shared.generated.resources.ic_home
+import cashbuddy.shared.generated.resources.ic_payments
+import cashbuddy.shared.generated.resources.ic_receipt_long
+import cashbuddy.shared.generated.resources.ic_refresh
+import cashbuddy.shared.generated.resources.ic_restaurant
+import cashbuddy.shared.generated.resources.ic_shopping_bag
+import cashbuddy.shared.generated.resources.ic_trending_down
+import cashbuddy.shared.generated.resources.ic_trending_up
+import cashbuddy.shared.generated.resources.ic_two_wheeler
+import org.jetbrains.compose.resources.DrawableResource
+import org.jetbrains.compose.resources.painterResource
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
@@ -111,7 +111,7 @@ fun TransactionCard(
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
-                    imageVector = getCategoryIcon(categoryName, isDebit),
+                    painter = painterResource(getCategoryDrawable(categoryName, isDebit)),
                     contentDescription = categoryName,
                     tint = categoryColor,
                     modifier = Modifier.size(22.dp)
@@ -182,41 +182,23 @@ fun TransactionItemCard(
     )
 }
 
-fun getCategoryIcon(categoryName: String, isDebit: Boolean = true): ImageVector {
-    return when (categoryName) {
-        "Food", "Food & Dining", "Dining", "Restaurant" -> Icons.Default.Restaurant
-        "Transport", "Transportation", "Travel", "Cab", "Fuel" -> Icons.Default.DirectionsCar
-        "Shopping", "Groceries", "Retail" -> Icons.Default.ShoppingBag
-        "Bills", "Bills & Utilities", "Utilities", "Recharge" -> Icons.Default.Receipt
-        "Entertainment", "Movies", "OTT" -> Icons.Default.Movie
-        "Health", "Healthcare", "Medical", "Pharmacy" -> Icons.Default.LocalHospital
-        "Education", "Learning", "Courses" -> Icons.Default.School
-        "Housing", "Rent", "Housing & Rent" -> Icons.Default.Home
-        "Insurance" -> Icons.Default.Security
-        "Investments", "Investment", "Stocks", "Mutual Funds" -> Icons.AutoMirrored.Filled.TrendingUp
-        "Salary" -> Icons.Default.AccountBalance
-        "Refund" -> Icons.Default.Replay
-        "Gift" -> Icons.Default.CardGiftcard
-        else -> {
-            val lower = categoryName.lowercase()
-            when {
-                lower.contains("food") || lower.contains("dining") || lower.contains("restaurant") -> Icons.Default.Restaurant
-                lower.contains("transport") || lower.contains("car") || lower.contains("auto") -> Icons.Default.DirectionsCar
-                lower.contains("shopping") || lower.contains("store") -> Icons.Default.ShoppingBag
-                lower.contains("bill") || lower.contains("utilit") || lower.contains("recharge") -> Icons.Default.Receipt
-                lower.contains("entertainment") || lower.contains("movie") || lower.contains("ott") -> Icons.Default.Movie
-                lower.contains("health") || lower.contains("medical") || lower.contains("pharm") -> Icons.Default.LocalHospital
-                lower.contains("education") || lower.contains("course") || lower.contains("fee") -> Icons.Default.School
-                lower.contains("housing") || lower.contains("rent") -> Icons.Default.Home
-                lower.contains("insurance") -> Icons.Default.Security
-                lower.contains("invest") -> Icons.AutoMirrored.Filled.TrendingUp
-                lower.contains("salary") -> Icons.Default.AccountBalance
-                lower.contains("refund") -> Icons.Default.Replay
-                lower.contains("gift") -> Icons.Default.CardGiftcard
-                isDebit -> Icons.Default.ArrowDownward
-                else -> Icons.Default.ArrowUpward
-            }
-        }
+fun getCategoryDrawable(categoryName: String, isDebit: Boolean = true): DrawableResource {
+    val lower = categoryName.lowercase()
+    return when {
+        lower.contains("food") || lower.contains("dining") || lower.contains("restaurant") -> Res.drawable.ic_restaurant
+        lower.contains("two wheeler") || lower.contains("bike") || lower.contains("motorcycle") -> Res.drawable.ic_two_wheeler
+        lower.contains("transport") || lower.contains("bus") || lower.contains("travel") || lower.contains("cab") || lower.contains("fuel") || lower.contains("auto") || lower.contains("car") -> Res.drawable.ic_directions_bus
+        lower.contains("shopping") || lower.contains("groceries") || lower.contains("retail") || lower.contains("store") -> Res.drawable.ic_shopping_bag
+        lower.contains("bill") || lower.contains("utilit") || lower.contains("recharge") -> Res.drawable.ic_receipt_long
+        lower.contains("housing") || lower.contains("rent") -> Res.drawable.ic_home
+        lower.contains("invest") || lower.contains("stock") || lower.contains("mutual") -> Res.drawable.ic_trending_up
+        lower.contains("salary") || lower.contains("account") || lower.contains("wallet") -> Res.drawable.ic_account_balance_wallet
+        lower.contains("refund") -> Res.drawable.ic_refresh
+        lower.contains("payment") || lower.contains("upi") -> Res.drawable.ic_payments
+        lower.contains("cash") || lower.contains("money") -> Res.drawable.ic_attach_money
+        categoryName.isNotBlank() && categoryName != "Unknown" -> Res.drawable.ic_category
+        isDebit -> Res.drawable.ic_trending_down
+        else -> Res.drawable.ic_trending_up
     }
 }
 

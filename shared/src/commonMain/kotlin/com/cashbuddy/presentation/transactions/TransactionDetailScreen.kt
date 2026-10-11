@@ -19,8 +19,10 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Edit
+import cashbuddy.shared.generated.resources.Res
+import cashbuddy.shared.generated.resources.ic_delete_forever
+import cashbuddy.shared.generated.resources.ic_edit
+import org.jetbrains.compose.resources.painterResource
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -124,7 +126,7 @@ fun TransactionDetailScreen(
                     )
                     IconButton(onClick = { showEditDialog = true }) {
                         Icon(
-                            imageVector = Icons.Default.Edit,
+                            painter = painterResource(Res.drawable.ic_edit),
                             contentDescription = "Edit Transaction",
                             tint = MaterialTheme.colorScheme.primary
                         )
@@ -259,8 +261,8 @@ fun TransactionDetailScreen(
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Icon(
-                            imageVector = Icons.Default.Edit,
-                            contentDescription = null,
+                            painter = painterResource(Res.drawable.ic_edit),
+                            contentDescription = "Edit Transaction",
                             tint = Color.White,
                             modifier = Modifier.size(18.dp)
                         )
@@ -280,8 +282,8 @@ fun TransactionDetailScreen(
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Icon(
-                            imageVector = Icons.Default.Delete,
-                            contentDescription = null,
+                            painter = painterResource(Res.drawable.ic_delete_forever),
+                            contentDescription = "Delete Transaction",
                             tint = DangerRed,
                             modifier = Modifier.size(18.dp)
                         )

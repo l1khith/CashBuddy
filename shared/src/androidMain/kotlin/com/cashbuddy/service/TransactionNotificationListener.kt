@@ -12,15 +12,11 @@ import android.util.Log
 import androidx.core.app.NotificationCompat
 import com.cashbuddy.core.CategoryEngine
 import com.cashbuddy.core.MerchantRuleEntry
-import com.cashbuddy.domain.model.Transaction
-import com.cashbuddy.domain.model.TransactionStatus
-import com.cashbuddy.domain.model.TransactionType
 import com.cashbuddy.domain.repository.AccountRepository
 import com.cashbuddy.domain.repository.CategoryRepository
 import com.cashbuddy.domain.repository.MerchantRuleRepository
 import com.cashbuddy.domain.repository.SettingsRepository
 import com.cashbuddy.domain.repository.TrainingDataRepository
-import com.cashbuddy.domain.repository.TransactionRepository
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -34,7 +30,7 @@ class TransactionNotificationListener : NotificationListenerService(), KoinCompo
 
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
-    private val transactionRepository: TransactionRepository by inject()
+   // private val transactionRepository: TransactionRepository by inject()
     private val accountRepository: AccountRepository by inject()
     private val categoryRepository: CategoryRepository by inject()
     private val settingsRepository: SettingsRepository by inject()

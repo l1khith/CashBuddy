@@ -3,7 +3,7 @@ package com.cashbuddy.core.prob
 
 import kotlin.concurrent.AtomicReference
 
-actual class ConcurrentHashMap<K : Any, V : Any> : MutableMap<K, V> {
+actual class ConcurrentHashMap<K : Any, V : Any> actual constructor() : MutableMap<K, V> {
     private val ref = AtomicReference<Map<K, V>>(emptyMap())
 
     override val size: Int get() = ref.value.size

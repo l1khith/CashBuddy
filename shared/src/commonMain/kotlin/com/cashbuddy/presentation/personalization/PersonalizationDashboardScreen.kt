@@ -19,12 +19,14 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.Bolt
-import androidx.compose.material.icons.filled.DeleteSweep
-import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material.icons.filled.FileDownload
-import androidx.compose.material.icons.filled.Info
-import androidx.compose.material.icons.filled.Sync
 import androidx.compose.material.icons.filled.TableRows
+import cashbuddy.shared.generated.resources.Res
+import cashbuddy.shared.generated.resources.ic_delete_forever
+import cashbuddy.shared.generated.resources.ic_edit
+import cashbuddy.shared.generated.resources.ic_file_download
+import cashbuddy.shared.generated.resources.ic_info
+import cashbuddy.shared.generated.resources.ic_refresh
+import org.jetbrains.compose.resources.painterResource
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -252,8 +254,8 @@ fun PersonalizationDashboardScreen(
                                     Text("Evaluating Pending Rules...")
                                 } else {
                                     Icon(
-                                        imageVector = Icons.Default.Sync,
-                                        contentDescription = null,
+                                        painter = painterResource(Res.drawable.ic_refresh),
+                                        contentDescription = "Sync",
                                         tint = Color.White,
                                         modifier = Modifier.size(18.dp)
                                     )
@@ -284,8 +286,9 @@ fun PersonalizationDashboardScreen(
                                 shape = RadiusMedium
                             ) {
                                 Icon(
-                                    imageVector = Icons.Default.FileDownload,
-                                    contentDescription = null,
+                                    painter = painterResource(Res.drawable.ic_file_download),
+                                    contentDescription = "Export Dataset",
+                                    tint = MaterialTheme.colorScheme.primary,
                                     modifier = Modifier.size(18.dp)
                                 )
                                 Spacer(modifier = Modifier.width(8.dp))
@@ -298,8 +301,8 @@ fun PersonalizationDashboardScreen(
                                 modifier = Modifier.fillMaxWidth()
                             ) {
                                 Icon(
-                                    imageVector = Icons.Default.DeleteSweep,
-                                    contentDescription = null,
+                                    painter = painterResource(Res.drawable.ic_delete_forever),
+                                    contentDescription = "Reset",
                                     tint = DangerRed,
                                     modifier = Modifier.size(18.dp)
                                 )
@@ -338,8 +341,8 @@ fun PersonalizationDashboardScreen(
                                 horizontalAlignment = Alignment.CenterHorizontally
                             ) {
                                 Icon(
-                                    imageVector = Icons.Default.Info,
-                                    contentDescription = null,
+                                    painter = painterResource(Res.drawable.ic_info),
+                                    contentDescription = "Info",
                                     modifier = Modifier.size(32.dp),
                                     tint = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
@@ -442,8 +445,8 @@ private fun CorrectionItemCard(
                     .padding(10.dp)
             ) {
                 Icon(
-                    imageVector = Icons.Default.Edit,
-                    contentDescription = null,
+                    painter = painterResource(Res.drawable.ic_edit),
+                    contentDescription = "Edit",
                     tint = PrimaryIndigo,
                     modifier = Modifier.size(18.dp)
                 )

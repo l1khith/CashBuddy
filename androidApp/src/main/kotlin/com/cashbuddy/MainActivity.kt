@@ -32,7 +32,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.FragmentActivity
@@ -67,8 +66,15 @@ class MainActivity : FragmentActivity() {
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
 
-        // FLAG_SECURE temporarily disabled to allow device mirroring/scrcpy on laptop
-        window.clearFlags(WindowManager.LayoutParams.FLAG_SECURE)
+        if (BuildConfig.DEBUG) {
+            // Disabled in debug builds to allow device mirroring/scrcpy on laptop
+            window.clearFlags(WindowManager.LayoutParams.FLAG_SECURE)
+        } else {
+            window.setFlags(
+                WindowManager.LayoutParams.FLAG_SECURE,
+                WindowManager.LayoutParams.FLAG_SECURE
+            )
+        }
 
         checkAndPromptNotificationPermissions()
 

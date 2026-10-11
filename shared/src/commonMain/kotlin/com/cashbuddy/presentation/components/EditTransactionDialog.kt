@@ -16,12 +16,14 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowDownward
-import androidx.compose.material.icons.filled.ArrowUpward
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import org.jetbrains.compose.resources.painterResource
+import cashbuddy.shared.generated.resources.Res
+import cashbuddy.shared.generated.resources.ic_trending_down
+import cashbuddy.shared.generated.resources.ic_trending_up
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
@@ -105,8 +107,9 @@ fun EditTransactionDialog(
                         label = { Text("Expense", fontWeight = FontWeight.SemiBold) },
                         leadingIcon = {
                             Icon(
-                                imageVector = Icons.Default.ArrowDownward,
-                                contentDescription = null,
+                                painter = painterResource(Res.drawable.ic_trending_down),
+                                contentDescription = "Expense",
+                                tint = DangerRed,
                                 modifier = Modifier.size(16.dp)
                             )
                         },
@@ -125,8 +128,9 @@ fun EditTransactionDialog(
                         label = { Text("Income", fontWeight = FontWeight.SemiBold) },
                         leadingIcon = {
                             Icon(
-                                imageVector = Icons.Default.ArrowUpward,
-                                contentDescription = null,
+                                painter = painterResource(Res.drawable.ic_trending_up),
+                                contentDescription = "Income",
+                                tint = AccentEmerald,
                                 modifier = Modifier.size(16.dp)
                             )
                         },

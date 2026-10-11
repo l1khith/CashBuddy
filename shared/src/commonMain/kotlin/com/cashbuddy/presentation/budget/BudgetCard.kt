@@ -18,7 +18,10 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.Warning
+import androidx.compose.ui.graphics.vector.rememberVectorPainter
+import cashbuddy.shared.generated.resources.Res
+import cashbuddy.shared.generated.resources.ic_warning
+import org.jetbrains.compose.resources.painterResource
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
@@ -70,13 +73,13 @@ fun BudgetCard(
         label = "budget_progress"
     )
 
-    val (barColor, statusIcon, statusText) = when {
+    val (barColor, statusPainter, statusText) = when {
         status.percentUsed >= 100f || status.state == AlertState.EXCEEDED ->
-            Triple(DangerRed, Icons.Default.Warning, "Exceeded by ${formatCurrency(abs(status.remaining), includeSymbol = true)}")
+            Triple(DangerRed, painterResource(Res.drawable.ic_warning), "Exceeded by ${formatCurrency(abs(status.remaining), includeSymbol = true)}")
         status.percentUsed >= 80f || status.state == AlertState.WARNING ->
-            Triple(WarningAmber, Icons.Default.Warning, "Approaching limit ($percentInt% used)")
+            Triple(WarningAmber, painterResource(Res.drawable.ic_warning), "Approaching limit ($percentInt% used)")
         else ->
-            Triple(AccentEmerald, Icons.Default.CheckCircle, "${formatCurrency(status.remaining, includeSymbol = true)} remaining ($percentInt% used)")
+            Triple(AccentEmerald, rememberVectorPainter(Icons.Default.CheckCircle), "${formatCurrency(status.remaining, includeSymbol = true)} remaining ($percentInt% used)")
     }
 
     val categoryColor = getCategoryColor(budget.category)
@@ -188,7 +191,7 @@ fun BudgetCard(
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(
-                        imageVector = statusIcon,
+                        painter = statusPainter,
                         contentDescription = null,
                         tint = barColor,
                         modifier = Modifier.size(14.dp)
