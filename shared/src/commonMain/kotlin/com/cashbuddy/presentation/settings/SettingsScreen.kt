@@ -184,6 +184,33 @@ fun SettingsScreen(
                                 Text("Android Notification Access Settings")
                             }
 
+                            if (state.isOcrAvailable) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        Text(
+                                            text = "Screenshot Receipt OCR",
+                                            style = MaterialTheme.typography.titleMedium,
+                                            fontWeight = FontWeight.SemiBold
+                                        )
+                                        Text(
+                                            text = "Screenshot OCR uses ML Kit on the Play Store build and Tesseract on the F-Droid build. Both run entirely on-device.",
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                    }
+                                    Text(
+                                        text = "Active",
+                                        style = MaterialTheme.typography.labelMedium,
+                                        color = AccentEmerald,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                }
+                            }
+
                         }
                     }
                 }

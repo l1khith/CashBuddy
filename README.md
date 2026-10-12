@@ -70,9 +70,9 @@ CashBuddy follows **Clean Architecture** and **Unidirectional Data Flow (UDF)**:
 | **Database** | SQLDelight 2.0.2 with SQLCipher (AES-256 GCM) |
 | **Key Storage** | Android Keystore (TEE / StrongBox) |
 | **Dependency Injection** | Koin 4.0 |
-| **Text Recognition (OCR)** | Bundled Google ML Kit (100% Offline) |
+| **Text Recognition (OCR)** | Play flavor: Google ML Kit • F-Droid flavor: Tesseract4Android (100% Offline) |
 | **Concurrency** | Kotlin Coroutines & Flow |
-| **Target Platforms** | Android (API 26+) & iOS |
+| **Target Platforms** | Android (API 24+ / targetSdk 36) & iOS |
 
 ---
 
@@ -80,17 +80,23 @@ CashBuddy follows **Clean Architecture** and **Unidirectional Data Flow (UDF)**:
 
 ### Prerequisites
 - Android Studio Ladybug / Meerkat (or newer)
-- JDK 17 or JDK 21
-- Android SDK 35
+- JDK 21
+- Android SDK 36
+
+### Build Flavors (`play` & `fdroid`)
+
+CashBuddy provides two distribution flavors:
+- **`play`**: Uses Google ML Kit (`com.google.mlkit:text-recognition`) for offline screenshot OCR.
+- **`fdroid`**: 100% free and open-source build with zero proprietary dependencies. Uses **Tesseract4Android** (`cz.adaptech.tesseract4android:tesseract4android:4.9.0`, Apache-2.0 License) and bundles `eng.traineddata` and `hin.traineddata` from [`tesseract-ocr/tessdata_fast`](https://github.com/tesseract-ocr/tessdata_fast) under the **Apache-2.0 License** in `androidApp/src/fdroid/assets/tessdata/` (adds ~5.2 MB of uncompressed traineddata to the F-Droid APK).
 
 ### Build Commands
 
 ```bash
-# Build Android Debug APK
-./gradlew :androidApp:assembleDebug
+# Build Google Play Release APK & AAB
+./gradlew :androidApp:assemblePlayRelease :androidApp:bundlePlayRelease
 
-# Build Android Release APK (with R8 minification)
-./gradlew :androidApp:assembleRelease
+# Build F-Droid Unsigned Release APK (FOSS / Tesseract OCR)
+./gradlew :androidApp:assembleFdroidRelease
 
 # Run all unit tests
 ./gradlew :shared:testAndroidHostTest
@@ -103,5 +109,6 @@ CashBuddy follows **Clean Architecture** and **Unidirectional Data Flow (UDF)**:
 CashBuddy is built with a zero-compromise approach to privacy:
 - Zero data collection
 - Zero analytics or tracking SDKs
-- Zero network communication
+- Zero network communication (`INTERNET` permission stripped)
 - 100% local on-device operation
+- F-Droid flavor bundles `eng.traineddata` and `hin.traineddata` from `tesseract-ocr/tessdata_fast` under the Apache License 2.0.

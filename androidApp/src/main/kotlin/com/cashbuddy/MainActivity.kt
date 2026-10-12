@@ -37,6 +37,7 @@ import androidx.core.content.ContextCompat
 import androidx.fragment.app.FragmentActivity
 import androidx.lifecycle.lifecycleScope
 import com.cashbuddy.domain.repository.SettingsRepository
+import com.cashbuddy.ocr.OcrEngine
 import com.cashbuddy.presentation.CashBuddyApp
 import com.cashbuddy.presentation.theme.CashBuddyTheme
 import kotlinx.coroutines.Dispatchers
@@ -47,6 +48,7 @@ import org.koin.android.ext.android.inject
 class MainActivity : FragmentActivity() {
 
     private val settingsRepository: SettingsRepository by inject()
+    private val ocrEngine: OcrEngine by inject()
 
     private enum class AuthState { LOADING, AUTHENTICATED, LOCKED }
     private var authState by mutableStateOf(AuthState.LOADING)
@@ -114,52 +116,66 @@ class MainActivity : FragmentActivity() {
         }
 
         // Layer 2: Handle incoming shared UPI payment screenshots
-        val screenshotHandler = com.cashbuddy.screenshot.ScreenshotHandler(this)
-        val cachedScreenshotFiles = mutableListOf<java.io.File>()
-
-        if (intent?.action == android.content.Intent.ACTION_SEND && intent?.type?.startsWith("image/") == true) {
-            val imageUri = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
-                intent?.getParcelableExtra(android.content.Intent.EXTRA_STREAM, android.net.Uri::class.java)
-            } else {
-                @Suppress("DEPRECATION")
-                intent?.getParcelableExtra(android.content.Intent.EXTRA_STREAM)
-            }
-            if (imageUri != null) {
-                screenshotHandler.copyUriToCache(imageUri)?.let { cachedScreenshotFiles.add(it) }
-            }
-        } else if (intent?.action == android.content.Intent.ACTION_SEND_MULTIPLE && intent?.type?.startsWith("image/") == true) {
-            val uris = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
-                intent?.getParcelableArrayListExtra(android.content.Intent.EXTRA_STREAM, android.net.Uri::class.java)
-            } else {
-                @Suppress("DEPRECATION")
-                intent?.getParcelableArrayListExtra(android.content.Intent.EXTRA_STREAM)
-            }
-            uris?.forEach { uri ->
-                screenshotHandler.copyUriToCache(uri)?.let { cachedScreenshotFiles.add(it) }
-            }
-        }
-
-        // Process screenshots with user feedback
         var screenshotInitialRoute: String? = null
-        if (cachedScreenshotFiles.isNotEmpty()) {
-            screenshotInitialRoute = "processing_screenshot"
-            lifecycleScope.launch(Dispatchers.IO) {
-                val createdIds = screenshotHandler.processScreenshots(cachedScreenshotFiles)
-                launch(Dispatchers.Main) {
-                    if (createdIds.isNotEmpty()) {
-                        android.widget.Toast.makeText(
-                            this@MainActivity,
-                            "${createdIds.size} transaction(s) parsed from screenshot",
-                            android.widget.Toast.LENGTH_LONG
-                        ).show()
+        val isShareImageIntent = (intent?.action == android.content.Intent.ACTION_SEND ||
+            intent?.action == android.content.Intent.ACTION_SEND_MULTIPLE) &&
+            intent?.type?.startsWith("image/") == true
+
+        if (isShareImageIntent) {
+            if (ocrEngine.isAvailable) {
+                val screenshotHandler = com.cashbuddy.screenshot.ScreenshotHandler(this)
+                val cachedScreenshotFiles = mutableListOf<java.io.File>()
+
+                if (intent?.action == android.content.Intent.ACTION_SEND) {
+                    val imageUri = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+                        intent?.getParcelableExtra(android.content.Intent.EXTRA_STREAM, android.net.Uri::class.java)
                     } else {
-                        android.widget.Toast.makeText(
-                            this@MainActivity,
-                            "Could not recognize transaction in screenshot",
-                            android.widget.Toast.LENGTH_LONG
-                        ).show()
+                        @Suppress("DEPRECATION")
+                        intent?.getParcelableExtra(android.content.Intent.EXTRA_STREAM)
+                    }
+                    if (imageUri != null) {
+                        screenshotHandler.copyUriToCache(imageUri)?.let { cachedScreenshotFiles.add(it) }
+                    }
+                } else if (intent?.action == android.content.Intent.ACTION_SEND_MULTIPLE) {
+                    val uris = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+                        intent?.getParcelableArrayListExtra(android.content.Intent.EXTRA_STREAM, android.net.Uri::class.java)
+                    } else {
+                        @Suppress("DEPRECATION")
+                        intent?.getParcelableArrayListExtra(android.content.Intent.EXTRA_STREAM)
+                    }
+                    uris?.forEach { uri ->
+                        screenshotHandler.copyUriToCache(uri)?.let { cachedScreenshotFiles.add(it) }
                     }
                 }
+
+                // Process screenshots with user feedback
+                if (cachedScreenshotFiles.isNotEmpty()) {
+                    screenshotInitialRoute = "processing_screenshot"
+                    lifecycleScope.launch(Dispatchers.IO) {
+                        val createdIds = screenshotHandler.processScreenshots(cachedScreenshotFiles)
+                        launch(Dispatchers.Main) {
+                            if (createdIds.isNotEmpty()) {
+                                android.widget.Toast.makeText(
+                                    this@MainActivity,
+                                    "${createdIds.size} transaction(s) parsed from screenshot",
+                                    android.widget.Toast.LENGTH_LONG
+                                ).show()
+                            } else {
+                                android.widget.Toast.makeText(
+                                    this@MainActivity,
+                                    "Could not recognize transaction in screenshot",
+                                    android.widget.Toast.LENGTH_LONG
+                                ).show()
+                            }
+                        }
+                    }
+                }
+            } else {
+                android.widget.Toast.makeText(
+                    this@MainActivity,
+                    "Screenshot OCR is not available on this device.",
+                    android.widget.Toast.LENGTH_LONG
+                ).show()
             }
         }
 
