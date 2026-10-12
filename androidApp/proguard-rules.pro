@@ -22,3 +22,12 @@
 -keep class com.google.mlkit.** { *; }
 -keep class com.google.android.gms.internal.mlkit_vision_text_common.** { *; }
 -dontwarn com.google.mlkit.**
+-dontwarn com.google.android.gms.internal.mlkit_vision_text_common.**
+
+# Tesseract4Android & Leptonica (F-Droid build JNI & native bindings)
+-keep class cz.adaptech.tesseract4android.** { *; }
+-keep class com.googlecode.leptonica.android.** { *; }
+-keep class com.googlecode.tesseract.android.** { *; }
+-dontwarn cz.adaptech.tesseract4android.**
+-dontwarn com.googlecode.leptonica.android.**
+-dontwarn com.googlecode.tesseract.android.**

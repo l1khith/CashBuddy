@@ -147,7 +147,7 @@ val appModule = module {
             budgetEngine = get()
         )
     }
-    viewModel { SettingsViewModel(get(), get(), get(), get(), get(), getOrNull(), getOrNull(), getOrNull()) }
+    viewModel { SettingsViewModel(get(), get(), get(), get(), get(), getOrNull(), getOrNull(), getOrNull(), getOrNull()) }
     viewModel { PersonalizationViewModel(get(), get(), get(), get(), getOrNull()) }
     viewModelOf(::AddTransactionViewModel)
     viewModel { DebugLogViewModel(get(), get(), getOrNull()) }

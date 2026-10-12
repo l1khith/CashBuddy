@@ -1,42 +1,46 @@
 package com.cashbuddy.screenshot
 
-import android.content.Context
-import android.net.Uri
 import android.util.Log
 import com.cashbuddy.core.ScreenshotTransaction
 import com.cashbuddy.core.parseScreenshotText
-import com.google.mlkit.vision.common.InputImage
-import com.google.mlkit.vision.text.TextRecognition
-import com.google.mlkit.vision.text.latin.TextRecognizerOptions
+import com.cashbuddy.ocr.OcrEngine
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
 import java.io.File
-import kotlin.coroutines.resume
-import kotlin.coroutines.resumeWithException
 
-class ScreenshotParser(private val context: Context) {
-
-    private val recognizer = TextRecognition.getClient(TextRecognizerOptions.DEFAULT_OPTIONS)
+class ScreenshotParser(
+    private val ocrEngine: OcrEngine
+) {
 
     companion object {
         private const val TAG = "ScreenshotParser"
     }
 
     /**
-     * Run ML Kit OCR on a locally cached image file and parse into structured transaction via Kotlin engine.
+     * Run OCR via OcrEngine on a locally cached image file and parse into structured transaction via Kotlin engine.
      */
     suspend fun parseImageFile(file: File): ScreenshotTransaction? = withContext(Dispatchers.IO) {
-        Log.d(TAG, "Starting OCR on file: ${file.name} (${file.length()} bytes)")
-
-        val image = InputImage.fromFilePath(context, Uri.fromFile(file))
-        val ocrText = try {
-            extractText(image)
-        } catch (e: Throwable) {
-            Log.e(TAG, "ML Kit OCR failed for ${file.name}", e)
+        if (!ocrEngine.isAvailable) {
+            Log.w(TAG, "OCR engine is not available in this build flavor")
             return@withContext null
         }
 
+        Log.d(TAG, "Starting OCR on file: ${file.name} (${file.length()} bytes)")
+
+        val imageBytes = try {
+            file.readBytes()
+        } catch (e: Throwable) {
+            Log.e(TAG, "Failed to read screenshot file: ${file.name}", e)
+            return@withContext null
+        }
+
+        val ocrResult = ocrEngine.recognizeText(imageBytes)
+        if (!ocrResult.success) {
+            Log.e(TAG, "OCR failed for ${file.name}: ${ocrResult.errorMessage}")
+            return@withContext null
+        }
+
+        val ocrText = ocrResult.text
         if (ocrText.isBlank()) {
             Log.w(TAG, "OCR returned empty text for ${file.name}")
             return@withContext null
@@ -59,17 +63,5 @@ class ScreenshotParser(private val context: Context) {
         }
 
         result
-    }
-
-    private suspend fun extractText(image: InputImage): String = suspendCancellableCoroutine { continuation ->
-        recognizer.process(image)
-            .addOnSuccessListener { visionText ->
-                Log.d(TAG, "ML Kit success: ${visionText.textBlocks.size} text blocks found")
-                continuation.resume(visionText.text)
-            }
-            .addOnFailureListener { exception ->
-                Log.e(TAG, "ML Kit processing failed", exception)
-                continuation.resumeWithException(exception)
-            }
     }
 }

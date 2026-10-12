@@ -16,27 +16,8 @@ val keystoreProperties = Properties().apply {
 
 kotlin {
     compilerOptions {
-        jvmTarget = JvmTarget.JVM_11
+        jvmTarget = JvmTarget.JVM_21
     }
-}
-dependencies {
-    implementation(project(":shared"))
-
-    implementation(libs.androidx.activity.compose)
-    implementation(libs.androidx.appcompat)
-    implementation(libs.androidx.biometric)
-    implementation(libs.androidx.core)
-    implementation(libs.koin.android)
-    implementation(libs.koin.compose)
-    implementation(libs.sqlcipher)
-    implementation(libs.compose.runtime)
-    implementation(libs.compose.foundation)
-    implementation(libs.compose.material3)
-    implementation(compose.materialIconsExtended)
-    implementation(libs.compose.ui)
-    implementation(libs.compose.uiToolingPreview)
-    debugImplementation(libs.compose.uiTooling)
-    implementation("com.google.mlkit:text-recognition:16.0.1")
 }
 
 android {
@@ -47,8 +28,8 @@ android {
         applicationId = "com.cashbuddy"
         minSdk = libs.versions.android.minSdk.get().toInt()
         targetSdk = libs.versions.android.targetSdk.get().toInt()
-        versionCode = 1
-        versionName = "1.0"
+        versionCode = 3
+        versionName = "1.0.2"
 
         ndk {
             abiFilters.addAll(listOf("arm64-v8a", "x86_64"))
@@ -69,6 +50,21 @@ android {
             }
         }
     }
+    flavorDimensions += "distribution"
+    productFlavors {
+        create("play") {
+            dimension = "distribution"
+            isDefault = true
+            val releaseSigning = signingConfigs.getByName("release")
+            if (releaseSigning.storeFile?.exists() == true) {
+                signingConfig = releaseSigning
+            }
+        }
+        create("fdroid") {
+            dimension = "distribution"
+            signingConfig = null
+        }
+    }
     packaging {
         resources {
             excludes += "/META-INF/{AL2.0,LGPL2.1}"
@@ -81,14 +77,6 @@ android {
         release {
             isMinifyEnabled = true
             isShrinkResources = true
-            val releaseSigning = signingConfigs.getByName("release")
-            if (releaseSigning.storeFile?.exists() == true) {
-                signingConfig = releaseSigning
-            }
-            ndk {
-                abiFilters.clear()
-                abiFilters.add("arm64-v8a")
-            }
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
@@ -96,11 +84,32 @@ android {
         }
     }
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_11
-        targetCompatibility = JavaVersion.VERSION_11
+        sourceCompatibility = JavaVersion.VERSION_21
+        targetCompatibility = JavaVersion.VERSION_21
     }
     buildFeatures {
         compose = true
         buildConfig = true
     }
+}
+
+dependencies {
+    implementation(project(":shared"))
+
+    implementation(libs.androidx.activity.compose)
+    implementation(libs.androidx.appcompat)
+    implementation(libs.androidx.biometric)
+    implementation(libs.androidx.core)
+    implementation(libs.koin.android)
+    implementation(libs.koin.compose)
+    implementation(libs.sqlcipher)
+    implementation(libs.compose.runtime)
+    implementation(libs.compose.foundation)
+    implementation(libs.compose.material3)
+    implementation(compose.materialIconsExtended)
+    implementation(libs.compose.ui)
+    implementation(libs.compose.uiToolingPreview)
+    debugImplementation(libs.compose.uiTooling)
+    "playImplementation"("com.google.mlkit:text-recognition:16.0.1")
+    "fdroidImplementation"("cz.adaptech.tesseract4android:tesseract4android:4.9.0")
 }

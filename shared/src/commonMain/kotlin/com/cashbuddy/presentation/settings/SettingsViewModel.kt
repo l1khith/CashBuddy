@@ -37,7 +37,8 @@ data class SettingsUiState(
     val isScanningDuplicates: Boolean = false,
     val duplicateGroups: List<com.cashbuddy.core.DuplicateReconciler.DuplicateGroup> = emptyList(),
     val hasRecentMerges: Boolean = false,
-    val isMerging: Boolean = false
+    val isMerging: Boolean = false,
+    val isOcrAvailable: Boolean = false
 )
 
 class SettingsViewModel(
@@ -48,10 +49,11 @@ class SettingsViewModel(
     private val trainingDataRepository: TrainingDataRepository,
     private val fileExporter: FileExporter? = null,
     private val debugConfig: com.cashbuddy.debug.DebugConfig? = null,
-    private val duplicateReconciler: com.cashbuddy.core.DuplicateReconciler? = null
+    private val duplicateReconciler: com.cashbuddy.core.DuplicateReconciler? = null,
+    private val ocrEngine: com.cashbuddy.ocr.OcrEngine? = null
 ) : ViewModel() {
 
-    private val _uiState = MutableStateFlow(SettingsUiState())
+    private val _uiState = MutableStateFlow(SettingsUiState(isOcrAvailable = ocrEngine?.isAvailable ?: false))
     val uiState: StateFlow<SettingsUiState> = _uiState.asStateFlow()
 
     private val _messageEffect = MutableSharedFlow<String>(extraBufferCapacity = 1)
@@ -83,7 +85,8 @@ class SettingsViewModel(
                     isDebugLogEnabled = debugLogEnabled,
                     isDebugLogVisible = true,
                     preferredCurrency = settings.preferredCurrency,
-                    isLoading = false
+                    isLoading = false,
+                    isOcrAvailable = ocrEngine?.isAvailable ?: false
                 )
             }.collect {
                 _uiState.value = it

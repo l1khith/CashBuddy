@@ -1,0 +1,50 @@
+# metadata/com.cashbuddy.yml
+# CashBuddy — 100% offline, privacy-first personal finance tracker.
+# F-Droid build uses the "fdroid" flavor (Tesseract4Android OCR, zero proprietary dependencies, zero network permissions).
+
+Categories:
+  - Money
+  - Security
+
+License: GPL-3.0-or-later
+
+SourceCode: https://github.com/l1khith/CashBuddy
+IssueTracker: https://github.com/l1khith/CashBuddy/issues
+Changelog: https://github.com/l1khith/CashBuddy/releases
+
+Name: CashBuddy
+
+Summary: 100% offline, privacy-first personal finance tracker
+
+Description: |
+  CashBuddy is a fully offline personal finance tracker designed for Indian
+  banks and UPI applications. It captures transactions through a three-layer
+  intake system: passive notification parsing, offline screenshot OCR, and
+  fast manual entry.
+
+  All data stays on-device. The app has zero network permissions, zero
+  analytics SDKs, and uses SQLCipher AES-256 encryption backed by the Android
+  Keystore.
+
+  The F-Droid build uses Tesseract4Android (Apache-2.0) with bundled English
+  and Hindi/Devanagari traineddata files for 100% offline screenshot OCR
+  without any proprietary dependencies.
+
+RepoType: git
+Repo: https://github.com/l1khith/CashBuddy.git
+
+AutoUpdateMode: Version
+UpdateCheckMode: Tags
+CurrentVersion: 1.0.2
+CurrentVersionCode: 3
+
+Builds:
+  - versionName: '1.0.2'
+    versionCode: 3
+    commit: v1.0.2
+    subdir: androidApp
+    gradle:
+      - fdroid
+    output: build/outputs/apk/fdroid/release/androidApp-fdroid-release-unsigned.apk
+    prebuild: |
+      sed -i -e '/playImplementation/d' build.gradle.kts
