@@ -28,8 +28,8 @@ android {
         applicationId = "com.cashbuddy"
         minSdk = libs.versions.android.minSdk.get().toInt()
         targetSdk = libs.versions.android.targetSdk.get().toInt()
-        versionCode = 3
-        versionName = "1.0.2"
+        versionCode = 4
+        versionName = "1.0.3"
 
         ndk {
             abiFilters.addAll(listOf("arm64-v8a", "x86_64"))
@@ -110,6 +110,7 @@ dependencies {
     implementation(libs.compose.ui)
     implementation(libs.compose.uiToolingPreview)
     debugImplementation(libs.compose.uiTooling)
+
     "playImplementation"("com.google.mlkit:text-recognition:16.0.1")
     "fdroidImplementation"("cz.adaptech.tesseract4android:tesseract4android:4.9.0")
 }
