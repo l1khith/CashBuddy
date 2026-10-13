@@ -676,12 +676,6 @@ fun SettingsScreen(
                                 .clickable { viewModel.onVersionClicked() }
                                 .padding(horizontal = 12.dp, vertical = 6.dp)
                         )
-                        Spacer(modifier = Modifier.height(4.dp))
-                        Text(
-                            text = "Typography: Roboto (Apache License 2.0)",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
-                        )
                         if (state.isDebugLogEnabled) {
                             Spacer(modifier = Modifier.height(4.dp))
                             Text(
