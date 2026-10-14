@@ -106,6 +106,8 @@ CashBuddy provides two distribution flavors:
 
 ## 📄 License & Privacy
 
+CashBuddy is open source software licensed under the **[Apache License, Version 2.0](LICENSE)**.
+
 CashBuddy is built with a zero-compromise approach to privacy:
 - Zero data collection
 - Zero analytics or tracking SDKs
