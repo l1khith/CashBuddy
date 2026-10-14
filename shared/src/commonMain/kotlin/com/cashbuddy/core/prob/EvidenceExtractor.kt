@@ -191,6 +191,11 @@ class EvidenceExtractor(
         return m.groups[1]?.value?.takeLast(4)
     }
 
+    fun extractUtr(text: String): String? {
+        val m = Regexes.UTR.find(text) ?: return null
+        return m.groups[1]?.value?.trim()
+    }
+
     fun extractMerchant(text: String, packageName: String? = null): String? {
         // 1. UPI handle / VPA
         val vpa = Regexes.UPI_HANDLE.find(text)?.value

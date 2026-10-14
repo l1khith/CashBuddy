@@ -124,30 +124,60 @@ class ScreenshotHandler(private val context: Context) : KoinComponent {
                         createdIds.add(outcome.txId)
                         Log.i(TAG, "Screenshot flagged for review: txId=${outcome.txId}")
                     }
+                    is com.cashbuddy.core.prob.PipelineOutcome.Merged -> {
+                        createdIds.add(outcome.txId)
+                        Log.i(TAG, "Screenshot merged with existing transaction: txId=${outcome.txId}")
+                    }
+                    is com.cashbuddy.core.prob.PipelineOutcome.DuplicateSkipped -> {
+                        Log.i(TAG, "Screenshot duplicate skipped: rawId=${outcome.rawId}")
+                    }
                     else -> {
                         Log.i(TAG, "Screenshot outcome: $outcome. Checking fallback.")
                         if (parsed.amount > 0.0 && parsed.merchant.isNotBlank() && parsed.merchant != "UPI Merchant") {
-                            val allCategories = categoryRepository.getAll().firstOrNull() ?: emptyList()
-                            val categoryId = allCategories.find { it.name.equals(parsed.category, ignoreCase = true) }?.id ?: 1L
-                            val domainTxType = when (parsed.transactionType) {
-                                com.cashbuddy.core.TransactionType.DEBIT -> com.cashbuddy.domain.model.TransactionType.DEBIT
-                                com.cashbuddy.core.TransactionType.CREDIT -> com.cashbuddy.domain.model.TransactionType.CREDIT
+                            // Check deduplication before fallback insertion
+                            val utr = parsed.utrOrRef
+                            val recentTxs = transactionRepository.getByDateRange(timestamp - (24 * 60 * 60 * 1000L), timestamp + (24 * 60 * 60 * 1000L)).firstOrNull() ?: emptyList()
+                            val existingMatch = if (!utr.isNullOrBlank()) {
+                                recentTxs.find { it.rawText.contains(utr, ignoreCase = true) }
+                            } else {
+                                recentTxs.find {
+                                    kotlin.math.abs(it.amount - parsed.amount) < 0.01 &&
+                                    (it.merchant.contains(parsed.merchant, ignoreCase = true) || parsed.merchant.contains(it.merchant, ignoreCase = true))
+                                }
                             }
-                            val tx = Transaction(
-                                accountId = 1L,
-                                categoryId = categoryId,
-                                amount = parsed.amount,
-                                type = domainTxType,
-                                timestamp = timestamp,
-                                merchant = parsed.merchant,
-                                notes = "Captured via Screenshot (${parsed.appName ?: "UPI"})",
-                                status = if (parsed.confidence >= 0.85f && parsed.amount < 10000.0) TransactionStatus.CONFIRMED else TransactionStatus.PENDING,
-                                confidence = parsed.confidence,
-                                sourceApp = parsed.appName ?: "screenshot",
-                                rawText = parsed.rawText
-                            )
-                            val insertedId = transactionRepository.insert(tx)
-                            createdIds.add(insertedId)
+
+                            if (existingMatch != null) {
+                                Log.i(TAG, "Fallback deduplication found existing transaction txId=${existingMatch.id}. Merging.")
+                                val combinedNotes = existingMatch.notes ?: "Captured via Screenshot (${parsed.appName ?: "UPI"})"
+                                transactionRepository.update(existingMatch.copy(
+                                    merchant = if (parsed.merchant.length > existingMatch.merchant.length) parsed.merchant else existingMatch.merchant,
+                                    notes = combinedNotes,
+                                    updatedAt = timestamp
+                                ))
+                                createdIds.add(existingMatch.id)
+                            } else {
+                                val allCategories = categoryRepository.getAll().firstOrNull() ?: emptyList()
+                                val categoryId = allCategories.find { it.name.equals(parsed.category, ignoreCase = true) }?.id ?: 1L
+                                val domainTxType = when (parsed.transactionType) {
+                                    com.cashbuddy.core.TransactionType.DEBIT -> com.cashbuddy.domain.model.TransactionType.DEBIT
+                                    com.cashbuddy.core.TransactionType.CREDIT -> com.cashbuddy.domain.model.TransactionType.CREDIT
+                                }
+                                val tx = Transaction(
+                                    accountId = 1L,
+                                    categoryId = categoryId,
+                                    amount = parsed.amount,
+                                    type = domainTxType,
+                                    timestamp = timestamp,
+                                    merchant = parsed.merchant,
+                                    notes = "Captured via Screenshot (${parsed.appName ?: "UPI"})",
+                                    status = if (parsed.confidence >= 0.85f && parsed.amount < 10000.0) TransactionStatus.CONFIRMED else TransactionStatus.PENDING,
+                                    confidence = parsed.confidence,
+                                    sourceApp = parsed.appName ?: "screenshot",
+                                    rawText = parsed.rawText
+                                )
+                                val insertedId = transactionRepository.insert(tx)
+                                createdIds.add(insertedId)
+                            }
                         }
                     }
                 }

@@ -114,17 +114,21 @@ class MessagePipeline(
                     if (amount <= 0.0) {
                         PipelineOutcome.Ignored(raw.id, classification.pTransaction, "Zero or unparsed amount")
                     } else {
-                        // 6. Dedup against recent 5-min window
+                        // 6. Dedup against recent 5-min window (or 24-hour window if UTR present)
                         val now = raw.timestamp
-                        val recentTxs = transactionRepo.getByDateRange(now - DedupEngine.WINDOW_MS, now + DedupEngine.WINDOW_MS).firstOrNull() ?: emptyList()
+                        val utr = classification.utr
+                        val windowMs = if (utr != null) 24 * 60 * 60 * 1000L else DedupEngine.WINDOW_MS
+                        val recentTxs = transactionRepo.getByDateRange(now - windowMs, now + windowMs).firstOrNull() ?: emptyList()
                         val candidates = recentTxs.map {
+                            val candidateUtr = evidenceExtractor.extractUtr(it.rawText)
                             DedupEngine.ExistingCandidate(
                                 id = it.id,
                                 amount = it.amount,
                                 merchant = it.merchant,
                                 accountLast4 = it.sourceApp,
                                 pTransaction = it.confidence.toDouble(),
-                                timestamp = it.timestamp
+                                timestamp = it.timestamp,
+                                utr = candidateUtr
                             )
                         }
 
@@ -134,7 +138,8 @@ class MessagePipeline(
                                 merchant = classification.merchant,
                                 accountLast4 = classification.accountLast4,
                                 pTransaction = classification.pTransaction,
-                                timestamp = raw.timestamp
+                                timestamp = raw.timestamp,
+                                utr = utr
                             ),
                             existing = candidates
                         )
@@ -228,17 +233,19 @@ class MessagePipeline(
                                     }
                                     val upgradedAccount = classification.accountLast4?.let {
                                         accountRegistry.findOrCreate(it, classification.bankHint)
-                                    }
-                                    if (upgradedAccount != null && upgradedAccount != existing.accountId) {
-                                        transactionRepo.update(existing.copy(
-                                            accountId = upgradedAccount,
-                                            status = newStatus,
-                                            confidence = maxOf(existing.confidence, classification.pTransaction.toFloat()),
-                                            updatedAt = raw.timestamp
-                                        ))
-                                    } else {
-                                        transactionRepo.updateStatus(dedupDecision.existingId, newStatus)
-                                    }
+                                    } ?: existing.accountId
+
+                                    val upgradedMerchant = dedupDecision.upgradedFields.merchant ?: existing.merchant
+                                    val combinedRawText = if (existing.rawText.contains(fullText)) existing.rawText else "${existing.rawText}\n---\n$fullText"
+
+                                    transactionRepo.update(existing.copy(
+                                        accountId = upgradedAccount,
+                                        merchant = upgradedMerchant,
+                                        status = newStatus,
+                                        confidence = maxOf(existing.confidence, classification.pTransaction.toFloat()),
+                                        rawText = combinedRawText,
+                                        updatedAt = raw.timestamp
+                                    ))
                                     rawMessageRepo.updateResultingTx(raw.id, dedupDecision.existingId.toString())
                                 }
                                 PipelineOutcome.Merged(dedupDecision.existingId, classification.pTransaction)
