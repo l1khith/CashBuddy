@@ -1,4 +1,4 @@
-# CashBuddy 💰
+# CashBuddy
 
 **CashBuddy** is a 100% offline, privacy-first personal finance tracker built with **Kotlin Multiplatform (KMP)** and **Compose Multiplatform**.
 
@@ -6,28 +6,28 @@ It captures, categorizes, and tracks expenses and income across all Indian banks
 
 ---
 
-## 🌟 Key Features
+## Key Features
 
-- 🔒 **100% Offline & Private**: Zero `INTERNET` permission in production. Your financial data never leaves your device.
-- 🚫 **Zero SMS Permissions**: Fully compliant with Google Play Store policies. Uses `BIND_NOTIFICATION_LISTENER_SERVICE` exclusively.
-- ⚡ **Pure Kotlin Multiplatform Core**: Built with 100% pure Kotlin (`shared/commonMain`). Zero JNI/NDK dependencies, zero native crashes, instant builds, and a tiny APK size (<15 MB).
-- 📲 **3-Layer Transaction Capture**:
+- **100% Offline & Private**: Zero `INTERNET` permission in production. Your financial data never leaves your device.
+- **Zero SMS Permissions**: Fully compliant with Google Play Store policies. Uses `BIND_NOTIFICATION_LISTENER_SERVICE` exclusively.
+- **Pure Kotlin Multiplatform Core**: Built with 100% pure Kotlin (`shared/commonMain`). Zero JNI/NDK dependencies, zero native crashes, instant builds, and a tiny APK size (<15 MB).
+- **3-Layer Transaction Capture**:
   1. **Notification Listener**: Passively parses transactional alerts from 50+ curated Indian banks and UPI apps (Google Pay, PhonePe, Paytm, CRED, HDFC, SBI, ICICI, Axis, etc.).
   2. **Screenshot Sharing**: Share UPI payment screenshots directly to CashBuddy from any app (e.g. BMTC tickets, GPay, PhonePe receipts). Offline ML Kit OCR extracts text and parses entities automatically.
   3. **Smart Manual Entry**: Instant manual entry with frequency-based merchant chips, auto-prefill, and fast category assignment.
-- 🧠 **On-Device Hybrid Personalization**:
+- **On-Device Hybrid Personalization**:
   - **Tier 1 (User Rules)**: Custom merchant-to-category rules learned immediately from user corrections (Confidence: 1.0).
   - **Tier 2 (Keyword Dictionary)**: Curated dictionary of 300+ Indian merchant keywords (Swiggy, Zomato, Uber, Blinkit, D-Mart, etc.) (Confidence: 0.90).
   - **Tier 3 (Fallback)**: Graceful fallback to Uncategorized for manual review.
-- 🛡️ **Human-in-the-Loop Review**: Transactions with confidence $< 0.85$ or amount $\ge ₹10,000$ are flagged as `PENDING` for explicit user review.
-- 🔐 **Hardware-Backed Encryption**: Encrypted with **SQLCipher (AES-256 GCM)** using hardware-backed keys from the **Android Keystore (TEE / StrongBox)**.
-- 👆 **Biometric Security**: Protected by `BIOMETRIC_STRONG` authentication on app launch and automatically locks after 5 minutes of background inactivity.
-- 📊 **Visual Analytics**: Interactive monthly summaries, spending category breakdowns, and financial goals.
-- 🎯 **Global & Category Budgets & Real-Time Alerts**: Set an overall global spending limit as well as per-category budgets for monthly, weekly, or yearly periods. Features computed Unbudgeted spending visibility, dynamic progress tracking (<80% green, 80–99% amber, ≥100% red), prioritized at-most-once notifications (category before global) at 80% and 100% threshold crossings, automated period rollover, and transaction drill-down. (See [Budgets Spec](specs/budgets/spec.md) and [Global Budget Spec](specs/budgets/spec-global.md)).
+- **Human-in-the-Loop Review**: Transactions with confidence $< 0.85$ or amount $\ge ₹10,000$ are flagged as `PENDING` for explicit user review.
+- **Hardware-Backed Encryption**: Encrypted with **SQLCipher (AES-256 GCM)** using hardware-backed keys from the **Android Keystore (TEE / StrongBox)**.
+- **Biometric Security**: Protected by `BIOMETRIC_STRONG` authentication on app launch and automatically locks after 5 minutes of background inactivity.
+- **Visual Analytics**: Interactive monthly summaries, spending category breakdowns, and financial goals.
+- **Global & Category Budgets & Real-Time Alerts**: Set an overall global spending limit as well as per-category budgets for monthly, weekly, or yearly periods. Features computed Unbudgeted spending visibility, dynamic progress tracking (<80% green, 80–99% amber, ≥100% red), prioritized at-most-once notifications (category before global) at 80% and 100% threshold crossings, automated period rollover, and transaction drill-down. (See [Budgets Spec](specs/budgets/spec.md) and [Global Budget Spec](specs/budgets/spec-global.md)).
 
 ---
 
-## 🏗️ Architecture Overview
+## Architecture Overview
 
 CashBuddy follows **Clean Architecture** and **Unidirectional Data Flow (UDF)**:
 
@@ -61,7 +61,7 @@ CashBuddy follows **Clean Architecture** and **Unidirectional Data Flow (UDF)**:
 
 ---
 
-## 🛠️ Tech Stack
+## Tech Stack
 
 | Layer | Technology |
 |---|---|
@@ -76,7 +76,7 @@ CashBuddy follows **Clean Architecture** and **Unidirectional Data Flow (UDF)**:
 
 ---
 
-## 🚀 Building & Running
+## Building & Running
 
 ### Prerequisites
 - Android Studio Ladybug / Meerkat (or newer)
@@ -104,7 +104,9 @@ CashBuddy provides two distribution flavors:
 
 ---
 
-## 📄 License & Privacy
+## License & Privacy
+
+CashBuddy is open source software licensed under the **[Apache License, Version 2.0](LICENSE)**.
 
 CashBuddy is built with a zero-compromise approach to privacy:
 - Zero data collection
