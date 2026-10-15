@@ -118,7 +118,7 @@ fun CashBuddyApp(
             NavHost(
                 navController = navController,
                 startDestination = startDestination,
-                modifier = Modifier.padding(innerPadding)
+                modifier = Modifier.padding(bottom = innerPadding.calculateBottomPadding())
             ) {
                 composable<ScreenRoute.Home> {
                     HomeScreen(
@@ -135,7 +135,14 @@ fun CashBuddyApp(
                     val reviewViewModel: ReviewViewModel = koinViewModel()
                     ReviewScreen(
                         viewModel = reviewViewModel,
-                        onNavigateBack = { navController.popBackStack() }
+                        onNavigateBack = {
+                            val popped = navController.popBackStack()
+                            if (!popped) {
+                                navController.navigate(ScreenRoute.Home) {
+                                    popUpTo(0) { inclusive = true }
+                                }
+                            }
+                        }
                     )
                 }
 

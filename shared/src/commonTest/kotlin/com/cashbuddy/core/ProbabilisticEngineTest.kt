@@ -551,5 +551,88 @@ class ProbabilisticEngineTest {
         assertEquals(TransactionType.CREDIT, result.type)
         assertEquals("Ramesh Kumar", result.merchant)
     }
+
+    @Test
+    fun testCrossChannelDedup_UnionBankSmsAndGPayScreenshot() {
+        val smsText = "Union Bank of India A/c *0383 Debited Rs:40.00 on 14-10-2026 13:22:23 by Mob Bk ref no 628777332339, Fvg: BOTTLE L Avl Bal Rs:4923.08. Not you?Call 18002333/SMS BLOCK 0383 to 8879365472"
+        val rawSms = RawMessage(
+            id = "sms-1",
+            sourceType = SourceType.SMS,
+            packageName = null,
+            senderId = "JM-UBI-T",
+            title = "Union Bank",
+            text = smsText,
+            timestamp = 1728900000000L
+        )
+
+        val smsSource = sourceDetector.detect("JM-UBI-T", smsText)
+        val smsEvidence = evidenceExtractor.extract(rawSms, smsSource)
+        val smsResult = classifier.classify(smsEvidence, smsText, smsSource)
+
+        assertEquals(40.0, smsResult.amount)
+        assertEquals("0383", smsResult.accountLast4)
+        assertEquals("Bottle L", smsResult.merchant)
+        assertEquals("628777332339", smsResult.utr)
+
+        // 1. First transaction inserted into ledger from SMS
+        val existingCandidates = listOf(
+            DedupEngine.ExistingCandidate(
+                id = 101L,
+                amount = smsResult.amount ?: 0.0,
+                merchant = smsResult.merchant,
+                accountLast4 = smsResult.accountLast4,
+                pTransaction = smsResult.pTransaction,
+                timestamp = rawSms.timestamp,
+                utr = smsResult.utr
+            )
+        )
+
+        // 2. User later shares GPay screenshot with the same UTR but longer merchant name
+        val screenshotText = """
+            To BOTTLE LAB TECHNOLOGIES PRIVATE LIMITED
+            ₹40
+            Completed
+            14 Oct 2026, 1:22 pm
+            Union Bank of India 0383
+            UPI transaction ID
+            628777332339
+            Google transaction ID
+            CICAgiPi280svJw
+        """.trimIndent()
+
+        val rawScreenshot = RawMessage(
+            id = "scr-1",
+            sourceType = SourceType.SCREENSHOT,
+            packageName = "com.google.android.apps.nbu.paisa.user",
+            senderId = null,
+            title = "Google Pay",
+            text = screenshotText,
+            timestamp = rawSms.timestamp + 3_600_000L // 1 hour later
+        )
+
+        val scrSource = sourceDetector.detect("com.google.android.apps.nbu.paisa.user", screenshotText)
+        val scrEvidence = evidenceExtractor.extract(rawScreenshot, scrSource)
+        val scrResult = classifier.classify(scrEvidence, screenshotText, scrSource, rawScreenshot.packageName)
+
+        assertEquals("628777332339", scrResult.utr)
+
+        val dedupDecision = DedupEngine.resolve(
+            newTx = DedupEngine.DedupInput(
+                amount = scrResult.amount ?: 40.0,
+                merchant = scrResult.merchant,
+                accountLast4 = scrResult.accountLast4,
+                pTransaction = scrResult.pTransaction,
+                timestamp = rawScreenshot.timestamp,
+                utr = scrResult.utr
+            ),
+            existing = existingCandidates
+        )
+
+        assertTrue(dedupDecision is DedupEngine.Decision.Merge, "Expected UTR match to produce Decision.Merge")
+        val merge = dedupDecision as DedupEngine.Decision.Merge
+        assertEquals(101L, merge.existingId)
+        assertEquals("0383", merge.upgradedFields.accountLast4, "Must preserve the verified account number from bank SMS")
+        assertTrue(merge.upgradedFields.clearReview)
+    }
 }
 

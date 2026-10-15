@@ -25,7 +25,8 @@ object DedupEngine {
         val merchant: String?,
         val accountLast4: String?,
         val pTransaction: Double,
-        val timestamp: Long
+        val timestamp: Long,
+        val utr: String? = null
     )
 
     data class ExistingCandidate(
@@ -34,10 +35,22 @@ object DedupEngine {
         val merchant: String?,
         val accountLast4: String?,
         val pTransaction: Double,
-        val timestamp: Long
+        val timestamp: Long,
+        val utr: String? = null
     )
 
     fun resolve(newTx: DedupInput, existing: List<ExistingCandidate>): Decision {
+        // Tier 1: Strong Match via Global UTR / UPI Ref ID
+        if (!newTx.utr.isNullOrBlank()) {
+            val utrTarget = existing.firstOrNull {
+                !it.utr.isNullOrBlank() && it.utr.equals(newTx.utr, ignoreCase = true)
+            }
+            if (utrTarget != null) {
+                return buildMergeDecision(newTx, utrTarget)
+            }
+        }
+
+        // Tier 2: Soft Match via Temporal Window & Amount
         val candidates = existing.filter {
             abs(it.amount - newTx.amount) < AMOUNT_EPS &&
             abs(it.timestamp - newTx.timestamp) < WINDOW_MS
@@ -46,22 +59,41 @@ object DedupEngine {
 
         val sameMerchant = candidates.firstOrNull {
             it.merchant != null && newTx.merchant != null &&
-            it.merchant.equals(newTx.merchant, ignoreCase = true)
+            (it.merchant.equals(newTx.merchant, ignoreCase = true) ||
+             it.merchant.contains(newTx.merchant, ignoreCase = true) ||
+             newTx.merchant.contains(it.merchant, ignoreCase = true))
         }
         val target = sameMerchant ?: candidates.first()
 
-        return if (newTx.pTransaction > target.pTransaction) {
-            Decision.Merge(
-                existingId = target.id,
-                upgradedFields = UpgradedFields(
-                    accountLast4 = newTx.accountLast4 ?: target.accountLast4,
-                    merchant = newTx.merchant ?: target.merchant,
-                    pTransaction = newTx.pTransaction,
-                    clearReview = newTx.pTransaction >= 0.90
-                )
+        return buildMergeDecision(newTx, target)
+    }
+
+    private fun buildMergeDecision(newTx: DedupInput, target: ExistingCandidate): Decision {
+        // Pick best merchant: prioritize the more descriptive / longer name if not a generic label
+        val chosenMerchant = pickBestMerchant(newTx.merchant, target.merchant)
+        val chosenAccount = newTx.accountLast4 ?: target.accountLast4
+        val maxP = maxOf(newTx.pTransaction, target.pTransaction)
+
+        return Decision.Merge(
+            existingId = target.id,
+            upgradedFields = UpgradedFields(
+                accountLast4 = chosenAccount,
+                merchant = chosenMerchant,
+                pTransaction = maxP,
+                clearReview = maxP >= 0.90
             )
-        } else {
-            Decision.Skip
-        }
+        )
+    }
+
+    private fun pickBestMerchant(m1: String?, m2: String?): String? {
+        if (m1.isNullOrBlank()) return m2
+        if (m2.isNullOrBlank()) return m1
+        val generic = setOf("upi merchant", "merchant", "unknown merchant", "bank")
+        val m1Gen = generic.contains(m1.lowercase())
+        val m2Gen = generic.contains(m2.lowercase())
+        if (m1Gen && !m2Gen) return m2
+        if (m2Gen && !m1Gen) return m1
+        // Prefer longer, more descriptive merchant names (e.g. "Bottle Lab Technologies Private Limited" over "Bottle L")
+        return if (m1.length >= m2.length) m1 else m2
     }
 }

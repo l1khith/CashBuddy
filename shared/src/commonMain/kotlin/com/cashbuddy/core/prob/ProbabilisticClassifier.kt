@@ -35,7 +35,8 @@ data class ClassificationResult(
     val type: TransactionType?,
     val accountLast4: String?,
     val merchant: String?,
-    val bankHint: String?
+    val bankHint: String?,
+    val utr: String? = null
 )
 
 class ProbabilisticClassifier(
@@ -94,6 +95,7 @@ class ProbabilisticClassifier(
         val accountLast4 = evidenceExtractor.extractAccountLast4(rawText)
         val merchant = evidenceExtractor.extractMerchant(rawText, packageName)
         val bankHint = if (evidence.senderLooksBank) "Bank" else null
+        val utr = evidenceExtractor.extractUtr(rawText)
 
         val fieldConfidences = fieldConfidenceEstimator.estimate(
             rawText = rawText,
@@ -113,7 +115,8 @@ class ProbabilisticClassifier(
             type = type,
             accountLast4 = accountLast4,
             merchant = merchant,
-            bankHint = bankHint
+            bankHint = bankHint,
+            utr = utr
         )
     }
 
@@ -167,6 +170,7 @@ class ProbabilisticClassifier(
         val accountLast4 = evidenceExtractor.extractAccountLast4(rawText)
         val merchant = evidenceExtractor.extractMerchant(rawText, packageName)
         val bankHint = if (evidence.senderLooksBank) "Bank" else null
+        val utr = evidenceExtractor.extractUtr(rawText)
 
         val fieldConfidences = fieldConfidenceEstimator.estimate(
             rawText = rawText,
@@ -186,7 +190,8 @@ class ProbabilisticClassifier(
             type = type,
             accountLast4 = accountLast4,
             merchant = merchant,
-            bankHint = bankHint
+            bankHint = bankHint,
+            utr = utr
         )
     }
 }

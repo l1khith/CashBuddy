@@ -1,0 +1,5 @@
+CashBuddy is a 100% offline, privacy-first personal finance tracker designed for Indian banks and UPI applications. It captures transactions through a three-layer intake system: passive notification parsing, offline screenshot OCR, and fast manual entry.
+
+All financial data remains strictly on your device. The app operates with zero network permissions, zero analytics SDKs, and uses hardware-backed AES-256 SQLCipher encryption.
+
+The F-Droid release uses Tesseract4Android (Apache-2.0) with bundled trained models for 100% local screenshot OCR without any proprietary dependencies.
