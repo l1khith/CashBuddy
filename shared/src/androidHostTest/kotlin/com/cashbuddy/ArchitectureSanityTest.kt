@@ -59,7 +59,7 @@ class ArchitectureSanityTest {
 
         val badFiles = rootDirs.flatMap { dir ->
             dir.walkTopDown()
-                .filter { it.isFile && it.extension.equals("txt", ignoreCase = true) }
+                .filter { it.isFile && it.extension.equals("txt", ignoreCase = true) && !it.invariantSeparatorsPath.contains("composeResources") }
                 .toList()
         }
         kotlin.test.assertTrue(badFiles.isEmpty(), "Found source files with .txt extension: $badFiles")

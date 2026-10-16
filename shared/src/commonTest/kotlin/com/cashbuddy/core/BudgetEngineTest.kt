@@ -450,4 +450,94 @@ class BudgetEngineTest {
         assertEquals(75.0f, status.percentUsed)
         assertEquals(AlertState.ON_TRACK, status.state)
     }
+
+    @Test
+    fun testCommittedAndDiscretionarySpend() = runBlocking {
+        val repo = FakeTransactionRepo()
+        val oct15_2026 = 1792051200000L
+
+        // 10 BMTC rides of ₹18 in Transport category
+        for (i in 0 until 10) {
+            repo.insert(
+                Transaction(
+                    id = (i + 1).toLong(),
+                    amount = 18.0,
+                    type = TransactionType.DEBIT,
+                    merchant = "BMTC",
+                    categoryId = 2L,
+                    categoryName = "Transport",
+                    sourceApp = "GPAY",
+                    rawText = "BMTC ₹18",
+                    confidence = 1.0f,
+                    status = TransactionStatus.CONFIRMED,
+                    timestamp = oct15_2026 - (i * 24L * 3600_000L)
+                )
+            )
+        }
+
+        // 1 Uber ride of ₹200 (discretionary)
+        repo.insert(
+            Transaction(
+                id = 100L,
+                amount = 200.0,
+                type = TransactionType.DEBIT,
+                merchant = "Uber",
+                categoryId = 2L,
+                categoryName = "Transport",
+                sourceApp = "UBER",
+                rawText = "Uber ₹200",
+                confidence = 1.0f,
+                status = TransactionStatus.CONFIRMED,
+                timestamp = oct15_2026
+            )
+        )
+
+        val pattern = com.cashbuddy.domain.model.RecurringPattern(
+            id = 1L,
+            merchantNormalized = "bmtc",
+            amountPaise = 1800L,
+            occurrenceCount = 10,
+            medianIntervalHours = 24.0,
+            cv = 0.01,
+            periodHours = 24,
+            autocorrelationPeak = 0.9,
+            firstSeen = oct15_2026 - (10 * 24L * 3600_000L),
+            lastSeen = oct15_2026,
+            lastUpdated = oct15_2026
+        )
+
+        val fakePatternRepo = object : com.cashbuddy.domain.repository.RecurringPatternRepository {
+            override suspend fun upsert(pattern: com.cashbuddy.domain.model.RecurringPattern) {}
+            override suspend fun upsertAll(patterns: List<com.cashbuddy.domain.model.RecurringPattern>) {}
+            override fun getAll(): kotlinx.coroutines.flow.Flow<List<com.cashbuddy.domain.model.RecurringPattern>> =
+                kotlinx.coroutines.flow.flowOf(listOf(pattern))
+            override suspend fun findByMerchantAndAmount(merchant: String, amountPaise: Long): com.cashbuddy.domain.model.RecurringPattern? = null
+            override suspend fun deleteById(id: Long) {}
+            override suspend fun deleteAll() {}
+            override suspend fun deleteStale(staleBefore: Long) {}
+        }
+
+        val engine = BudgetEngine(
+            transactionRepository = repo,
+            recurringPatternRepository = fakePatternRepo,
+            timeZone = TimeZone.of("Asia/Kolkata")
+        )
+
+        val budget = Budget(
+            id = "b1",
+            category = "Transport",
+            amount = 1000.0,
+            period = BudgetPeriod.MONTHLY,
+            startDate = oct15_2026 - (15L * 24 * 3600_000L)
+        )
+
+        val status = engine.statusFor(budget, oct15_2026)
+        // Total spent: 10 * 18 + 200 = 380.0
+        assertEquals(380.0, status.spent)
+        // Committed: 10 * 18 = 180.0
+        assertEquals(180.0, status.committed)
+        // Discretionary: 380 - 180 = 200.0
+        assertEquals(200.0, status.discretionary)
+        assertEquals(1, status.recurringPatternCount)
+    }
 }

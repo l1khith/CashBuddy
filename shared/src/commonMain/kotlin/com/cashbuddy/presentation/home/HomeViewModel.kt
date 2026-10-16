@@ -18,6 +18,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
@@ -28,8 +29,31 @@ class HomeViewModel(
     private val getRecentTransactionsUseCase: GetRecentTransactionsUseCase,
     private val getUnreviewedCountUseCase: GetUnreviewedCountUseCase,
     private val getDateRangeSummaryUseCase: GetDateRangeSummaryUseCase,
-    private val getTransactionsByDateRangeWithLimitUseCase: GetTransactionsByDateRangeWithLimitUseCase
+    private val getTransactionsByDateRangeWithLimitUseCase: GetTransactionsByDateRangeWithLimitUseCase,
+    private val recurringPatternRepository: com.cashbuddy.domain.repository.RecurringPatternRepository? = null,
+    private val transactionRepository: com.cashbuddy.domain.repository.TransactionRepository? = null
 ) : ViewModel() {
+
+    init {
+        viewModelScope.launch {
+            if (recurringPatternRepository != null && transactionRepository != null) {
+                try {
+                    val patterns = recurringPatternRepository.getAll().firstOrNull() ?: emptyList()
+                    val lastUpdated = patterns.maxOfOrNull { it.lastUpdated } ?: 0L
+                    val now = com.cashbuddy.platform.currentTimeMillis()
+                    if (now - lastUpdated > 24L * 3600_000L || patterns.isEmpty()) {
+                        val allTxs = transactionRepository.getAll().firstOrNull() ?: emptyList()
+                        val detected = com.cashbuddy.core.analytics.RecurrenceDetector.detect(allTxs, now)
+                        if (detected.isNotEmpty()) {
+                            recurringPatternRepository.upsertAll(detected)
+                        }
+                    }
+                } catch (_: Throwable) {
+                    // Non-blocking background startup recurrence check
+                }
+            }
+        }
+    }
 
     val unreviewedCount: StateFlow<Int> = getUnreviewedCountUseCase()
         .distinctUntilChanged()

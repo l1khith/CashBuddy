@@ -13,6 +13,7 @@ import com.cashbuddy.domain.repository.RawMessageRepository
 import com.cashbuddy.domain.repository.SettingsRepository
 import com.cashbuddy.domain.repository.TransactionRepository
 import kotlinx.coroutines.flow.firstOrNull
+import kotlin.math.roundToLong
 
 sealed interface PipelineOutcome {
     val outcomeName: String
@@ -64,7 +65,8 @@ class MessagePipeline(
     private val recentStateRepository: RecentStateRepository? = null,
     private val settingsRepo: SettingsRepository? = null,
     private val budgetAlertScheduler: com.cashbuddy.core.budget.BudgetAlertScheduler? = null,
-    private val fraudDetector: com.cashbuddy.core.FraudDetector = com.cashbuddy.core.FraudDetector(transactionRepo)
+    private val fraudDetector: com.cashbuddy.core.FraudDetector = com.cashbuddy.core.FraudDetector(transactionRepo),
+    private val recurringPatternRepo: com.cashbuddy.domain.repository.RecurringPatternRepository? = null
 ) {
     suspend fun ingest(raw: RawMessage): PipelineOutcome {
         recentStateRepository?.recordRaw(raw.timestamp, raw.packageName)
@@ -81,7 +83,20 @@ class MessagePipeline(
 
             // 4. Classify
             val fullText = if (raw.title.isNotBlank()) "${raw.title} ${raw.text}" else raw.text
-            val classification = classifier.classifySuspending(evidence, fullText, source, raw.packageName)
+            var classification = classifier.classifySuspending(evidence, fullText, source, raw.packageName)
+
+            // 4.1 Recurring Pattern Check (T6 / AC-2)
+            var isRecurringMatch = false
+            if (classification.merchant != null && classification.amount != null && classification.amount > 0.0) {
+                val amountPaise = (classification.amount * 100.0).roundToLong()
+                val pattern = recurringPatternRepo?.findByMerchantAndAmount(classification.merchant, amountPaise)
+                if (pattern != null) {
+                    isRecurringMatch = true
+                    classification = classification.copy(
+                        pTransaction = maxOf(classification.pTransaction, 0.95)
+                    )
+                }
+            }
 
             debugLogger?.recordClassification(
                 logId = logId,
@@ -94,12 +109,16 @@ class MessagePipeline(
 
             // 5. Policy decision
             val maxAutoConfirm = settingsRepo?.getAutoConfirmThreshold()?.firstOrNull() ?: 10000.0
-            val action = policy.action(
-                p = classification.pTransaction,
-                hasAccount = classification.accountLast4 != null,
-                amount = classification.amount ?: 0.0,
-                maxAutoConfirmAmount = maxAutoConfirm
-            )
+            val action = if (isRecurringMatch) {
+                PolicyEngine.Action.AUTO_LOG
+            } else {
+                policy.action(
+                    p = classification.pTransaction,
+                    hasAccount = classification.accountLast4 != null,
+                    amount = classification.amount ?: 0.0,
+                    maxAutoConfirmAmount = maxAutoConfirm
+                )
+            }
             debugLogger?.recordPolicy(logId, action.name)
 
             val outcome: PipelineOutcome = when (action) {
@@ -205,9 +224,14 @@ class MessagePipeline(
                                     amount = tx.amount,
                                     timestamp = tx.timestamp
                                 )
+                                var finalStatus = status
                                 if (anomaly.isAnomalous) {
                                     val note = formatAnomalyNote(anomaly.score, anomaly.median, anomaly.mad)
                                     transactionRepo.updateNotes(insertedId, note)
+                                    if (finalStatus == TransactionStatus.CONFIRMED) {
+                                        transactionRepo.updateStatus(insertedId, TransactionStatus.PENDING)
+                                        finalStatus = TransactionStatus.PENDING
+                                    }
                                 }
 
                                 try {
@@ -216,7 +240,19 @@ class MessagePipeline(
                                     // Non-blocking best-effort alert check
                                 }
 
-                                if (status == TransactionStatus.CONFIRMED) {
+                                if (finalStatus == TransactionStatus.CONFIRMED) {
+                                    if (recurringPatternRepo != null) {
+                                        try {
+                                            val totalCount = transactionRepo.getCount().firstOrNull() ?: 0L
+                                            if (totalCount > 0 && totalCount % 10L == 0L) {
+                                                val allTxs = transactionRepo.getAll().firstOrNull() ?: emptyList()
+                                                val detected = com.cashbuddy.core.analytics.RecurrenceDetector.detect(allTxs, raw.timestamp)
+                                                recurringPatternRepo.upsertAll(detected)
+                                            }
+                                        } catch (_: Throwable) {
+                                            // Non-blocking recurrence detection
+                                        }
+                                    }
                                     PipelineOutcome.Logged(insertedId, classification.pTransaction, amount, tx.merchant)
                                 } else {
                                     PipelineOutcome.PendingReview(insertedId, classification.pTransaction, amount, tx.merchant)

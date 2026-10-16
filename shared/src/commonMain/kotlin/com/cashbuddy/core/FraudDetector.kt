@@ -55,9 +55,16 @@ class FraudDetector(
         val mad = computeMedian(deviations)
 
         if (mad == 0.0) {
+            val isAnomalous = if (median > 0.0 && amount != median) {
+                val ratio = abs(amount - median) / median
+                ratio >= 0.5
+            } else {
+                false
+            }
+            val score = if (isAnomalous) 99.0 else 0.0
             return AnomalyResult(
-                isAnomalous = false,
-                score = 0.0,
+                isAnomalous = isAnomalous,
+                score = score,
                 median = median,
                 mad = 0.0,
                 sampleSize = n

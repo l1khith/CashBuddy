@@ -93,13 +93,35 @@ class FraudDetectorTest {
     }
 
     @Test
-    fun testZeroMadNotAnomalous() = runBlocking {
-        // 12 samples all equal to ₹300, new ₹500 -> not anomalous (MAD = 0)
-        val repo = FakeTransactionRepo(List(12) { 300.0 })
+    fun testZeroMadIdenticalAmountNotAnomalous() = runBlocking {
+        // 12 identical samples ₹18, new ₹18 -> not anomalous
+        val repo = FakeTransactionRepo(List(12) { 18.0 })
         val detector = FraudDetector(repo)
 
-        val result = detector.checkAnomaly("Subscription", 500.0, 1727600000000L)
-        assertFalse(result.isAnomalous, "Zero MAD should never be marked anomalous")
+        val result = detector.checkAnomaly("BMTC", 18.0, 1727600000000L)
+        assertFalse(result.isAnomalous, "Exact same amount with MAD=0 is not anomalous")
+        assertTrue(result.mad == 0.0)
+    }
+
+    @Test
+    fun testZeroMadLargeOutlierIsAnomalous() = runBlocking {
+        // 12 identical amounts ₹18, new ₹2500 -> anomalous (ratio = |2500 - 18| / 18 >= 0.5)
+        val repo = FakeTransactionRepo(List(12) { 18.0 })
+        val detector = FraudDetector(repo)
+
+        val result = detector.checkAnomaly("BMTC", 2500.0, 1727600000000L)
+        assertTrue(result.isAnomalous, "₹2,500 at ₹18 merchant with MAD=0 must be anomalous")
+        assertTrue(result.mad == 0.0)
+    }
+
+    @Test
+    fun testZeroMadSmallDeviationNotAnomalous() = runBlocking {
+        // 12 identical amounts ₹18, new ₹19 -> not anomalous (ratio = 1/18 < 0.5)
+        val repo = FakeTransactionRepo(List(12) { 18.0 })
+        val detector = FraudDetector(repo)
+
+        val result = detector.checkAnomaly("BMTC", 19.0, 1727600000000L)
+        assertFalse(result.isAnomalous, "₹19 at ₹18 merchant with MAD=0 should not be anomalous")
         assertTrue(result.mad == 0.0)
     }
 }
