@@ -67,6 +67,32 @@ class TrainingDataRepositoryImpl(
     override fun getAllCorrections(): Flow<List<UserCorrection>> =
         queries.getAllCorrections(::mapCorrection).asFlow().mapToList(dispatcher)
 
+    override suspend fun getRawPage(cursorTimestamp: Long?, cursorId: Long?, limit: Long): List<RawTrainingData> = withContext(dispatcher) {
+        queries.getRawPage(
+            cursorTimestamp = cursorTimestamp,
+            cursorId = cursorId,
+            limit = limit,
+            mapper = ::mapRaw
+        ).executeAsList()
+    }
+
+    override suspend fun getCorrectionsPage(cursorTimestamp: Long?, cursorId: Long?, limit: Long): List<UserCorrection> = withContext(dispatcher) {
+        queries.getCorrectionsPage(
+            cursorTimestamp = cursorTimestamp,
+            cursorId = cursorId,
+            limit = limit,
+            mapper = ::mapCorrection
+        ).executeAsList()
+    }
+
+    override suspend fun getRawCount(): Long = withContext(dispatcher) {
+        queries.getRawCount().executeAsOne()
+    }
+
+    override suspend fun getCorrectionCount(): Long = withContext(dispatcher) {
+        queries.getCorrectionCount().executeAsOne()
+    }
+
     override fun getStats(): Flow<TrainingStats> {
         val rawCountFlow = queries.getRawCount().asFlow().mapToOne(dispatcher)
         val correctionsCountFlow = queries.getCorrectionCount().asFlow().mapToOne(dispatcher)

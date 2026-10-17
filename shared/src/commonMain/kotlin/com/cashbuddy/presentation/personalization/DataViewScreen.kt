@@ -31,7 +31,10 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -62,6 +65,40 @@ fun DataViewScreen(
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     var selectedFilter by remember { mutableStateOf(DataFilter.ALL) }
+    val listState = rememberLazyListState()
+
+    val shouldLoadMore by remember {
+        derivedStateOf {
+            val totalItems = listState.layoutInfo.totalItemsCount
+            val lastVisible = listState.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: 0
+            totalItems > 0 && lastVisible >= totalItems - 5
+        }
+    }
+
+    LaunchedEffect(shouldLoadMore, selectedFilter) {
+        if (shouldLoadMore && !state.isLoading) {
+            when (selectedFilter) {
+                DataFilter.ALL -> {
+                    if (!state.isLoadingMoreCorrections && !state.isEndReachedCorrections) {
+                        viewModel.loadMoreCorrections()
+                    }
+                    if (!state.isLoadingMoreRaw && !state.isEndReachedRaw) {
+                        viewModel.loadMoreRaw()
+                    }
+                }
+                DataFilter.RAW_NOTIFICATIONS -> {
+                    if (!state.isLoadingMoreRaw && !state.isEndReachedRaw) {
+                        viewModel.loadMoreRaw()
+                    }
+                }
+                DataFilter.USER_CORRECTIONS -> {
+                    if (!state.isLoadingMoreCorrections && !state.isEndReachedCorrections) {
+                        viewModel.loadMoreCorrections()
+                    }
+                }
+            }
+        }
+    }
 
     Scaffold(
         modifier = modifier.fillMaxSize(),
@@ -130,6 +167,7 @@ fun DataViewScreen(
 
                 // Data Feed
                 LazyColumn(
+                    state = listState,
                     modifier = Modifier.fillMaxSize(),
                     contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp)
@@ -163,6 +201,23 @@ fun DataViewScreen(
                             }
                             items(state.rawNotifications, key = { "raw_${it.id}" }) { item ->
                                 RawSampleCard(sample = item)
+                            }
+                        }
+                    }
+
+                    if (state.isLoadingMoreCorrections || state.isLoadingMoreRaw) {
+                        item(key = "loading_more") {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 12.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(24.dp),
+                                    strokeWidth = 2.dp,
+                                    color = PrimaryIndigo
+                                )
                             }
                         }
                     }
