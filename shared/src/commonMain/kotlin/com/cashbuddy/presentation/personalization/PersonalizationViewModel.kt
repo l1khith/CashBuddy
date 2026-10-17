@@ -160,10 +160,11 @@ class PersonalizationViewModel(
 
     fun exportDataset() {
         viewModelScope.launch(ioDispatcher) {
-            val jsonl = trainingDataRepository.exportTrainingDataJsonl()
             if (fileExporter != null) {
                 val fileName = "cashbuddy_training_${currentTimeMillis()}.jsonl"
-                val result = fileExporter.exportCsvFile(fileName, jsonl)
+                val result = fileExporter.exportFileStream(fileName, "application/jsonl") { write ->
+                    trainingDataRepository.streamTrainingDataJsonl(write)
+                }
                 result.fold(
                     onSuccess = { path ->
                         _messageEffect.emit("Training dataset exported: $path")

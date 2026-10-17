@@ -12,12 +12,16 @@ import java.io.FileOutputStream
 
 class AndroidFileExporter(private val context: Context) : FileExporter {
 
-    override suspend fun exportCsvFile(fileName: String, content: String): Result<String> = withContext(Dispatchers.IO) {
+    override suspend fun exportFileStream(
+        fileName: String,
+        mimeType: String,
+        writer: suspend (append: (String) -> Unit) -> Unit
+    ): Result<String> = withContext(Dispatchers.IO) {
         try {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                 val contentValues = ContentValues().apply {
                     put(MediaStore.MediaColumns.DISPLAY_NAME, fileName)
-                    put(MediaStore.MediaColumns.MIME_TYPE, "text/csv")
+                    put(MediaStore.MediaColumns.MIME_TYPE, mimeType)
                     put(MediaStore.MediaColumns.RELATIVE_PATH, Environment.DIRECTORY_DOWNLOADS + "/CashBuddy")
                 }
 
@@ -25,8 +29,11 @@ class AndroidFileExporter(private val context: Context) : FileExporter {
                     ?: return@withContext Result.failure(Exception("Failed to create MediaStore entry"))
 
                 context.contentResolver.openOutputStream(uri)?.use { outputStream ->
-                    outputStream.write(content.toByteArray(Charsets.UTF_8))
-                    outputStream.flush()
+                    val bufferedWriter = outputStream.bufferedWriter(Charsets.UTF_8)
+                    writer { chunk ->
+                        bufferedWriter.write(chunk)
+                    }
+                    bufferedWriter.flush()
                 } ?: return@withContext Result.failure(Exception("Failed to open output stream"))
 
                 Result.success("Saved to Downloads/CashBuddy/$fileName")
@@ -36,14 +43,23 @@ class AndroidFileExporter(private val context: Context) : FileExporter {
                 val targetFile = File(appDir, fileName)
 
                 FileOutputStream(targetFile).use { fos ->
-                    fos.write(content.toByteArray(Charsets.UTF_8))
-                    fos.flush()
+                    val bufferedWriter = fos.bufferedWriter(Charsets.UTF_8)
+                    writer { chunk ->
+                        bufferedWriter.write(chunk)
+                    }
+                    bufferedWriter.flush()
                 }
 
                 Result.success(targetFile.absolutePath)
             }
         } catch (e: Exception) {
             Result.failure(e)
+        }
+    }
+
+    override suspend fun exportCsvFile(fileName: String, content: String): Result<String> {
+        return exportFileStream(fileName, "text/csv") { write ->
+            write(content)
         }
     }
 }

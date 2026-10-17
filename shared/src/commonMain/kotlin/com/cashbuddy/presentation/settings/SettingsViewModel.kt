@@ -142,12 +142,12 @@ class SettingsViewModel(
     }
 
     fun exportCsvData(onCsvReady: (String) -> Unit = {}) {
-        viewModelScope.launch {
-            val csv = exportDataUseCase.exportCsv()
-            onCsvReady(csv)
+        viewModelScope.launch(com.cashbuddy.platform.ioDispatcher) {
             if (fileExporter != null) {
                 val fileName = "cashbuddy_ledger_${currentTimeMillis()}.csv"
-                val result = fileExporter.exportCsvFile(fileName, csv)
+                val result = fileExporter.exportFileStream(fileName, "text/csv") { write ->
+                    exportDataUseCase.streamCsv(write)
+                }
                 result.fold(
                     onSuccess = { path ->
                         _messageEffect.emit(path)
@@ -157,18 +157,20 @@ class SettingsViewModel(
                     }
                 )
             } else {
+                val csv = exportDataUseCase.exportCsv()
+                onCsvReady(csv)
                 _messageEffect.emit("Data exported successfully")
             }
         }
     }
 
     fun exportTrainingDataset(onJsonlReady: (String) -> Unit = {}) {
-        viewModelScope.launch {
-            val jsonl = trainingDataRepository.exportTrainingDataJsonl()
-            onJsonlReady(jsonl)
+        viewModelScope.launch(com.cashbuddy.platform.ioDispatcher) {
             if (fileExporter != null) {
                 val fileName = "cashbuddy_training_${currentTimeMillis()}.jsonl"
-                val result = fileExporter.exportCsvFile(fileName, jsonl)
+                val result = fileExporter.exportFileStream(fileName, "application/jsonl") { write ->
+                    trainingDataRepository.streamTrainingDataJsonl(write)
+                }
                 result.fold(
                     onSuccess = { path ->
                         _messageEffect.emit("Training dataset exported: $path")
@@ -178,6 +180,8 @@ class SettingsViewModel(
                     }
                 )
             } else {
+                val jsonl = trainingDataRepository.exportTrainingDataJsonl()
+                onJsonlReady(jsonl)
                 _messageEffect.emit("Training dataset generated (${_uiState.value.rawTrainingSamplesCount} raw, ${_uiState.value.userCorrectionsCount} corrections)")
             }
         }

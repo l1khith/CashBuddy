@@ -32,6 +32,7 @@ interface TrainingDataRepository {
     suspend fun getRawCount(): Long = 0L
     suspend fun getCorrectionCount(): Long = 0L
     fun getStats(): Flow<TrainingStats>
+    suspend fun streamTrainingDataJsonl(write: (String) -> Unit) {}
     suspend fun exportTrainingDataJsonl(): String
     suspend fun clearTrainingData()
 }

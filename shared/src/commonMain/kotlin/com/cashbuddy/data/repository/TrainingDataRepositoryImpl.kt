@@ -101,35 +101,62 @@ class TrainingDataRepositoryImpl(
         }
     }
 
+    override suspend fun streamTrainingDataJsonl(write: (String) -> Unit): Unit = withContext(dispatcher) {
+        val chunkSize = 500L
+
+        // 1. Stream User Corrections in 500-item chunks
+        var corrCursorTimestamp: Long? = null
+        var corrCursorId: Long? = null
+        while (true) {
+            val page = getCorrectionsPage(corrCursorTimestamp, corrCursorId, limit = chunkSize)
+            if (page.isEmpty()) break
+
+            val sb = StringBuilder(page.size * 150)
+            for (c in page) {
+                val escapedMerchant = escapeJson(c.merchant)
+                val escapedSource = escapeJson(c.sourceApp ?: "")
+                val escapedText = escapeJson(c.rawText ?: "")
+                val escapedOld = escapeJson(c.oldCategory ?: "")
+                val escapedLabel = escapeJson(c.newCategory)
+                sb.append("{\"type\":\"user_correction\",\"merchant\":\"$escapedMerchant\",\"source_app\":\"$escapedSource\",\"raw_text\":\"$escapedText\",\"old_category\":\"$escapedOld\",\"label\":\"$escapedLabel\",\"timestamp\":${c.timestamp}}\n")
+            }
+            write(sb.toString())
+
+            val last = page.last()
+            corrCursorTimestamp = last.timestamp
+            corrCursorId = last.id
+            if (page.size < chunkSize) break
+        }
+
+        // 2. Stream Raw Ingested Notifications in 500-item chunks
+        var rawCursorTimestamp: Long? = null
+        var rawCursorId: Long? = null
+        while (true) {
+            val page = getRawPage(rawCursorTimestamp, rawCursorId, limit = chunkSize)
+            if (page.isEmpty()) break
+
+            val sb = StringBuilder(page.size * 200)
+            for (r in page) {
+                val escapedText = escapeJson(r.rawText)
+                val escapedSource = escapeJson(r.source)
+                val escapedApp = escapeJson(r.sourceApp ?: "")
+                val escapedMerchant = escapeJson(r.extractedMerchant ?: "")
+                val escapedType = escapeJson(r.extractedType ?: "")
+                val amountStr = r.extractedAmount?.toString() ?: "null"
+                sb.append("{\"type\":\"raw_notification\",\"raw_text\":\"$escapedText\",\"source\":\"$escapedSource\",\"source_app\":\"$escapedApp\",\"extracted_merchant\":\"$escapedMerchant\",\"extracted_amount\":$amountStr,\"extracted_type\":\"$escapedType\",\"timestamp\":${r.timestamp}}\n")
+            }
+            write(sb.toString())
+
+            val last = page.last()
+            rawCursorTimestamp = last.timestamp
+            rawCursorId = last.id
+            if (page.size < chunkSize) break
+        }
+    }
+
     override suspend fun exportTrainingDataJsonl(): String = withContext(dispatcher) {
-        val corrections = queries.getAllCorrections(::mapCorrection).executeAsList()
-        val rawSamples = queries.getAllRaw(::mapRaw).executeAsList()
-
         val sb = StringBuilder()
-
-        // 1. Export User Corrections (High Value Ground Truth)
-        for (c in corrections) {
-            val escapedMerchant = escapeJson(c.merchant)
-            val escapedSource = escapeJson(c.sourceApp ?: "")
-            val escapedText = escapeJson(c.rawText ?: "")
-            val escapedOld = escapeJson(c.oldCategory ?: "")
-            val escapedLabel = escapeJson(c.newCategory)
-
-            sb.append("{\"type\":\"user_correction\",\"merchant\":\"$escapedMerchant\",\"source_app\":\"$escapedSource\",\"raw_text\":\"$escapedText\",\"old_category\":\"$escapedOld\",\"label\":\"$escapedLabel\",\"timestamp\":${c.timestamp}}\n")
-        }
-
-        // 2. Export Raw Ingested Notifications (For DistilBERT / Parser Retraining)
-        for (r in rawSamples) {
-            val escapedText = escapeJson(r.rawText)
-            val escapedSource = escapeJson(r.source)
-            val escapedApp = escapeJson(r.sourceApp ?: "")
-            val escapedMerchant = escapeJson(r.extractedMerchant ?: "")
-            val escapedType = escapeJson(r.extractedType ?: "")
-            val amountStr = r.extractedAmount?.toString() ?: "null"
-
-            sb.append("{\"type\":\"raw_notification\",\"raw_text\":\"$escapedText\",\"source\":\"$escapedSource\",\"source_app\":\"$escapedApp\",\"extracted_merchant\":\"$escapedMerchant\",\"extracted_amount\":$amountStr,\"extracted_type\":\"$escapedType\",\"timestamp\":${r.timestamp}}\n")
-        }
-
+        streamTrainingDataJsonl { sb.append(it) }
         sb.toString()
     }
 
