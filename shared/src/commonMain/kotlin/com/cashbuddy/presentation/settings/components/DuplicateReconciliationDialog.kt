@@ -153,7 +153,10 @@ fun DuplicateReconciliationDialog(
                         .heightIn(max = 380.dp),
                     verticalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
-                    itemsIndexed(duplicateGroups) { index, group ->
+                    itemsIndexed(
+                        items = duplicateGroups,
+                        key = { _, group -> group.survivor.id }
+                    ) { index, group ->
                         val isExpanded = expandedState[index] == true
                         DuplicateGroupCard(
                             group = group,
