@@ -6,11 +6,11 @@ import kotlin.concurrent.AtomicReference
 actual class ConcurrentHashMap<K : Any, V : Any> actual constructor() : MutableMap<K, V> {
     private val ref = AtomicReference<Map<K, V>>(emptyMap())
 
-    override val size: Int get() = ref.value.size
-    override fun containsKey(key: K): Boolean = ref.value.containsKey(key)
-    override fun containsValue(value: V): Boolean = ref.value.containsValue(value)
-    override fun get(key: K): V? = ref.value[key]
-    override fun isEmpty(): Boolean = ref.value.isEmpty()
+    actual override val size: Int get() = ref.value.size
+    actual override fun containsKey(key: K): Boolean = ref.value.containsKey(key)
+    actual override fun containsValue(value: V): Boolean = ref.value.containsValue(value)
+    actual override fun get(key: K): V? = ref.value[key]
+    actual override fun isEmpty(): Boolean = ref.value.isEmpty()
     private class ConcurrentEntry<K, V>(
         override val key: K,
         override var value: V
@@ -22,16 +22,16 @@ actual class ConcurrentHashMap<K : Any, V : Any> actual constructor() : MutableM
         }
     }
 
-    override val entries: MutableSet<MutableMap.MutableEntry<K, V>>
+    actual override val entries: MutableSet<MutableMap.MutableEntry<K, V>>
         get() = ref.value.entries.mapTo(mutableSetOf()) { (k, v) -> ConcurrentEntry(k, v) }
-    override val keys: MutableSet<K> get() = ref.value.keys.toMutableSet()
-    override val values: MutableCollection<V> get() = ref.value.values.toMutableList()
+    actual override val keys: MutableSet<K> get() = ref.value.keys.toMutableSet()
+    actual override val values: MutableCollection<V> get() = ref.value.values.toMutableList()
 
-    override fun clear() {
+    actual override fun clear() {
         ref.value = emptyMap()
     }
 
-    override fun put(key: K, value: V): V? {
+    actual override fun put(key: K, value: V): V? {
         while (true) {
             val old = ref.value
             val prev = old[key]
@@ -40,7 +40,7 @@ actual class ConcurrentHashMap<K : Any, V : Any> actual constructor() : MutableM
         }
     }
 
-    override fun putAll(from: Map<out K, V>) {
+    actual override fun putAll(from: Map<out K, V>) {
         while (true) {
             val old = ref.value
             val newMap = old + from
@@ -48,7 +48,7 @@ actual class ConcurrentHashMap<K : Any, V : Any> actual constructor() : MutableM
         }
     }
 
-    override fun remove(key: K): V? {
+    actual override fun remove(key: K): V? {
         while (true) {
             val old = ref.value
             val prev = old[key] ?: return null

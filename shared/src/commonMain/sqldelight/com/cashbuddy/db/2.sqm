@@ -1,0 +1,17 @@
+CREATE TABLE IF NOT EXISTS recurring_pattern (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    merchant_normalized TEXT NOT NULL,
+    amount_paise INTEGER NOT NULL,
+    occurrence_count INTEGER NOT NULL,
+    median_interval_hours REAL NOT NULL,
+    cv REAL NOT NULL,
+    period_hours INTEGER NOT NULL,
+    autocorrelation_peak REAL NOT NULL,
+    first_seen INTEGER NOT NULL,
+    last_seen INTEGER NOT NULL,
+    last_updated INTEGER NOT NULL,
+    UNIQUE(merchant_normalized, amount_paise)
+);
+
+CREATE INDEX IF NOT EXISTS idx_pattern_merchant ON recurring_pattern(merchant_normalized);
+CREATE INDEX IF NOT EXISTS idx_pattern_amount ON recurring_pattern(amount_paise);

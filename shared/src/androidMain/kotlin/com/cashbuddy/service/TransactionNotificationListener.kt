@@ -110,13 +110,20 @@ class TransactionNotificationListener : NotificationListenerService(), KoinCompo
         // Extract from InboxStyle notifications (e.g. grouped app notifications)
         val lines = extras.getCharSequenceArray(android.app.Notification.EXTRA_TEXT_LINES)
         if (!lines.isNullOrEmpty()) {
-            val linesJoined = lines.filterNotNull().joinToString(" ") { it.toString() }
-            text = if (text.isBlank()) {
-                linesJoined
-            } else if (!text.contains(linesJoined, ignoreCase = true)) {
-                "$text $linesJoined"
+            val nonNullLines = lines.filterNotNull().map { it.toString() }
+            // Prefer lines that contain a valid transaction sentence (e.g. "Your payment of ₹140.0 was successful")
+            val txLine = nonNullLines.firstOrNull { com.cashbuddy.core.prob.SentenceScopedExtractor.isValidTransactionSentence(it) }
+            text = if (txLine != null) {
+                if (text.isBlank()) txLine else "$text $txLine"
             } else {
-                text
+                val linesJoined = nonNullLines.joinToString(" ")
+                if (text.isBlank()) {
+                    linesJoined
+                } else if (!text.contains(linesJoined, ignoreCase = true)) {
+                    "$text $linesJoined"
+                } else {
+                    text
+                }
             }
         }
 

@@ -8,6 +8,7 @@ import com.cashbuddy.domain.model.BudgetPeriod
 import com.cashbuddy.domain.model.BudgetStatus
 import com.cashbuddy.domain.model.TransactionType
 import com.cashbuddy.domain.repository.TransactionRepository
+import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.datetime.DatePeriod
 import kotlinx.datetime.Instant
 import kotlinx.datetime.LocalDate
@@ -21,7 +22,8 @@ import kotlinx.datetime.toLocalDateTime
 
 class BudgetEngine(
     private val transactionRepository: TransactionRepository,
-    private val timeZone: TimeZone = TimeZone.currentSystemDefault()
+    private val timeZone: TimeZone = TimeZone.currentSystemDefault(),
+    private val recurringPatternRepository: com.cashbuddy.domain.repository.RecurringPatternRepository? = null
 ) {
 
     suspend fun statusFor(budget: Budget, now: Long): BudgetStatus {
@@ -51,12 +53,39 @@ class BudgetEngine(
             else -> AlertState.ON_TRACK
         }
 
+        var committed = 0.0
+        var patternCount = 0
+        if (recurringPatternRepository != null) {
+            val allPatterns = recurringPatternRepository.getAll().firstOrNull() ?: emptyList()
+            val categoryTxs = if (budget.category == BudgetCategories.GLOBAL) {
+                transactionRepository.getByDateRange(range.first, range.last).firstOrNull() ?: emptyList()
+            } else {
+                transactionRepository.getByCategoryAndPeriod(budget.category, range.first, range.last).firstOrNull() ?: emptyList()
+            }
+
+            for (pattern in allPatterns) {
+                val occurrences = categoryTxs.count { tx ->
+                    tx.type == TransactionType.DEBIT &&
+                    tx.merchant.trim().equals(pattern.merchantNormalized, ignoreCase = true) &&
+                    (tx.amount * 100.0).toLong() == pattern.amountPaise
+                }
+                if (occurrences > 0) {
+                    committed += (pattern.amountPaise / 100.0) * occurrences
+                    patternCount++
+                }
+            }
+        }
+        val discretionary = maxOf(0.0, spent - committed)
+
         return BudgetStatus(
             budget = budget,
             spent = spent,
             remaining = remaining,
             percentUsed = percentUsed,
-            state = state
+            state = state,
+            committed = committed,
+            discretionary = discretionary,
+            recurringPatternCount = patternCount
         )
     }
 
