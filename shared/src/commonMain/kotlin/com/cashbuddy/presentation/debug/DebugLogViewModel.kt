@@ -5,9 +5,14 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.cashbuddy.debug.DebugConfig
 import com.cashbuddy.domain.model.DebugLogEntry
+import com.cashbuddy.domain.model.DebugLogFilter
+import com.cashbuddy.domain.repository.DebugLogPager
 import com.cashbuddy.domain.repository.DebugLogRepository
 import com.cashbuddy.platform.FileExporter
 import com.cashbuddy.platform.currentTimeMillis
+import com.cashbuddy.platform.ioDispatcher
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -16,6 +21,10 @@ import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.debounce
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
@@ -46,62 +55,152 @@ data class DebugLogUiState(
     val recordingRemainingSeconds: Long = 0L,
     val totalCount: Long = 0L,
     val isLoading: Boolean = false,
+    val isLoadingMore: Boolean = false,
+    val isEndReached: Boolean = false,
     val expandedLogIds: Set<String> = emptySet()
 )
 
+@OptIn(FlowPreview::class, ExperimentalCoroutinesApi::class)
 class DebugLogViewModel(
     private val repository: DebugLogRepository,
     val debugConfig: DebugConfig,
     private val fileExporter: FileExporter? = null
 ) : ViewModel() {
 
-    private val _uiState = MutableStateFlow(DebugLogUiState())
+    private val pager = DebugLogPager(repository, pageSize = 50L)
+
+    private val _uiState = MutableStateFlow(DebugLogUiState(isLoading = true))
     val uiState: StateFlow<DebugLogUiState> = _uiState.asStateFlow()
 
     private val _messageEffect = MutableSharedFlow<String>()
     val messageEffect: SharedFlow<String> = _messageEffect.asSharedFlow()
 
+    private val _packageQuery = MutableStateFlow("")
+    private val _actionFilter = MutableStateFlow(ActionFilter.ALL)
+    private val _timeRange = MutableStateFlow(TimeRange.ALL)
+
     private var timerJob: Job? = null
 
+    private data class FilterCriteria(
+        val query: String,
+        val action: ActionFilter,
+        val range: TimeRange
+    )
+
+    private val filterCriteriaFlow = combine(
+        _packageQuery.debounce(300),
+        _actionFilter,
+        _timeRange
+    ) { query, action, range ->
+        FilterCriteria(query, action, range)
+    }.distinctUntilChanged()
+
     init {
-        loadLogs()
         startRecordingTimer()
+        viewModelScope.launch(ioDispatcher) {
+            filterCriteriaFlow.collectLatest { criteria ->
+                applyFilterAndReload(criteria)
+            }
+        }
+    }
+
+    private fun buildFilter(
+        action: ActionFilter,
+        query: String,
+        range: TimeRange
+    ): DebugLogFilter {
+        val now = currentTimeMillis()
+        val startTime = range.durationMs?.let { now - it }
+        val pkg = query.trim().ifEmpty { null }
+
+        val policyAction = when (action) {
+            ActionFilter.AUTO_LOG -> "AUTO_LOG"
+            ActionFilter.LOG_AND_FLAG -> "LOG_AND_FLAG"
+            ActionFilter.ASK_USER -> "ASK_USER"
+            ActionFilter.IGNORED -> "IGNORE"
+            else -> null
+        }
+
+        val outcome = when (action) {
+            ActionFilter.LOGGED -> "LOGGED"
+            ActionFilter.ERRORS -> "ERROR"
+            else -> null
+        }
+
+        return DebugLogFilter(
+            policyAction = policyAction,
+            outcome = outcome,
+            packageName = pkg,
+            startTime = startTime
+        )
+    }
+
+    private suspend fun applyFilterAndReload(criteria: FilterCriteria) {
+        _uiState.update { it.copy(isLoading = true) }
+        pager.reset()
+        val filter = buildFilter(criteria.action, criteria.query, criteria.range)
+        try {
+            val count = repository.count()
+            val initial = pager.loadNextPage(filter = filter, limit = 50L)
+            _uiState.update {
+                it.copy(
+                    entries = initial,
+                    filteredEntries = initial,
+                    totalCount = count,
+                    isLoading = false,
+                    isEndReached = pager.isEndReached
+                )
+            }
+        } catch (e: Throwable) {
+            _uiState.update { it.copy(isLoading = false) }
+            _messageEffect.emit("Failed to load logs: ${e.message}")
+        }
     }
 
     fun loadLogs() {
-        viewModelScope.launch {
-            _uiState.update { it.copy(isLoading = true) }
+        viewModelScope.launch(ioDispatcher) {
+            applyFilterAndReload(FilterCriteria(_packageQuery.value, _actionFilter.value, _timeRange.value))
+        }
+    }
+
+    fun loadNextPage() {
+        val state = _uiState.value
+        if (state.isLoading || state.isLoadingMore || state.isEndReached) return
+
+        val filter = buildFilter(state.actionFilter, state.packageQuery, state.timeRange)
+        viewModelScope.launch(ioDispatcher) {
+            _uiState.update { it.copy(isLoadingMore = true) }
             try {
-                val all = repository.recent(500)
-                val count = repository.count()
+                val next = pager.loadNextPage(filter = filter, limit = 50L)
                 _uiState.update { current ->
+                    val combined = current.entries + next
                     current.copy(
-                        entries = all,
-                        totalCount = count,
-                        isLoading = false
+                        entries = combined,
+                        filteredEntries = combined,
+                        isLoadingMore = false,
+                        isEndReached = pager.isEndReached
                     )
                 }
-                applyFilters()
             } catch (e: Throwable) {
-                _uiState.update { it.copy(isLoading = false) }
-                _messageEffect.emit("Failed to load logs: ${e.message}")
+                _uiState.update { it.copy(isLoadingMore = false) }
+                _messageEffect.emit("Failed to load more logs: ${e.message}")
             }
         }
     }
 
     fun setActionFilter(filter: ActionFilter) {
+        _actionFilter.value = filter
         _uiState.update { it.copy(actionFilter = filter) }
-        applyFilters()
     }
 
     fun setPackageQuery(query: String) {
+        _packageQuery.value = query
         _uiState.update { it.copy(packageQuery = query) }
-        applyFilters()
     }
 
     fun setTimeRange(range: TimeRange) {
+        _timeRange.value = range
         _uiState.update { it.copy(timeRange = range) }
-        applyFilters()
     }
 
     fun toggleExpand(id: String) {
@@ -136,14 +235,16 @@ class DebugLogViewModel(
     }
 
     fun clearLogs() {
-        viewModelScope.launch {
+        viewModelScope.launch(ioDispatcher) {
             try {
                 repository.clearAll()
+                pager.reset()
                 _uiState.update {
                     it.copy(
                         entries = emptyList(),
                         filteredEntries = emptyList(),
                         totalCount = 0L,
+                        isEndReached = true,
                         expandedLogIds = emptySet()
                     )
                 }
@@ -155,7 +256,7 @@ class DebugLogViewModel(
     }
 
     fun exportCsv(onCsvReady: (String) -> Unit = {}) {
-        viewModelScope.launch {
+        viewModelScope.launch(ioDispatcher) {
             val csv = generateCsv(_uiState.value.filteredEntries)
             onCsvReady(csv)
             if (fileExporter != null) {
@@ -177,47 +278,6 @@ class DebugLogViewModel(
 
     fun getCopyAllText(): String {
         return generateCsv(_uiState.value.filteredEntries)
-    }
-
-    private fun applyFilters() {
-        val current = _uiState.value
-        val now = currentTimeMillis()
-        val filtered = current.entries.filter { entry ->
-            // Action filter
-            val matchesAction = when (current.actionFilter) {
-                ActionFilter.ALL -> true
-                ActionFilter.IGNORED -> entry.policyAction.equals("IGNORE", ignoreCase = true) ||
-                                       entry.pipelineOutcome.equals("IGNORED", ignoreCase = true)
-                ActionFilter.LOGGED -> entry.pipelineOutcome.equals("LOGGED", ignoreCase = true) ||
-                                      entry.pipelineOutcome.equals("CONFIRMED", ignoreCase = true)
-                ActionFilter.ERRORS -> !entry.errorMessage.isNullOrBlank() ||
-                                      entry.pipelineOutcome.equals("ERROR", ignoreCase = true)
-                ActionFilter.AUTO_LOG -> entry.policyAction.equals("AUTO_LOG", ignoreCase = true)
-                ActionFilter.LOG_AND_FLAG -> entry.policyAction.equals("LOG_AND_FLAG", ignoreCase = true)
-                ActionFilter.ASK_USER -> entry.policyAction.equals("ASK_USER", ignoreCase = true)
-            }
-
-            // Package query filter
-            val matchesPackage = if (current.packageQuery.isBlank()) {
-                true
-            } else {
-                val q = current.packageQuery.lowercase()
-                (entry.packageName?.lowercase()?.contains(q) == true) ||
-                (entry.senderId?.lowercase()?.contains(q) == true) ||
-                (entry.rawText.lowercase().contains(q))
-            }
-
-            // Time range filter
-            val matchesTime = if (current.timeRange.durationMs == null) {
-                true
-            } else {
-                entry.timestamp >= (now - current.timeRange.durationMs)
-            }
-
-            matchesAction && matchesPackage && matchesTime
-        }
-
-        _uiState.update { it.copy(filteredEntries = filtered) }
     }
 
     private fun startRecordingTimer() {
