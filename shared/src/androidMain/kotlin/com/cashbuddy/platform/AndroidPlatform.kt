@@ -11,3 +11,5 @@ fun setAppVersionInfo(versionName: String, versionCode: Int) {
 actual fun currentTimeMillis(): Long = System.currentTimeMillis()
 
 actual fun getAppVersionDisplay(): String = "CashBuddy v$androidVersionName (Build $androidVersionCode)"
+
+actual val ioDispatcher: kotlinx.coroutines.CoroutineDispatcher = kotlinx.coroutines.Dispatchers.IO

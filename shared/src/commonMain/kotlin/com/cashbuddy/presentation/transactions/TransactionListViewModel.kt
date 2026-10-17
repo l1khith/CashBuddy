@@ -8,20 +8,24 @@ import com.cashbuddy.domain.model.DateRange
 import com.cashbuddy.domain.model.DateRangeHelper
 import com.cashbuddy.domain.model.TimePeriod
 import com.cashbuddy.domain.model.Transaction
-import com.cashbuddy.domain.model.TransactionStatus
 import com.cashbuddy.domain.model.TransactionType
 import com.cashbuddy.domain.repository.CategoryRepository
+import com.cashbuddy.domain.repository.HistorySummary
+import com.cashbuddy.domain.repository.TransactionPager
 import com.cashbuddy.domain.repository.TransactionRepository
+import com.cashbuddy.platform.ioDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
-import kotlinx.coroutines.flow.flatMapLatest
-import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.launch
 
 @Immutable
 data class TransactionListUiState(
@@ -35,20 +39,30 @@ data class TransactionListUiState(
     val totalDebit: Double = 0.0,
     val totalCredit: Double = 0.0,
     val totalCount: Int = 0,
-    val isLoading: Boolean = true
+    val isLoading: Boolean = true,
+    val isLoadingMore: Boolean = false,
+    val isEndReached: Boolean = false
 )
 
-@OptIn(ExperimentalCoroutinesApi::class)
+@OptIn(FlowPreview::class, ExperimentalCoroutinesApi::class)
 class TransactionListViewModel(
     private val transactionRepository: TransactionRepository,
     private val categoryRepository: CategoryRepository
 ) : ViewModel() {
+
+    private val pager = TransactionPager(transactionRepository, pageSize = 50L)
 
     private val _searchQuery = MutableStateFlow("")
     private val _selectedType = MutableStateFlow<TransactionType?>(null)
     private val _selectedCategoryId = MutableStateFlow<Long?>(null)
     private val _selectedPeriod = MutableStateFlow(TimePeriod.ALL_TIME)
     private val _customDateRange = MutableStateFlow<DateRange?>(null)
+
+    private val _transactions = MutableStateFlow<List<Transaction>>(emptyList())
+    private val _categories = MutableStateFlow<List<Category>>(emptyList())
+    private val _summary = MutableStateFlow(HistorySummary(0.0, 0.0, 0L))
+    private val _isLoading = MutableStateFlow(true)
+    private val _isLoadingMore = MutableStateFlow(false)
 
     private data class FilterCriteria(
         val query: String,
@@ -59,7 +73,7 @@ class TransactionListViewModel(
     )
 
     private val filterCriteriaFlow = combine(
-        _searchQuery,
+        _searchQuery.debounce(300),
         _selectedType,
         _selectedCategoryId,
         _selectedPeriod,
@@ -68,77 +82,124 @@ class TransactionListViewModel(
         FilterCriteria(query, type, catId, period, customRange)
     }.distinctUntilChanged()
 
-    val uiState: StateFlow<TransactionListUiState> = filterCriteriaFlow
-        .flatMapLatest { criteria ->
+    init {
+        viewModelScope.launch(ioDispatcher) {
+            categoryRepository.getAll().distinctUntilChanged().collect { cats ->
+                _categories.value = cats
+            }
+        }
+
+        viewModelScope.launch(ioDispatcher) {
+            filterCriteriaFlow.collectLatest { criteria ->
+                _isLoading.value = true
+                pager.reset()
+
+                val range = DateRangeHelper.calculateDateRange(
+                    criteria.period,
+                    criteria.customRange?.startTimestamp,
+                    criteria.customRange?.endTimestamp
+                )
+                val startTime = if (criteria.period == TimePeriod.ALL_TIME) null else range.startTimestamp
+                val endTime = if (criteria.period == TimePeriod.ALL_TIME) null else range.endTimestamp
+
+                val summary = transactionRepository.getHistorySummary(
+                    searchQuery = criteria.query.trim().ifEmpty { null },
+                    type = criteria.type?.name,
+                    categoryId = criteria.catId,
+                    startTime = startTime,
+                    endTime = endTime
+                )
+                _summary.value = summary
+
+                val firstPage = pager.loadNextPage(
+                    searchQuery = criteria.query.trim().ifEmpty { null },
+                    type = criteria.type?.name,
+                    categoryId = criteria.catId,
+                    startTime = startTime,
+                    endTime = endTime
+                )
+                _transactions.value = firstPage
+                _isLoading.value = false
+            }
+        }
+    }
+
+    fun loadNextPage() {
+        if (pager.isEndReached || _isLoading.value || _isLoadingMore.value) return
+        viewModelScope.launch(ioDispatcher) {
+            _isLoadingMore.value = true
+            val criteria = FilterCriteria(
+                _searchQuery.value,
+                _selectedType.value,
+                _selectedCategoryId.value,
+                _selectedPeriod.value,
+                _customDateRange.value
+            )
             val range = DateRangeHelper.calculateDateRange(
                 criteria.period,
                 criteria.customRange?.startTimestamp,
                 criteria.customRange?.endTimestamp
             )
-            val txsFlow = if (criteria.period == TimePeriod.ALL_TIME) {
-                transactionRepository.getAll()
-            } else {
-                transactionRepository.getByDateRange(range.startTimestamp, range.endTimestamp)
+            val startTime = if (criteria.period == TimePeriod.ALL_TIME) null else range.startTimestamp
+            val endTime = if (criteria.period == TimePeriod.ALL_TIME) null else range.endTimestamp
+
+            val nextPage = pager.loadNextPage(
+                searchQuery = criteria.query.trim().ifEmpty { null },
+                type = criteria.type?.name,
+                categoryId = criteria.catId,
+                startTime = startTime,
+                endTime = endTime
+            )
+            if (nextPage.isNotEmpty()) {
+                _transactions.value = _transactions.value + nextPage
             }
-            combine(
-                txsFlow.distinctUntilChanged(),
-                categoryRepository.getAll().distinctUntilChanged()
-            ) { allTxs, allCats ->
-                val trimmedQuery = criteria.query.trim()
-                val hasQuery = trimmedQuery.isNotEmpty()
-
-                val filtered = allTxs.filter { tx ->
-                    // 1. Fast equality filters first
-                    if (criteria.type != null && tx.type != criteria.type) return@filter false
-                    if (criteria.catId != null && tx.categoryId != criteria.catId) return@filter false
-
-                    // 2. Query filter with early exit
-                    if (!hasQuery) return@filter true
-
-                    // Match merchant first (95% of cases)
-                    if (tx.merchant.contains(trimmedQuery, ignoreCase = true)) return@filter true
-
-                    // Match category name
-                    if (tx.categoryName?.contains(trimmedQuery, ignoreCase = true) == true) return@filter true
-
-                    // Match user notes
-                    if (tx.notes?.contains(trimmedQuery, ignoreCase = true) == true) return@filter true
-
-                    // Fallback to raw text only if necessary
-                    tx.rawText.contains(trimmedQuery, ignoreCase = true)
-                }
-
-                // Single-pass computation for debit and credit totals (zero intermediary list allocations)
-                var totalDebit = 0.0
-                var totalCredit = 0.0
-                for (tx in filtered) {
-                    if (tx.status == TransactionStatus.CONFIRMED) {
-                        if (tx.type == TransactionType.DEBIT) totalDebit += tx.amount
-                        else if (tx.type == TransactionType.CREDIT) totalCredit += tx.amount
-                    }
-                }
-
-                TransactionListUiState(
-                    filteredTransactions = filtered,
-                    categories = allCats,
-                    searchQuery = criteria.query,
-                    selectedType = criteria.type,
-                    selectedCategoryId = criteria.catId,
-                    selectedPeriod = criteria.period,
-                    customDateRange = criteria.customRange,
-                    totalDebit = totalDebit,
-                    totalCredit = totalCredit,
-                    totalCount = filtered.size,
-                    isLoading = false
-                )
-            }
+            _isLoadingMore.value = false
         }
-        .flowOn(Dispatchers.Default) // Execute all heavy filtering & aggregation off the main thread
-        .stateIn(
-            scope = viewModelScope,
-            started = SharingStarted.WhileSubscribed(5000),
-            initialValue = TransactionListUiState(isLoading = true)
+    }
+
+    val uiState: StateFlow<TransactionListUiState> = combine(
+        _transactions,
+        _categories,
+        _searchQuery,
+        _selectedType,
+        _selectedCategoryId,
+        _selectedPeriod,
+        _customDateRange,
+        _summary,
+        _isLoading,
+        _isLoadingMore
+    ) { args: Array<Any?> ->
+        val txs = args[0] as List<Transaction>
+        val cats = args[1] as List<Category>
+        val query = args[2] as String
+        val type = args[3] as TransactionType?
+        val catId = args[4] as Long?
+        val period = args[5] as TimePeriod
+        val customRange = args[6] as DateRange?
+        val summary = args[7] as HistorySummary
+        val loading = args[8] as Boolean
+        val loadingMore = args[9] as Boolean
+
+        TransactionListUiState(
+            filteredTransactions = txs,
+            categories = cats,
+            searchQuery = query,
+            selectedType = type,
+            selectedCategoryId = catId,
+            selectedPeriod = period,
+            customDateRange = customRange,
+            totalDebit = summary.totalDebit,
+            totalCredit = summary.totalCredit,
+            totalCount = summary.totalCount.toInt(),
+            isLoading = loading,
+            isLoadingMore = loadingMore,
+            isEndReached = pager.isEndReached
         )
+    }.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5000),
+        initialValue = TransactionListUiState(isLoading = true)
+    )
 
     fun onSearchQueryChanged(query: String) {
         _searchQuery.value = query
