@@ -27,6 +27,8 @@ class TransactionPager(
         categoryId: Long? = null,
         startTime: Long? = null,
         endTime: Long? = null,
+        minAmount: Double? = null,
+        maxAmount: Double? = null,
         limit: Long = pageSize
     ): List<Transaction> {
         if (isEndReached) return emptyList()
@@ -37,6 +39,8 @@ class TransactionPager(
             categoryId = categoryId,
             startTime = startTime,
             endTime = endTime,
+            minAmount = minAmount,
+            maxAmount = maxAmount,
             cursorTimestamp = cursorTimestamp,
             cursorId = cursorId,
             limit = limit

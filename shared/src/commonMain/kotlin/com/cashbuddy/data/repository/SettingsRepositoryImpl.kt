@@ -106,4 +106,19 @@ class SettingsRepositoryImpl(
     override suspend fun setPreferredCurrency(currencyCode: String): Unit = withContext(dispatcher) {
         queries.set("preferredCurrency", currencyCode, com.cashbuddy.platform.currentTimeMillis())
     }
+
+    override fun getIgnoredPackages(): Flow<List<String>> =
+        queries.getIgnoredPackages().asFlow().mapToList(dispatcher)
+
+    override suspend fun isPackageIgnored(packageName: String): Boolean = withContext(dispatcher) {
+        queries.isPackageIgnored(packageName).executeAsOne() > 0L
+    }
+
+    override suspend fun addIgnoredPackage(packageName: String): Unit = withContext(dispatcher) {
+        queries.addIgnoredPackage(packageName.trim())
+    }
+
+    override suspend fun removeIgnoredPackage(packageName: String): Unit = withContext(dispatcher) {
+        queries.removeIgnoredPackage(packageName.trim())
+    }
 }

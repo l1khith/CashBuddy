@@ -90,6 +90,12 @@ fun AddTransactionScreen(
         }
     }
 
+    LaunchedEffect(state.defaultMerchant) {
+        if (merchant.isBlank() && state.defaultMerchant.isNotBlank()) {
+            merchant = state.defaultMerchant
+        }
+    }
+
     LaunchedEffect(Unit) {
         viewModel.savedEffect.collectLatest {
             onNavigateBack()

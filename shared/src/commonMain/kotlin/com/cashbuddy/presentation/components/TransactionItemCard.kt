@@ -2,6 +2,7 @@ package com.cashbuddy.presentation.components
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -63,11 +64,13 @@ import com.cashbuddy.presentation.theme.TextPrimaryDark
 import com.cashbuddy.presentation.theme.WarningAmber
 import com.cashbuddy.presentation.theme.getCategoryColor
 
+@OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
 @Composable
 fun TransactionCard(
     transaction: Transaction,
     categoryName: String = transaction.categoryName ?: "General",
     onClick: () -> Unit,
+    onLongClick: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     val categoryColor = getCategoryColor(categoryName)
@@ -85,11 +88,21 @@ fun TransactionCard(
     }
 
     Card(
-        onClick = onClick,
         modifier = modifier
             .fillMaxWidth()
             .height(72.dp)
-            .then(borderModifier),
+            .then(borderModifier)
+            .clip(RadiusLarge)
+            .let {
+                if (onLongClick != null) {
+                    it.combinedClickable(
+                        onClick = onClick,
+                        onLongClick = onLongClick
+                    )
+                } else {
+                    it.clickable(onClick = onClick)
+                }
+            },
         shape = RadiusLarge,
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surface

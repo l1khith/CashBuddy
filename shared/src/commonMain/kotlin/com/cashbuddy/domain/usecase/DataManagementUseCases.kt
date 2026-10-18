@@ -44,3 +44,126 @@ class ExportDataUseCase(
     }
 }
 
+class ImportDataUseCase(
+    private val transactionRepository: TransactionRepository,
+    private val accountRepository: AccountRepository
+) {
+    data class ImportResult(
+        val totalProcessed: Int,
+        val successCount: Int,
+        val failedCount: Int
+    )
+
+    suspend fun importCsv(csvContent: String): ImportResult {
+        var total = 0
+        var success = 0
+        var failed = 0
+
+        val lines = csvContent.lineSequence()
+        var isHeader = true
+
+        val accounts = accountRepository.getAll().first()
+        val defaultAccountId = accounts.firstOrNull()?.id ?: 1L
+
+        for (line in lines) {
+            val trimmed = line.trim()
+            if (trimmed.isBlank()) continue
+            if (isHeader) {
+                isHeader = false
+                // Check if line looks like header
+                if (trimmed.contains("Amount", ignoreCase = true) || trimmed.contains("Merchant", ignoreCase = true)) {
+                    continue
+                }
+            }
+
+            total++
+            try {
+                val tokens = parseCsvLine(trimmed)
+                if (tokens.size < 5) {
+                    failed++
+                    continue
+                }
+
+                // Header mapping: ID,Amount,Type,Currency,Merchant,Category,Account,Source,Confidence,Status,Timestamp,Notes
+                // Or standard 5+ column format: Amount, Type, Currency, Merchant, Category, ...
+                val amount: Double
+                val type: com.cashbuddy.domain.model.TransactionType
+                val currency: String
+                val merchant: String
+                val timestamp: Long
+                val notes: String?
+
+                if (tokens[0].toLongOrNull() != null && tokens.size >= 11) {
+                    // ID present
+                    amount = tokens[1].toDoubleOrNull() ?: throw IllegalArgumentException("Invalid amount")
+                    type = try { com.cashbuddy.domain.model.TransactionType.valueOf(tokens[2].uppercase()) } catch (_: Exception) { com.cashbuddy.domain.model.TransactionType.DEBIT }
+                    currency = tokens[3].ifBlank { "INR" }
+                    merchant = tokens[4].ifBlank { "Manual Entry" }
+                    timestamp = tokens[10].toLongOrNull() ?: com.cashbuddy.platform.currentTimeMillis()
+                    notes = tokens.getOrNull(11)?.takeIf { it.isNotBlank() }
+                } else {
+                    amount = tokens[0].toDoubleOrNull() ?: throw IllegalArgumentException("Invalid amount")
+                    type = try { com.cashbuddy.domain.model.TransactionType.valueOf(tokens[1].uppercase()) } catch (_: Exception) { com.cashbuddy.domain.model.TransactionType.DEBIT }
+                    currency = tokens.getOrNull(2)?.ifBlank { "INR" } ?: "INR"
+                    merchant = tokens.getOrNull(3)?.ifBlank { "Manual Entry" } ?: "Manual Entry"
+                    timestamp = com.cashbuddy.platform.currentTimeMillis()
+                    notes = tokens.getOrNull(4)
+                }
+
+                val now = com.cashbuddy.platform.currentTimeMillis()
+                val tx = com.cashbuddy.domain.model.Transaction(
+                    id = 0L,
+                    amount = amount,
+                    type = type,
+                    currency = currency,
+                    merchant = merchant,
+                    categoryId = 1L, // Default General
+                    accountId = defaultAccountId,
+                    sourceApp = "csv_import",
+                    rawText = "CSV Import: $merchant",
+                    confidence = 1.0f,
+                    status = com.cashbuddy.domain.model.TransactionStatus.CONFIRMED,
+                    notes = notes,
+                    timestamp = timestamp,
+                    createdAt = now,
+                    updatedAt = now
+                )
+
+                transactionRepository.insert(tx)
+                success++
+            } catch (e: Exception) {
+                failed++
+            }
+        }
+
+        return ImportResult(totalProcessed = total, successCount = success, failedCount = failed)
+    }
+
+    private fun parseCsvLine(line: String): List<String> {
+        val result = mutableListOf<String>()
+        val sb = StringBuilder()
+        var inQuotes = false
+        var i = 0
+        while (i < line.length) {
+            val c = line[i]
+            if (c == '\"') {
+                if (inQuotes && i + 1 < line.length && line[i + 1] == '\"') {
+                    sb.append('\"')
+                    i++
+                } else {
+                    inQuotes = !inQuotes
+                }
+            } else if (c == ',' && !inQuotes) {
+                result.add(sb.toString().trim())
+                sb.clear()
+            } else {
+                sb.append(c)
+            }
+            i++
+        }
+        result.add(sb.toString().trim())
+        return result
+    }
+}
+
+

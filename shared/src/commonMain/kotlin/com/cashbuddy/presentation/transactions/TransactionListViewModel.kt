@@ -36,12 +36,15 @@ data class TransactionListUiState(
     val selectedCategoryId: Long? = null,
     val selectedPeriod: TimePeriod = TimePeriod.ALL_TIME,
     val customDateRange: DateRange? = null,
+    val minAmount: Double? = null,
+    val maxAmount: Double? = null,
     val totalDebit: Double = 0.0,
     val totalCredit: Double = 0.0,
     val totalCount: Int = 0,
     val isLoading: Boolean = true,
     val isLoadingMore: Boolean = false,
-    val isEndReached: Boolean = false
+    val isEndReached: Boolean = false,
+    val editingTransaction: Transaction? = null
 )
 
 @OptIn(FlowPreview::class, ExperimentalCoroutinesApi::class)
@@ -57,6 +60,9 @@ class TransactionListViewModel(
     private val _selectedCategoryId = MutableStateFlow<Long?>(null)
     private val _selectedPeriod = MutableStateFlow(TimePeriod.ALL_TIME)
     private val _customDateRange = MutableStateFlow<DateRange?>(null)
+    private val _minAmount = MutableStateFlow<Double?>(null)
+    private val _maxAmount = MutableStateFlow<Double?>(null)
+    private val _editingTransaction = MutableStateFlow<Transaction?>(null)
 
     private val _transactions = MutableStateFlow<List<Transaction>>(emptyList())
     private val _categories = MutableStateFlow<List<Category>>(emptyList())
@@ -69,7 +75,9 @@ class TransactionListViewModel(
         val type: TransactionType?,
         val catId: Long?,
         val period: TimePeriod,
-        val customRange: DateRange?
+        val customRange: DateRange?,
+        val minAmt: Double?,
+        val maxAmt: Double?
     )
 
     private val filterCriteriaFlow = combine(
@@ -77,9 +85,19 @@ class TransactionListViewModel(
         _selectedType,
         _selectedCategoryId,
         _selectedPeriod,
-        _customDateRange
-    ) { query, type, catId, period, customRange ->
-        FilterCriteria(query, type, catId, period, customRange)
+        _customDateRange,
+        _minAmount,
+        _maxAmount
+    ) { args: Array<Any?> ->
+        FilterCriteria(
+            query = args[0] as String,
+            type = args[1] as TransactionType?,
+            catId = args[2] as Long?,
+            period = args[3] as TimePeriod,
+            customRange = args[4] as DateRange?,
+            minAmt = args[5] as Double?,
+            maxAmt = args[6] as Double?
+        )
     }.distinctUntilChanged()
 
     init {
@@ -107,7 +125,9 @@ class TransactionListViewModel(
                     type = criteria.type?.name,
                     categoryId = criteria.catId,
                     startTime = startTime,
-                    endTime = endTime
+                    endTime = endTime,
+                    minAmount = criteria.minAmt,
+                    maxAmount = criteria.maxAmt
                 )
                 _summary.value = summary
 
@@ -116,7 +136,9 @@ class TransactionListViewModel(
                     type = criteria.type?.name,
                     categoryId = criteria.catId,
                     startTime = startTime,
-                    endTime = endTime
+                    endTime = endTime,
+                    minAmount = criteria.minAmt,
+                    maxAmount = criteria.maxAmt
                 )
                 _transactions.value = firstPage
                 _isLoading.value = false
@@ -133,7 +155,9 @@ class TransactionListViewModel(
                 _selectedType.value,
                 _selectedCategoryId.value,
                 _selectedPeriod.value,
-                _customDateRange.value
+                _customDateRange.value,
+                _minAmount.value,
+                _maxAmount.value
             )
             val range = DateRangeHelper.calculateDateRange(
                 criteria.period,
@@ -148,7 +172,9 @@ class TransactionListViewModel(
                 type = criteria.type?.name,
                 categoryId = criteria.catId,
                 startTime = startTime,
-                endTime = endTime
+                endTime = endTime,
+                minAmount = criteria.minAmt,
+                maxAmount = criteria.maxAmt
             )
             if (nextPage.isNotEmpty()) {
                 _transactions.value = _transactions.value + nextPage
@@ -165,9 +191,12 @@ class TransactionListViewModel(
         _selectedCategoryId,
         _selectedPeriod,
         _customDateRange,
+        _minAmount,
+        _maxAmount,
         _summary,
         _isLoading,
-        _isLoadingMore
+        _isLoadingMore,
+        _editingTransaction
     ) { args: Array<Any?> ->
         val txs = args[0] as List<Transaction>
         val cats = args[1] as List<Category>
@@ -176,9 +205,12 @@ class TransactionListViewModel(
         val catId = args[4] as Long?
         val period = args[5] as TimePeriod
         val customRange = args[6] as DateRange?
-        val summary = args[7] as HistorySummary
-        val loading = args[8] as Boolean
-        val loadingMore = args[9] as Boolean
+        val minAmt = args[7] as Double?
+        val maxAmt = args[8] as Double?
+        val summary = args[9] as HistorySummary
+        val loading = args[10] as Boolean
+        val loadingMore = args[11] as Boolean
+        val editingTx = args[12] as Transaction?
 
         TransactionListUiState(
             filteredTransactions = txs,
@@ -188,12 +220,15 @@ class TransactionListViewModel(
             selectedCategoryId = catId,
             selectedPeriod = period,
             customDateRange = customRange,
+            minAmount = minAmt,
+            maxAmount = maxAmt,
             totalDebit = summary.totalDebit,
             totalCredit = summary.totalCredit,
             totalCount = summary.totalCount.toInt(),
             isLoading = loading,
             isLoadingMore = loadingMore,
-            isEndReached = pager.isEndReached
+            isEndReached = pager.isEndReached,
+            editingTransaction = editingTx
         )
     }.stateIn(
         scope = viewModelScope,
@@ -227,11 +262,56 @@ class TransactionListViewModel(
         _selectedPeriod.value = TimePeriod.CUSTOM
     }
 
+    fun onAmountRangeSelected(min: Double?, max: Double?) {
+        _minAmount.value = min
+        _maxAmount.value = max
+    }
+
+    fun onStartEditTransaction(tx: Transaction) {
+        _editingTransaction.value = tx
+    }
+
+    fun onDismissEditTransaction() {
+        _editingTransaction.value = null
+    }
+
+    fun updateTransaction(
+        id: Long,
+        amount: Double,
+        type: TransactionType,
+        merchant: String,
+        categoryId: Long
+    ) {
+        viewModelScope.launch(ioDispatcher) {
+            val existing = _transactions.value.find { it.id == id } 
+                ?: _editingTransaction.value?.takeIf { it.id == id }
+            if (existing != null) {
+                val updated = existing.copy(
+                    amount = amount,
+                    type = type,
+                    merchant = merchant.trim().ifEmpty { existing.merchant },
+                    categoryId = categoryId,
+                    status = com.cashbuddy.domain.model.TransactionStatus.CONFIRMED,
+                    updatedAt = com.cashbuddy.platform.currentTimeMillis()
+                )
+                transactionRepository.update(updated)
+                _editingTransaction.value = null
+
+                // Optimistically update list
+                _transactions.value = _transactions.value.map {
+                    if (it.id == id) updated else it
+                }
+            }
+        }
+    }
+
     fun clearFilters() {
         _searchQuery.value = ""
         _selectedType.value = null
         _selectedCategoryId.value = null
         _selectedPeriod.value = TimePeriod.ALL_TIME
         _customDateRange.value = null
+        _minAmount.value = null
+        _maxAmount.value = null
     }
 }

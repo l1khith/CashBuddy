@@ -27,11 +27,20 @@ class ReviewViewModel(
     private val rejectTransactionUseCase: RejectTransactionUseCase,
     private val modifyTransactionUseCase: ModifyTransactionUseCase,
     private val reducer: ReviewReducer = ReviewReducer(),
-    private val learnedTokenRepository: LearnedTokenRepository? = null
+    private val learnedTokenRepository: LearnedTokenRepository? = null,
+    private val settingsRepository: com.cashbuddy.domain.repository.SettingsRepository? = null
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(ReviewState())
     val uiState: StateFlow<ReviewState> = _uiState.asStateFlow()
+
+    fun ignorePackage(packageName: String) {
+        val repo = settingsRepository ?: return
+        viewModelScope.launch {
+            repo.addIgnoredPackage(packageName)
+            _effects.emit(ReviewEffect.ShowSnackbar("Added $packageName to Ignore List"))
+        }
+    }
 
     private val _effects = MutableSharedFlow<ReviewEffect>(extraBufferCapacity = 1)
     val effects: SharedFlow<ReviewEffect> = _effects.asSharedFlow()

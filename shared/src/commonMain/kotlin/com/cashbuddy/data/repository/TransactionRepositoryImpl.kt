@@ -244,6 +244,8 @@ class TransactionRepositoryImpl(
         categoryId: Long?,
         startTime: Long?,
         endTime: Long?,
+        minAmount: Double?,
+        maxAmount: Double?,
         cursorTimestamp: Long?,
         cursorId: Long?,
         limit: Long
@@ -254,6 +256,8 @@ class TransactionRepositoryImpl(
             categoryId = categoryId,
             startTime = startTime,
             endTime = endTime,
+            minAmount = minAmount,
+            maxAmount = maxAmount,
             cursorTimestamp = cursorTimestamp,
             cursorId = cursorId,
             limit = limit,
@@ -266,14 +270,18 @@ class TransactionRepositoryImpl(
         type: String?,
         categoryId: Long?,
         startTime: Long?,
-        endTime: Long?
+        endTime: Long?,
+        minAmount: Double?,
+        maxAmount: Double?
     ): com.cashbuddy.domain.repository.HistorySummary = withContext(dispatcher) {
         val row = queries.getHistorySummary(
             searchQuery = searchQuery,
             type = type,
             categoryId = categoryId,
             startTime = startTime,
-            endTime = endTime
+            endTime = endTime,
+            minAmount = minAmount,
+            maxAmount = maxAmount
         ).executeAsOne()
         com.cashbuddy.domain.repository.HistorySummary(
             totalDebit = row.total_debit,

@@ -32,6 +32,7 @@ import com.cashbuddy.domain.usecase.BatchCategorizeUseCase
 import com.cashbuddy.domain.usecase.CalculateBalanceUseCase
 import com.cashbuddy.domain.usecase.ConfirmTransactionUseCase
 import com.cashbuddy.domain.usecase.ExportDataUseCase
+import com.cashbuddy.domain.usecase.ImportDataUseCase
 import com.cashbuddy.domain.usecase.GetDateRangeSummaryUseCase
 import com.cashbuddy.domain.usecase.GetRecentTransactionsUseCase
 import com.cashbuddy.domain.usecase.GetTransactionsByDateRangeWithLimitUseCase
@@ -125,6 +126,7 @@ val appModule = module {
     factoryOf(::RejectTransactionUseCase)
     factoryOf(::ModifyTransactionUseCase)
     factoryOf(::ExportDataUseCase)
+    factoryOf(::ImportDataUseCase)
     factoryOf(::ReviewReducer)
     factoryOf(::BatchCategorizeUseCase)
 
@@ -149,7 +151,7 @@ val appModule = module {
             budgetEngine = get()
         )
     }
-    viewModel { SettingsViewModel(get(), get(), get(), get(), get(), getOrNull(), getOrNull(), getOrNull(), getOrNull()) }
+    viewModel { SettingsViewModel(get(), get(), get(), get(), get(), getOrNull(), getOrNull(), getOrNull(), getOrNull(), getOrNull()) }
     viewModel { PersonalizationViewModel(get(), get(), get(), get(), getOrNull()) }
     viewModelOf(::AddTransactionViewModel)
     viewModel { DebugLogViewModel(get(), get(), getOrNull()) }

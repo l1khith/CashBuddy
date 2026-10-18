@@ -8,5 +8,6 @@ data class BudgetStatus(
     val state: AlertState,
     val committed: Double = 0.0,
     val discretionary: Double = 0.0,
-    val recurringPatternCount: Int = 0
+    val recurringPatternCount: Int = 0,
+    val projected: Double = 0.0
 )

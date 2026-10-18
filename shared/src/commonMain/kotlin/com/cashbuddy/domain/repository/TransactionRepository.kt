@@ -59,6 +59,8 @@ interface TransactionRepository {
         categoryId: Long? = null,
         startTime: Long? = null,
         endTime: Long? = null,
+        minAmount: Double? = null,
+        maxAmount: Double? = null,
         cursorTimestamp: Long? = null,
         cursorId: Long? = null,
         limit: Long = 50
@@ -68,7 +70,9 @@ interface TransactionRepository {
         type: String? = null,
         categoryId: Long? = null,
         startTime: Long? = null,
-        endTime: Long? = null
+        endTime: Long? = null,
+        minAmount: Double? = null,
+        maxAmount: Double? = null
     ): HistorySummary = HistorySummary(0.0, 0.0, 0L)
 }
 
