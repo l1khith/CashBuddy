@@ -28,8 +28,8 @@ android {
         applicationId = "com.cashbuddy"
         minSdk = libs.versions.android.minSdk.get().toInt()
         targetSdk = libs.versions.android.targetSdk.get().toInt()
-        versionCode = 4
-        versionName = "1.0.3"
+        versionCode = 5
+        versionName = "1.0.4"
 
         ndk {
             abiFilters.addAll(listOf("arm64-v8a", "x86_64"))

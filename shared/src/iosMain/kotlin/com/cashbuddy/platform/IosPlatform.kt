@@ -11,3 +11,5 @@ actual fun getAppVersionDisplay(): String {
     val build = NSBundle.mainBundle.objectForInfoDictionaryKey("CFBundleVersion") as? String ?: "1"
     return "CashBuddy v$version (Build $build)"
 }
+
+actual val ioDispatcher: kotlinx.coroutines.CoroutineDispatcher = kotlinx.coroutines.Dispatchers.Default

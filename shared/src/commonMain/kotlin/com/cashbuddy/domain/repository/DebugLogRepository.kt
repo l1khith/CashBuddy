@@ -31,4 +31,10 @@ interface DebugLogRepository {
     suspend fun recent(limit: Int): List<DebugLogEntry>
     suspend fun clearAll()
     suspend fun count(): Long
+    suspend fun filterLogsPage(
+        filter: DebugLogFilter,
+        cursorTimestamp: Long?,
+        cursorId: String?,
+        limit: Long = 50L
+    ): List<DebugLogEntry> = emptyList()
 }

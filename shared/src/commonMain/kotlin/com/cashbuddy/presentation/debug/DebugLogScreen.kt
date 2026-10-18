@@ -66,8 +66,10 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -109,7 +111,22 @@ fun DebugLogScreen(
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
     val clipboardManager = LocalClipboardManager.current
+    val listState = rememberLazyListState()
     var showClearDialog by remember { mutableStateOf(false) }
+
+    val shouldLoadMore by remember {
+        derivedStateOf {
+            val totalItems = state.entries.size
+            val lastVisibleItem = listState.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: 0
+            totalItems > 0 && lastVisibleItem >= totalItems - 5
+        }
+    }
+
+    LaunchedEffect(shouldLoadMore) {
+        if (shouldLoadMore && !state.isLoading && !state.isLoadingMore && !state.isEndReached) {
+            viewModel.loadNextPage()
+        }
+    }
 
     LaunchedEffect(Unit) {
         viewModel.messageEffect.collectLatest { msg ->
@@ -279,6 +296,7 @@ fun DebugLogScreen(
                 }
             } else {
                 LazyColumn(
+                    state = listState,
                     modifier = Modifier.fillMaxSize(),
                     contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
                     verticalArrangement = Arrangement.spacedBy(10.dp)
@@ -292,6 +310,23 @@ fun DebugLogScreen(
                             isExpanded = state.expandedLogIds.contains(entry.id),
                             onToggleExpand = { viewModel.toggleExpand(entry.id) }
                         )
+                    }
+
+                    if (state.isLoadingMore) {
+                        item(key = "loading_more") {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 12.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(24.dp),
+                                    strokeWidth = 2.dp,
+                                    color = PrimaryIndigo
+                                )
+                            }
+                        }
                     }
                 }
             }

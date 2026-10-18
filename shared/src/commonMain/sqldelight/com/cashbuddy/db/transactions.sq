@@ -293,5 +293,44 @@ ORDER BY timestamp DESC;
 updateNotes:
 UPDATE transactions SET notes = :notes, updated_at = :updatedAt WHERE id = :id;
 
+getHistoryPage:
+SELECT t.*, c.name AS category_name, c.color AS category_color, c.icon AS category_icon,
+       a.name AS account_name, a.type AS account_type
+FROM transactions t
+LEFT JOIN categories c ON t.category_id = c.id
+LEFT JOIN accounts a ON t.account_id = a.id
+WHERE t.is_merged = 0
+  AND (:searchQuery IS NULL OR :searchQuery = '' OR t.merchant LIKE ('%' || :searchQuery || '%') OR c.name LIKE ('%' || :searchQuery || '%') OR t.raw_text LIKE ('%' || :searchQuery || '%') OR t.notes LIKE ('%' || :searchQuery || '%'))
+  AND (:type IS NULL OR t.type = :type)
+  AND (:categoryId IS NULL OR t.category_id = :categoryId)
+  AND (:startTime IS NULL OR t.timestamp >= :startTime)
+  AND (:endTime IS NULL OR t.timestamp <= :endTime)
+  AND (:minAmount IS NULL OR t.amount >= :minAmount)
+  AND (:maxAmount IS NULL OR t.amount <= :maxAmount)
+  AND (:cursorTimestamp IS NULL OR :cursorId IS NULL OR t.timestamp < :cursorTimestamp OR (t.timestamp = :cursorTimestamp AND t.id < :cursorId))
+ORDER BY t.timestamp DESC, t.id DESC
+LIMIT :limit;
+
+getHistorySummary:
+SELECT 
+    COALESCE(SUM(CASE WHEN t.type = 'DEBIT' AND t.status IN ('CONFIRMED', 'MODIFIED') THEN t.amount ELSE 0.0 END), 0.0) AS total_debit,
+    COALESCE(SUM(CASE WHEN t.type = 'CREDIT' AND t.status IN ('CONFIRMED', 'MODIFIED') THEN t.amount ELSE 0.0 END), 0.0) AS total_credit,
+    COUNT(*) AS total_count
+FROM transactions t
+LEFT JOIN categories c ON t.category_id = c.id
+WHERE t.is_merged = 0
+  AND (:searchQuery IS NULL OR :searchQuery = '' OR t.merchant LIKE ('%' || :searchQuery || '%') OR c.name LIKE ('%' || :searchQuery || '%') OR t.raw_text LIKE ('%' || :searchQuery || '%') OR t.notes LIKE ('%' || :searchQuery || '%'))
+  AND (:type IS NULL OR t.type = :type)
+  AND (:categoryId IS NULL OR t.category_id = :categoryId)
+  AND (:startTime IS NULL OR t.timestamp >= :startTime)
+  AND (:endTime IS NULL OR t.timestamp <= :endTime)
+  AND (:minAmount IS NULL OR t.amount >= :minAmount)
+  AND (:maxAmount IS NULL OR t.amount <= :maxAmount);
+
+getAverageAmount:
+SELECT COALESCE(AVG(amount), 0.0)
+FROM transactions
+WHERE is_merged = 0;
+
 
 

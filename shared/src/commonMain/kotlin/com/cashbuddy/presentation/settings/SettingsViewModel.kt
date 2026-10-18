@@ -13,6 +13,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import com.cashbuddy.domain.repository.TrainingDataRepository
+import com.cashbuddy.domain.model.TrainingStats
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import androidx.compose.runtime.Immutable
@@ -38,7 +39,9 @@ data class SettingsUiState(
     val duplicateGroups: List<com.cashbuddy.core.DuplicateReconciler.DuplicateGroup> = emptyList(),
     val hasRecentMerges: Boolean = false,
     val isMerging: Boolean = false,
-    val isOcrAvailable: Boolean = false
+    val isOcrAvailable: Boolean = false,
+    val ignoredPackages: List<String> = emptyList(),
+    val isImportingCsv: Boolean = false
 )
 
 class SettingsViewModel(
@@ -50,7 +53,8 @@ class SettingsViewModel(
     private val fileExporter: FileExporter? = null,
     private val debugConfig: com.cashbuddy.debug.DebugConfig? = null,
     private val duplicateReconciler: com.cashbuddy.core.DuplicateReconciler? = null,
-    private val ocrEngine: com.cashbuddy.ocr.OcrEngine? = null
+    private val ocrEngine: com.cashbuddy.ocr.OcrEngine? = null,
+    private val importDataUseCase: com.cashbuddy.domain.usecase.ImportDataUseCase? = null
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(SettingsUiState(isOcrAvailable = ocrEngine?.isAvailable ?: false))
@@ -68,8 +72,17 @@ class SettingsViewModel(
                 transactionRepository.getCount(),
                 accountRepository.getCount(),
                 trainingDataRepository.getStats(),
-                settingsRepository.getDebugLogEnabled()
-            ) { settings, txCount, accCount, stats, debugLogEnabled ->
+                settingsRepository.getDebugLogEnabled(),
+                settingsRepository.getIgnoredPackages()
+            ) { args: Array<Any?> ->
+                val settings = args[0] as com.cashbuddy.domain.model.UserSettings
+                val txCount = args[1] as Long
+                val accCount = args[2] as Long
+                val stats = args[3] as TrainingStats
+                val debugLogEnabled = args[4] as Boolean
+                @Suppress("UNCHECKED_CAST")
+                val ignoredPkgs = args[5] as List<String>
+
                 if (debugConfig != null) {
                     debugConfig.cachedDeveloperMode = debugLogEnabled
                 }
@@ -86,7 +99,8 @@ class SettingsViewModel(
                     isDebugLogVisible = true,
                     preferredCurrency = settings.preferredCurrency,
                     isLoading = false,
-                    isOcrAvailable = ocrEngine?.isAvailable ?: false
+                    isOcrAvailable = ocrEngine?.isAvailable ?: false,
+                    ignoredPackages = ignoredPkgs
                 )
             }.collect {
                 _uiState.value = it
@@ -142,12 +156,12 @@ class SettingsViewModel(
     }
 
     fun exportCsvData(onCsvReady: (String) -> Unit = {}) {
-        viewModelScope.launch {
-            val csv = exportDataUseCase.exportCsv()
-            onCsvReady(csv)
+        viewModelScope.launch(com.cashbuddy.platform.ioDispatcher) {
             if (fileExporter != null) {
                 val fileName = "cashbuddy_ledger_${currentTimeMillis()}.csv"
-                val result = fileExporter.exportCsvFile(fileName, csv)
+                val result = fileExporter.exportFileStream(fileName, "text/csv") { write ->
+                    exportDataUseCase.streamCsv(write)
+                }
                 result.fold(
                     onSuccess = { path ->
                         _messageEffect.emit(path)
@@ -157,18 +171,20 @@ class SettingsViewModel(
                     }
                 )
             } else {
+                val csv = exportDataUseCase.exportCsv()
+                onCsvReady(csv)
                 _messageEffect.emit("Data exported successfully")
             }
         }
     }
 
     fun exportTrainingDataset(onJsonlReady: (String) -> Unit = {}) {
-        viewModelScope.launch {
-            val jsonl = trainingDataRepository.exportTrainingDataJsonl()
-            onJsonlReady(jsonl)
+        viewModelScope.launch(com.cashbuddy.platform.ioDispatcher) {
             if (fileExporter != null) {
                 val fileName = "cashbuddy_training_${currentTimeMillis()}.jsonl"
-                val result = fileExporter.exportCsvFile(fileName, jsonl)
+                val result = fileExporter.exportFileStream(fileName, "application/jsonl") { write ->
+                    trainingDataRepository.streamTrainingDataJsonl(write)
+                }
                 result.fold(
                     onSuccess = { path ->
                         _messageEffect.emit("Training dataset exported: $path")
@@ -178,6 +194,8 @@ class SettingsViewModel(
                     }
                 )
             } else {
+                val jsonl = trainingDataRepository.exportTrainingDataJsonl()
+                onJsonlReady(jsonl)
                 _messageEffect.emit("Training dataset generated (${_uiState.value.rawTrainingSamplesCount} raw, ${_uiState.value.userCorrectionsCount} corrections)")
             }
         }
@@ -265,5 +283,38 @@ class SettingsViewModel(
             }
         }
         return sb.toString()
+    }
+
+    fun addIgnoredPackage(packageName: String) {
+        val clean = packageName.trim()
+        if (clean.isBlank()) return
+        viewModelScope.launch {
+            settingsRepository.addIgnoredPackage(clean)
+            _messageEffect.emit("Added $clean to Ignore List")
+        }
+    }
+
+    fun removeIgnoredPackage(packageName: String) {
+        val clean = packageName.trim()
+        if (clean.isBlank()) return
+        viewModelScope.launch {
+            settingsRepository.removeIgnoredPackage(clean)
+            _messageEffect.emit("Removed $clean from Ignore List")
+        }
+    }
+
+    fun importCsvData(csvContent: String) {
+        val importer = importDataUseCase ?: return
+        viewModelScope.launch(com.cashbuddy.platform.ioDispatcher) {
+            _uiState.value = _uiState.value.copy(isImportingCsv = true)
+            try {
+                val result = importer.importCsv(csvContent)
+                _messageEffect.emit("Imported ${result.successCount} transactions (${result.failedCount} failed)")
+            } catch (e: Exception) {
+                _messageEffect.emit("Import error: ${e.message}")
+            } finally {
+                _uiState.value = _uiState.value.copy(isImportingCsv = false)
+            }
+        }
     }
 }

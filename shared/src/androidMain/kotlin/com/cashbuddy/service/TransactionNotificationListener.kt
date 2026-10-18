@@ -158,6 +158,9 @@ class TransactionNotificationListener : NotificationListenerService(), KoinCompo
 
         serviceScope.launch {
             try {
+                // Check if package is in user ignore list
+                if (settingsRepository.isPackageIgnored(packageName)) return@launch
+
                 // Verify notifications are enabled in settings
                 val isEnabled = settingsRepository.getNotificationEnabled().firstOrNull() ?: true
                 if (!isEnabled) return@launch

@@ -15,3 +15,20 @@ INSERT OR REPLACE INTO settings (key, value, updated_at) VALUES (?, ?, ?);
 
 deleteByKey:
 DELETE FROM settings WHERE key = ?;
+
+CREATE TABLE ignored_packages (
+    package_name TEXT PRIMARY KEY NOT NULL
+);
+
+getIgnoredPackages:
+SELECT package_name FROM ignored_packages ORDER BY package_name ASC;
+
+isPackageIgnored:
+SELECT COUNT(*) FROM ignored_packages WHERE package_name = ?;
+
+addIgnoredPackage:
+INSERT OR IGNORE INTO ignored_packages (package_name) VALUES (?);
+
+removeIgnoredPackage:
+DELETE FROM ignored_packages WHERE package_name = ?;
+

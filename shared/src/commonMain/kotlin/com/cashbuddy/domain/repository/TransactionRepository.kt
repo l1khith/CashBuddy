@@ -53,7 +53,34 @@ interface TransactionRepository {
     suspend fun sumAll(startTime: Long, endTime: Long, type: TransactionType = TransactionType.DEBIT): Double = 0.0
     suspend fun getAmountsAtMerchant(merchant: String, fromTimestamp: Long, toTimestamp: Long): List<Double> = emptyList()
     suspend fun updateNotes(id: Long, notes: String) {}
+    suspend fun getHistoryPage(
+        searchQuery: String? = null,
+        type: String? = null,
+        categoryId: Long? = null,
+        startTime: Long? = null,
+        endTime: Long? = null,
+        minAmount: Double? = null,
+        maxAmount: Double? = null,
+        cursorTimestamp: Long? = null,
+        cursorId: Long? = null,
+        limit: Long = 50
+    ): List<Transaction> = emptyList()
+    suspend fun getHistorySummary(
+        searchQuery: String? = null,
+        type: String? = null,
+        categoryId: Long? = null,
+        startTime: Long? = null,
+        endTime: Long? = null,
+        minAmount: Double? = null,
+        maxAmount: Double? = null
+    ): HistorySummary = HistorySummary(0.0, 0.0, 0L)
 }
+
+data class HistorySummary(
+    val totalDebit: Double,
+    val totalCredit: Double,
+    val totalCount: Long
+)
 
 data class MergeLogEntry(
     val id: Long,

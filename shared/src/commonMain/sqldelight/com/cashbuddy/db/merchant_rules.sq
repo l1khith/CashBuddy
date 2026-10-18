@@ -53,3 +53,7 @@ DELETE FROM merchant_rules WHERE pattern = ?;
 
 deleteById:
 DELETE FROM merchant_rules WHERE id = ?;
+
+getCount:
+SELECT COUNT(*) FROM merchant_rules;
+

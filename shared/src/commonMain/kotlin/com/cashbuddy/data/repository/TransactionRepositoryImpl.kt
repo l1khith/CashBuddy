@@ -156,14 +156,7 @@ class TransactionRepositoryImpl(
         queries.getCount().asFlow().mapToOne(dispatcher).distinctUntilChanged()
 
     override fun getAverageAmount(): Flow<Double> =
-        queries.getAll(::mapTransaction).asFlow().mapToList(dispatcher).let { flow ->
-            kotlinx.coroutines.flow.flow {
-                flow.collect { list ->
-                    val avg = if (list.isEmpty()) 0.0 else list.map { it.amount }.average()
-                    emit(avg)
-                }
-            }
-        }
+        queries.getAverageAmount().asFlow().mapToOne(dispatcher).distinctUntilChanged()
 
     override suspend fun findDuplicateCandidates(): List<Transaction> = withContext(dispatcher) {
         queries.findDuplicateCandidates(::mapTransaction).executeAsList()
@@ -243,6 +236,58 @@ class TransactionRepositoryImpl(
     override suspend fun updateNotes(id: Long, notes: String): Unit = withContext(dispatcher) {
         val now = com.cashbuddy.platform.currentTimeMillis()
         queries.updateNotes(notes = notes, updatedAt = now, id = id)
+    }
+
+    override suspend fun getHistoryPage(
+        searchQuery: String?,
+        type: String?,
+        categoryId: Long?,
+        startTime: Long?,
+        endTime: Long?,
+        minAmount: Double?,
+        maxAmount: Double?,
+        cursorTimestamp: Long?,
+        cursorId: Long?,
+        limit: Long
+    ): List<Transaction> = withContext(dispatcher) {
+        queries.getHistoryPage(
+            searchQuery = searchQuery,
+            type = type,
+            categoryId = categoryId,
+            startTime = startTime,
+            endTime = endTime,
+            minAmount = minAmount,
+            maxAmount = maxAmount,
+            cursorTimestamp = cursorTimestamp,
+            cursorId = cursorId,
+            limit = limit,
+            mapper = ::mapTransaction
+        ).executeAsList()
+    }
+
+    override suspend fun getHistorySummary(
+        searchQuery: String?,
+        type: String?,
+        categoryId: Long?,
+        startTime: Long?,
+        endTime: Long?,
+        minAmount: Double?,
+        maxAmount: Double?
+    ): com.cashbuddy.domain.repository.HistorySummary = withContext(dispatcher) {
+        val row = queries.getHistorySummary(
+            searchQuery = searchQuery,
+            type = type,
+            categoryId = categoryId,
+            startTime = startTime,
+            endTime = endTime,
+            minAmount = minAmount,
+            maxAmount = maxAmount
+        ).executeAsOne()
+        com.cashbuddy.domain.repository.HistorySummary(
+            totalDebit = row.total_debit,
+            totalCredit = row.total_credit,
+            totalCount = row.total_count
+        )
     }
 
     private fun mapTransaction(

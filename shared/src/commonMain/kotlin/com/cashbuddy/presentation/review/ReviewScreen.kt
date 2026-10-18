@@ -28,6 +28,7 @@ import androidx.compose.material.icons.filled.DoneAll
 import cashbuddy.shared.generated.resources.Res
 import cashbuddy.shared.generated.resources.ic_edit
 import org.jetbrains.compose.resources.painterResource
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -42,6 +43,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -83,6 +85,8 @@ fun ReviewScreen(
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
     var editingTransaction by remember { mutableStateOf<Transaction?>(null) }
+    val discardCounts = remember { mutableMapOf<String, Int>() }
+    var packageToIgnorePrompt by remember { mutableStateOf<String?>(null) }
 
     LaunchedEffect(Unit) {
         viewModel.effects.collectLatest { effect ->
@@ -233,7 +237,17 @@ fun ReviewScreen(
                             transaction = tx,
                             allCategories = state.allCategories,
                             onConfirm = { viewModel.processIntent(ReviewIntent.ConfirmTransaction(tx.id)) },
-                            onReject = { viewModel.processIntent(ReviewIntent.RejectTransaction(tx.id)) },
+                            onReject = {
+                                viewModel.processIntent(ReviewIntent.RejectTransaction(tx.id))
+                                val pkg = tx.sourceApp
+                                if (pkg.isNotBlank() && !pkg.equals("manual", ignoreCase = true) && !pkg.equals("csv_import", ignoreCase = true)) {
+                                    val count = (discardCounts[pkg] ?: 0) + 1
+                                    discardCounts[pkg] = count
+                                    if (count >= 3) {
+                                        packageToIgnorePrompt = pkg
+                                    }
+                                }
+                            },
                             onEdit = { editingTransaction = tx },
                             onCategoryChange = { newCatId ->
                                 viewModel.processIntent(ReviewIntent.ModifyCategory(tx.id, newCatId))
@@ -242,6 +256,36 @@ fun ReviewScreen(
                     }
                 }
             }
+        }
+
+        if (packageToIgnorePrompt != null) {
+            val pkg = packageToIgnorePrompt!!
+            AlertDialog(
+                onDismissRequest = { packageToIgnorePrompt = null },
+                title = { Text("Ignore App Notifications?") },
+                text = { Text("You discarded transactions from $pkg 3 times. Would you like to ignore all future notifications from this app?") },
+                confirmButton = {
+                    Button(
+                        onClick = {
+                            viewModel.ignorePackage(pkg)
+                            discardCounts.remove(pkg)
+                            packageToIgnorePrompt = null
+                        }
+                    ) {
+                        Text("Ignore App")
+                    }
+                },
+                dismissButton = {
+                    TextButton(
+                        onClick = {
+                            discardCounts.remove(pkg)
+                            packageToIgnorePrompt = null
+                        }
+                    ) {
+                        Text("Keep Receiving")
+                    }
+                }
+            )
         }
 
         if (editingTransaction != null) {

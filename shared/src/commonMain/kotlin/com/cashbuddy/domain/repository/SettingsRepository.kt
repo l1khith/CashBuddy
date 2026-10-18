@@ -20,4 +20,8 @@ interface SettingsRepository {
     suspend fun setDebugLogEnabled(enabled: Boolean)
     fun getPreferredCurrency(): Flow<String>
     suspend fun setPreferredCurrency(currencyCode: String)
+    fun getIgnoredPackages(): Flow<List<String>>
+    suspend fun isPackageIgnored(packageName: String): Boolean
+    suspend fun addIgnoredPackage(packageName: String)
+    suspend fun removeIgnoredPackage(packageName: String)
 }

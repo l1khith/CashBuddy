@@ -77,6 +77,12 @@ class BudgetEngine(
         }
         val discretionary = maxOf(0.0, spent - committed)
 
+        // Feature 5: Budget Pacing Projection
+        // projected = (spent / daysElapsed) * totalDaysInPeriod
+        val daysElapsed = maxOf(1L, (now - range.first) / 86400_000L + 1L)
+        val totalDays = maxOf(1L, (range.last - range.first) / 86400_000L + 1L)
+        val projected = (spent / daysElapsed.toDouble()) * totalDays.toDouble()
+
         return BudgetStatus(
             budget = budget,
             spent = spent,
@@ -85,7 +91,8 @@ class BudgetEngine(
             state = state,
             committed = committed,
             discretionary = discretionary,
-            recurringPatternCount = patternCount
+            recurringPatternCount = patternCount,
+            projected = projected
         )
     }
 

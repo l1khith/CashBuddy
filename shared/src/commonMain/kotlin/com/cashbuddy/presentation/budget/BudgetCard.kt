@@ -73,11 +73,15 @@ fun BudgetCard(
         label = "budget_progress"
     )
 
+    val isProjectedOver = status.projected > budget.amount && status.percentUsed < 100f
+
     val (barColor, statusPainter, statusText) = when {
         status.percentUsed >= 100f || status.state == AlertState.EXCEEDED ->
             Triple(DangerRed, painterResource(Res.drawable.ic_warning), "Exceeded by ${formatCurrency(abs(status.remaining), includeSymbol = true)}")
         status.percentUsed >= 80f || status.state == AlertState.WARNING ->
             Triple(WarningAmber, painterResource(Res.drawable.ic_warning), "Approaching limit ($percentInt% used)")
+        isProjectedOver ->
+            Triple(WarningAmber, painterResource(Res.drawable.ic_warning), "Projected over by ${formatCurrency(status.projected - budget.amount, includeSymbol = true)}")
         else ->
             Triple(AccentEmerald, rememberVectorPainter(Icons.Default.CheckCircle), "${formatCurrency(status.remaining, includeSymbol = true)} remaining ($percentInt% used)")
     }

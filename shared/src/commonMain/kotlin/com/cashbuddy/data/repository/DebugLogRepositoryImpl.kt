@@ -144,6 +144,30 @@ class DebugLogRepositoryImpl(
         queries.count().executeAsOne()
     }
 
+    override suspend fun filterLogsPage(
+        filter: DebugLogFilter,
+        cursorTimestamp: Long?,
+        cursorId: String?,
+        limit: Long
+    ): List<DebugLogEntry> = withContext(dispatcher) {
+        val list = queries.filterLogsPage(
+            sourceType = filter.sourceType,
+            policyAction = filter.policyAction,
+            packageName = filter.packageName,
+            startTime = filter.startTime,
+            endTime = filter.endTime,
+            cursorTimestamp = cursorTimestamp,
+            cursorId = cursorId,
+            limit = limit
+        ).executeAsList().map { it.toEntry() }
+
+        if (filter.outcome != null) {
+            list.filter { it.pipelineOutcome.equals(filter.outcome, ignoreCase = true) }
+        } else {
+            list
+        }
+    }
+
     private fun Debug_log.toEntry(): DebugLogEntry = DebugLogEntry(
         id = id,
         timestamp = timestamp,

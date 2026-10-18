@@ -21,6 +21,10 @@ class MerchantRuleRepositoryImpl(
     override fun getAll(): Flow<List<MerchantRule>> =
         queries.getAll(::mapRuleWithCategory).asFlow().mapToList(dispatcher)
 
+    override suspend fun getCount(): Long = withContext(dispatcher) {
+        queries.getCount().executeAsOne()
+    }
+
     override suspend fun findMatch(merchant: String): MerchantRule? = withContext(dispatcher) {
         val trimmed = merchant.trim()
         if (trimmed.isEmpty()) return@withContext null

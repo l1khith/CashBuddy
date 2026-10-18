@@ -101,6 +101,17 @@ WHERE (:sourceType IS NULL OR source_type = :sourceType)
   AND (:endTime IS NULL OR timestamp <= :endTime)
 ORDER BY timestamp DESC;
 
+filterLogsPage:
+SELECT * FROM debug_log
+WHERE (:sourceType IS NULL OR source_type = :sourceType)
+  AND (:policyAction IS NULL OR policy_action = :policyAction)
+  AND (:packageName IS NULL OR package_name LIKE ('%' || :packageName || '%'))
+  AND (:startTime IS NULL OR timestamp >= :startTime)
+  AND (:endTime IS NULL OR timestamp <= :endTime)
+  AND (:cursorTimestamp IS NULL OR :cursorId IS NULL OR timestamp < :cursorTimestamp OR (timestamp = :cursorTimestamp AND id < :cursorId))
+ORDER BY timestamp DESC, id DESC
+LIMIT :limit;
+
 distinctPackages:
 SELECT DISTINCT package_name FROM debug_log
 WHERE package_name IS NOT NULL

@@ -22,7 +22,13 @@ actual class DatabaseDriverFactory(private val context: Context) {
             schema = AppDatabase.Schema,
             context = context,
             name = "cashbuddy.db",
-            factory = SupportOpenHelperFactory(passphrase.copyOf())
+            factory = SupportOpenHelperFactory(passphrase.copyOf()),
+            callback = object : AndroidSqliteDriver.Callback(AppDatabase.Schema) {
+                override fun onOpen(db: androidx.sqlite.db.SupportSQLiteDatabase) {
+                    super.onOpen(db)
+                    db.execSQL("CREATE TABLE IF NOT EXISTS ignored_packages (package_name TEXT PRIMARY KEY NOT NULL);")
+                }
+            }
         )
 
         // Zeroize original passphrase from heap — factory holds its own copy for lazy DB open

@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.MergeType
@@ -28,6 +29,7 @@ import cashbuddy.shared.generated.resources.ic_download
 import cashbuddy.shared.generated.resources.ic_file_download
 import cashbuddy.shared.generated.resources.ic_tune
 import cashbuddy.shared.generated.resources.ic_visibility
+import cashbuddy.shared.generated.resources.ic_warning
 import org.jetbrains.compose.resources.painterResource
 import com.cashbuddy.presentation.settings.components.DuplicateReconciliationDialog
 import androidx.compose.material3.AlertDialog
@@ -39,6 +41,7 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
@@ -72,6 +75,7 @@ import com.cashbuddy.presentation.theme.DangerRed
 import com.cashbuddy.presentation.theme.PrimaryIndigo
 import com.cashbuddy.presentation.theme.RadiusLarge
 import com.cashbuddy.presentation.theme.RadiusMedium
+import com.cashbuddy.presentation.theme.RadiusSmall
 
 @Composable
 fun SettingsScreen(
@@ -87,6 +91,8 @@ fun SettingsScreen(
     var showClearDialog by remember { mutableStateOf(false) }
     var showClearTrainingDialog by remember { mutableStateOf(false) }
     var showDuplicateDialog by remember { mutableStateOf(false) }
+    var showIgnoreDialog by remember { mutableStateOf(false) }
+    var showImportDialog by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {
         viewModel.messageEffect.collectLatest { msg ->
@@ -182,6 +188,21 @@ fun SettingsScreen(
                                 )
                                 Spacer(modifier = Modifier.width(8.dp))
                                 Text("Android Notification Access Settings")
+                            }
+
+                            OutlinedButton(
+                                onClick = { showIgnoreDialog = true },
+                                modifier = Modifier.fillMaxWidth(),
+                                shape = RoundedCornerShape(10.dp)
+                            ) {
+                                Icon(
+                                    painter = painterResource(Res.drawable.ic_warning),
+                                    contentDescription = "Ignore List",
+                                    tint = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text("Ignored Apps List (${state.ignoredPackages.size})")
                             }
 
                             if (state.isOcrAvailable) {
@@ -413,6 +434,21 @@ fun SettingsScreen(
                                 )
                                 Spacer(modifier = Modifier.width(8.dp))
                                 Text("Export All Transactions (CSV)")
+                            }
+
+                            OutlinedButton(
+                                onClick = { showImportDialog = true },
+                                modifier = Modifier.fillMaxWidth(),
+                                shape = RoundedCornerShape(10.dp)
+                            ) {
+                                Icon(
+                                    painter = painterResource(Res.drawable.ic_file_download),
+                                    contentDescription = "Import Transactions",
+                                    tint = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text("Import Transactions (CSV)")
                             }
 
                             OutlinedButton(
@@ -749,6 +785,160 @@ fun SettingsScreen(
                 viewModel.exportCsvData {}
             },
             onDismiss = { showDuplicateDialog = false }
+        )
+    }
+
+    // Ignore List Dialog (Feature 4)
+    if (showIgnoreDialog) {
+        var newPkgText by remember { mutableStateOf("") }
+        AlertDialog(
+            onDismissRequest = { showIgnoreDialog = false },
+            title = {
+                Text(
+                    text = "Ignored Apps",
+                    style = CashBuddyTypography.titleLarge,
+                    fontWeight = FontWeight.Bold
+                )
+            },
+            text = {
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Text(
+                        text = "Notifications from these packages will be silently dropped and ignored by the parser.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        OutlinedTextField(
+                            value = newPkgText,
+                            onValueChange = { newPkgText = it },
+                            placeholder = { Text("com.example.app", style = CashBuddyTypography.bodySmall) },
+                            modifier = Modifier.weight(1f),
+                            singleLine = true,
+                            shape = RadiusSmall
+                        )
+                        Button(
+                            onClick = {
+                                if (newPkgText.isNotBlank()) {
+                                    viewModel.addIgnoredPackage(newPkgText)
+                                    newPkgText = ""
+                                }
+                            },
+                            shape = RadiusSmall
+                        ) {
+                            Text("Add")
+                        }
+                    }
+
+                    if (state.ignoredPackages.isEmpty()) {
+                        Text(
+                            text = "No packages currently ignored.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(vertical = 8.dp)
+                        )
+                    } else {
+                        LazyColumn(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(160.dp),
+                            verticalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            items(
+                                items = state.ignoredPackages,
+                                key = { it }
+                            ) { pkg ->
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clip(RadiusSmall)
+                                        .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+                                        .padding(horizontal = 10.dp, vertical = 6.dp),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text(
+                                        text = pkg,
+                                        style = CashBuddyTypography.bodySmall,
+                                        modifier = Modifier.weight(1f)
+                                    )
+                                    TextButton(
+                                        onClick = { viewModel.removeIgnoredPackage(pkg) }
+                                    ) {
+                                        Text("Remove", color = DangerRed, style = CashBuddyTypography.labelSmall)
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { showIgnoreDialog = false }) {
+                    Text("Close")
+                }
+            }
+        )
+    }
+
+    // CSV Import Dialog (Feature 6)
+    if (showImportDialog) {
+        var csvText by remember { mutableStateOf("") }
+        AlertDialog(
+            onDismissRequest = { showImportDialog = false },
+            title = {
+                Text(
+                    text = "Import Transactions (CSV)",
+                    style = CashBuddyTypography.titleLarge,
+                    fontWeight = FontWeight.Bold
+                )
+            },
+            text = {
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    Text(
+                        text = "Paste CSV data below. Supports standard exported ledger columns or 'Amount,Type,Currency,Merchant,Notes'.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    OutlinedTextField(
+                        value = csvText,
+                        onValueChange = { csvText = it },
+                        placeholder = { Text("Amount,Type,Currency,Merchant...\n150,DEBIT,INR,Swiggy,Lunch", style = CashBuddyTypography.bodySmall) },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(180.dp),
+                        shape = RadiusMedium
+                    )
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        if (csvText.isNotBlank()) {
+                            viewModel.importCsvData(csvText)
+                            showImportDialog = false
+                        }
+                    },
+                    enabled = csvText.isNotBlank() && !state.isImportingCsv
+                ) {
+                    Text(if (state.isImportingCsv) "Importing..." else "Import")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showImportDialog = false }) {
+                    Text("Cancel")
+                }
+            }
         )
     }
 }

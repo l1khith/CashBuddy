@@ -32,6 +32,7 @@ data class AddTransactionUiState(
     val recentMerchants: List<String> = emptyList(),
     val frequentAmounts: List<Double> = listOf(50.0, 100.0, 200.0, 500.0, 1000.0, 2000.0),
     val suggestedCategoryId: Long? = null,
+    val defaultMerchant: String = "",
     val isLoading: Boolean = true
 )
 
@@ -55,11 +56,15 @@ class AddTransactionViewModel(
 
     init {
         viewModelScope.launch {
+            val nowMillis = com.cashbuddy.platform.currentTimeMillis()
+            val thirtyDaysAgo = nowMillis - (30L * 24 * 60 * 60 * 1000)
+            
             combine(
                 categoryRepository.getAll(),
                 accountRepository.getAll(),
-                transactionRepository.getRecent(limit = 50)
-            ) { cats, accs, txs ->
+                transactionRepository.getRecent(limit = 100),
+                transactionRepository.getByDateRange(thirtyDaysAgo, nowMillis)
+            ) { cats, accs, txs, monthTxs ->
                 allTransactions = txs
 
                 // Extract recent unique merchants
@@ -80,15 +85,60 @@ class AddTransactionViewModel(
                     listOf(50.0, 100.0, 200.0, 500.0, 1000.0, 2000.0)
                 }
 
-                // Initial time-based category default
-                val defaultCategory = getTimeBasedDefaultCategory(cats)
+                // Anticipatory prediction:
+                // 1. Current time of day & day of week
+                val currentDateTime = kotlinx.datetime.Instant.fromEpochMilliseconds(nowMillis)
+                    .toLocalDateTime(TimeZone.currentSystemDefault())
+                val currentHour = currentDateTime.hour
+
+                // 2. Filter transactions in last 30 days within ±2 hour window of current time
+                val timeWindowTxs = monthTxs.filter { tx ->
+                    val txClean = tx.merchant.trim()
+                    if (txClean.isBlank() || txClean.equals("Manual Entry", ignoreCase = true)) return@filter false
+                    val txDateTime = kotlinx.datetime.Instant.fromEpochMilliseconds(tx.timestamp)
+                        .toLocalDateTime(TimeZone.currentSystemDefault())
+                    val diff = kotlin.math.abs(txDateTime.hour - currentHour)
+                    diff <= 2 || diff >= 22 // Wrap around 24 hours
+                }
+
+                // Top 3 merchants within window
+                val topMerchants = timeWindowTxs
+                    .groupingBy { it.merchant.trim() }
+                    .eachCount()
+                    .entries
+                    .sortedByDescending { it.value }
+                    .take(3)
+                    .map { it.key }
+
+                val topMerchant = topMerchants.firstOrNull() ?: ""
+
+                // 3. Most frequent category for these merchants or top merchant
+                val candidateTxs = if (topMerchant.isNotBlank()) {
+                    timeWindowTxs.filter { it.merchant.trim().equals(topMerchant, ignoreCase = true) }
+                } else {
+                    timeWindowTxs
+                }
+
+                val mostFrequentCatId = candidateTxs
+                    .groupingBy { it.categoryId }
+                    .eachCount()
+                    .maxByOrNull { it.value }
+                    ?.key
+
+                val suggestedCategory = if (mostFrequentCatId != null && cats.any { it.id == mostFrequentCatId }) {
+                    mostFrequentCatId
+                } else {
+                    val defaultCategory = getTimeBasedDefaultCategory(cats)
+                    defaultCategory?.id ?: cats.firstOrNull()?.id
+                }
 
                 AddTransactionUiState(
                     categories = cats,
                     accounts = accs,
                     recentMerchants = recentMerchants,
                     frequentAmounts = frequentAmounts,
-                    suggestedCategoryId = defaultCategory?.id ?: cats.firstOrNull()?.id,
+                    suggestedCategoryId = suggestedCategory,
+                    defaultMerchant = topMerchant,
                     isLoading = false
                 )
             }.collect {

@@ -32,6 +32,12 @@ getAllRaw:
 SELECT * FROM raw_training_data
 ORDER BY timestamp DESC;
 
+getRawPage:
+SELECT * FROM raw_training_data
+WHERE (:cursorTimestamp IS NULL OR :cursorId IS NULL OR timestamp < :cursorTimestamp OR (timestamp = :cursorTimestamp AND id < :cursorId))
+ORDER BY timestamp DESC, id DESC
+LIMIT :limit;
+
 getRawCount:
 SELECT COUNT(*) FROM raw_training_data;
 
@@ -46,6 +52,12 @@ VALUES (?, ?, ?, ?, ?, ?);
 getAllCorrections:
 SELECT * FROM user_corrections
 ORDER BY timestamp DESC;
+
+getCorrectionsPage:
+SELECT * FROM user_corrections
+WHERE (:cursorTimestamp IS NULL OR :cursorId IS NULL OR timestamp < :cursorTimestamp OR (timestamp = :cursorTimestamp AND id < :cursorId))
+ORDER BY timestamp DESC, id DESC
+LIMIT :limit;
 
 getCorrectionCount:
 SELECT COUNT(*) FROM user_corrections;

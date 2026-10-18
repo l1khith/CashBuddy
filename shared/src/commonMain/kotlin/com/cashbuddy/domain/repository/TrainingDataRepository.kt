@@ -27,7 +27,12 @@ interface TrainingDataRepository {
 
     fun getAllRaw(): Flow<List<RawTrainingData>>
     fun getAllCorrections(): Flow<List<UserCorrection>>
+    suspend fun getRawPage(cursorTimestamp: Long? = null, cursorId: Long? = null, limit: Long = 50L): List<RawTrainingData> = emptyList()
+    suspend fun getCorrectionsPage(cursorTimestamp: Long? = null, cursorId: Long? = null, limit: Long = 50L): List<UserCorrection> = emptyList()
+    suspend fun getRawCount(): Long = 0L
+    suspend fun getCorrectionCount(): Long = 0L
     fun getStats(): Flow<TrainingStats>
+    suspend fun streamTrainingDataJsonl(write: (String) -> Unit) {}
     suspend fun exportTrainingDataJsonl(): String
     suspend fun clearTrainingData()
 }
