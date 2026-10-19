@@ -67,6 +67,8 @@ class TransactionPagerTest {
             categoryId: Long?,
             startTime: Long?,
             endTime: Long?,
+            minAmount: Double?,
+            maxAmount: Double?,
             cursorTimestamp: Long?,
             cursorId: Long?,
             limit: Long
