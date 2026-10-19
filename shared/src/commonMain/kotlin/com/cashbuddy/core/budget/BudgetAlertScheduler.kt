@@ -5,6 +5,8 @@ import com.cashbuddy.domain.model.AlertState
 import com.cashbuddy.domain.model.BudgetCategories
 import com.cashbuddy.domain.repository.BudgetRepository
 import com.cashbuddy.platform.currentTimeMillis
+import kotlinx.datetime.Instant
+import kotlin.math.roundToInt
 
 data class AlertEvent(
     val budgetId: String,
@@ -44,58 +46,88 @@ class BudgetAlertScheduler(
             }
 
             val status = budgetEngine.statusFor(budget, now)
+            val pacing = BudgetPacer.calculatePacing(
+                spent = status.spent,
+                budgetAmount = budget.amount,
+                period = budget.period,
+                now = Instant.fromEpochMilliseconds(now)
+            )
 
-            when (status.state) {
-                AlertState.WARNING -> {
-                    // Fire 80% warning only if not already alerted for WARNING or EXCEEDED in this period
-                    if (lastState == null || lastState == AlertState.ON_TRACK) {
-                        budgetRepository.markAlerted(budget.id, AlertState.WARNING, now)
-                        // At most one notification per transition cycle
-                        if (firedEvents.isEmpty()) {
-                            val message = if (budget.category == BudgetCategories.GLOBAL) {
-                                "You've used 80% of your ${budget.period.name.lowercase()} budget"
-                            } else {
-                                "${budget.category} budget is at 80%"
-                            }
-                            val event = AlertEvent(
-                                budgetId = budget.id,
-                                category = budget.category,
-                                state = AlertState.WARNING,
-                                message = message
-                            )
-                            notifier?.sendAlert(event)
-                            firedEvents.add(event)
-                        }
+            val daysRemaining = pacing.daysRemaining
+
+            // Do NOT fire notifications on the last day of the month/period (user can't fix it then)
+            if (daysRemaining <= 0) {
+                continue
+            }
+
+            val isGlobal = (budget.category == BudgetCategories.GLOBAL)
+
+            var alertState: AlertState? = null
+            var alertMessage: String? = null
+
+            // 1. BREACHED: actualPercent >= 100%
+            if (pacing.actualPercent >= 100.0) {
+                alertState = AlertState.EXCEEDED
+                alertMessage = if (isGlobal) {
+                    "You've exceeded your ${budget.period.name.lowercase()} budget"
+                } else {
+                    "${budget.category} budget exceeded"
+                }
+            }
+            // 2. DANGER ZONE: actualPercent >= 85% AND daysRemaining >= 3
+            else if (pacing.actualPercent >= 85.0 && daysRemaining >= 3) {
+                if (!isGlobal || pacing.projectedOverage > 0.0) {
+                    alertState = AlertState.WARNING
+                    alertMessage = if (isGlobal) {
+                        "You've used 80% of your ${budget.period.name.lowercase()} budget"
+                    } else {
+                        "${budget.category} budget is at 80%"
                     }
                 }
-                AlertState.EXCEEDED -> {
-                    // Fire exceeded alert only if not already alerted for EXCEEDED in this period
-                    if (lastState != AlertState.EXCEEDED) {
-                        budgetRepository.markAlerted(budget.id, AlertState.EXCEEDED, now)
-                        // At most one notification per transition cycle
-                        if (firedEvents.isEmpty()) {
-                            val message = if (budget.category == BudgetCategories.GLOBAL) {
-                                "You've exceeded your ${budget.period.name.lowercase()} budget"
-                            } else {
-                                "${budget.category} budget exceeded"
-                            }
-                            val event = AlertEvent(
-                                budgetId = budget.id,
-                                category = budget.category,
-                                state = AlertState.EXCEEDED,
-                                message = message
-                            )
-                            notifier?.sendAlert(event)
-                            firedEvents.add(event)
-                        }
-                    }
+            }
+            // 3. OVERSPENDING PACE: actualPercent - expectedPercent >= 15% (spending 15% faster than period is passing)
+            else if ((pacing.actualPercent - pacing.expectedPercent) >= 15.0 && daysRemaining >= 3 && pacing.projectedOverage > 0.0) {
+                alertState = AlertState.WARNING
+                val formattedOverage = formatOverage(pacing.projectedOverage)
+                alertMessage = if (isGlobal) {
+                    "At this rate, you'll exceed your ${budget.period.name.lowercase()} budget by ₹$formattedOverage"
+                } else {
+                    "At this rate, you'll exceed your ${budget.category} budget by ₹$formattedOverage"
                 }
-                AlertState.ON_TRACK -> {
-                    // No alert needed while spending remains on track
+            }
+
+            if (alertState != null && alertMessage != null) {
+                val shouldAlert = when (alertState) {
+                    AlertState.EXCEEDED -> lastState != AlertState.EXCEEDED
+                    AlertState.WARNING -> lastState == null || lastState == AlertState.ON_TRACK
+                    AlertState.ON_TRACK -> false
+                }
+
+                if (shouldAlert) {
+                    budgetRepository.markAlerted(budget.id, alertState, now)
+                    if (firedEvents.isEmpty()) {
+                        val event = AlertEvent(
+                            budgetId = budget.id,
+                            category = budget.category,
+                            state = alertState,
+                            message = alertMessage
+                        )
+                        notifier?.sendAlert(event)
+                        firedEvents.add(event)
+                    }
                 }
             }
         }
 
         return firedEvents
+    }
+
+    private fun formatOverage(amount: Double): String {
+        return if (amount >= 1000) {
+            val rounded = (amount / 100).roundToInt() * 100
+            rounded.toString()
+        } else {
+            amount.roundToInt().toString()
+        }
     }
 }
