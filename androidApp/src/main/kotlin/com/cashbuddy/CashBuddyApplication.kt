@@ -2,6 +2,7 @@ package com.cashbuddy
 
 import android.app.Application
 import android.util.Log
+import androidx.glance.appwidget.updateAll
 import com.cashbuddy.debug.DebugConfig
 import com.cashbuddy.di.androidModule
 import com.cashbuddy.di.appModule
@@ -23,11 +24,58 @@ class CashBuddyApplication : Application() {
     override fun onCreate() {
         super.onCreate()
 
+        val assistantModule = org.koin.dsl.module {
+            single<com.cashbuddy.core.anomaly.AnomalyNotifier> {
+                com.cashbuddy.notification.AndroidAnomalyNotifier(get(), get())
+            }
+        }
+
         // Initialize Koin Dependency Injection
         startKoin {
             androidContext(this@CashBuddyApplication)
-            modules(appModule, androidModule, platformModule)
+            modules(appModule, androidModule, platformModule, assistantModule)
         }
+
+        // Setup notification channels for Assistant features
+        com.cashbuddy.notification.NotificationHelper.createChannels(this)
+
+        // Observe smart notifications setting to schedule or cancel workers & persistent notification
+        applicationScope.launch {
+            try {
+                val settingsRepository: com.cashbuddy.domain.repository.SettingsRepository = get()
+                settingsRepository.getSmartNotificationsEnabled().collect { enabled ->
+                    if (enabled) {
+                        com.cashbuddy.worker.AssistantWorkManager.scheduleAll(this@CashBuddyApplication)
+                        com.cashbuddy.notification.QuickGlanceNotification.update(this@CashBuddyApplication)
+                    } else {
+                        com.cashbuddy.worker.AssistantWorkManager.cancelAll(this@CashBuddyApplication)
+                        com.cashbuddy.notification.QuickGlanceNotification.dismiss(this@CashBuddyApplication)
+                    }
+                }
+            } catch (e: Throwable) {
+                Log.e("CashBuddyApplication", "Failed to initialize Assistant workers", e)
+            }
+        }
+
+        // Listen for transaction updates to refresh persistent notification & Glance widget
+        val filter = android.content.IntentFilter("com.cashbuddy.ACTION_TRANSACTIONS_UPDATED")
+        androidx.core.content.ContextCompat.registerReceiver(
+            this,
+            object : android.content.BroadcastReceiver() {
+                override fun onReceive(context: android.content.Context?, intent: android.content.Intent?) {
+                    applicationScope.launch {
+                        com.cashbuddy.notification.QuickGlanceNotification.update(this@CashBuddyApplication)
+                        try {
+                            com.cashbuddy.widget.CashBuddyWidget().updateAll(this@CashBuddyApplication)
+                        } catch (e: Throwable) {
+                            Log.w("CashBuddyApplication", "Widget update failed", e)
+                        }
+                    }
+                }
+            },
+            filter,
+            androidx.core.content.ContextCompat.RECEIVER_NOT_EXPORTED
+        )
 
         // Configure DebugConfig with BuildConfig.DEBUG and dynamic app version info
         get<DebugConfig>().isDebugBuild = BuildConfig.DEBUG

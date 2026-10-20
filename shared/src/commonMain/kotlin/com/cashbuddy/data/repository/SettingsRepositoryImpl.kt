@@ -27,7 +27,8 @@ class SettingsRepositoryImpl(
                 minConfidenceThreshold = map["minConfidenceThreshold"]?.toFloatOrNull() ?: 0.85f,
                 notificationsEnabled = map["notificationsEnabled"]?.toBooleanStrictOrNull() ?: true,
                 biometricEnabled = map["biometricEnabled"]?.toBooleanStrictOrNull() ?: false,
-                preferredCurrency = map["preferredCurrency"] ?: "INR"
+                preferredCurrency = map["preferredCurrency"] ?: "INR",
+                smartNotificationsEnabled = map["smartNotificationsEnabled"]?.toBooleanStrictOrNull() ?: true
             )
         }
 
@@ -38,6 +39,7 @@ class SettingsRepositoryImpl(
         queries.set("notificationsEnabled", settings.notificationsEnabled.toString(), now)
         queries.set("biometricEnabled", settings.biometricEnabled.toString(), now)
         queries.set("preferredCurrency", settings.preferredCurrency, now)
+        queries.set("smartNotificationsEnabled", settings.smartNotificationsEnabled.toString(), now)
     }
 
     override fun getNotificationEnabled(): Flow<Boolean> =
@@ -120,5 +122,14 @@ class SettingsRepositoryImpl(
 
     override suspend fun removeIgnoredPackage(packageName: String): Unit = withContext(dispatcher) {
         queries.removeIgnoredPackage(packageName.trim())
+    }
+
+    override fun getSmartNotificationsEnabled(): Flow<Boolean> =
+        queries.get("smartNotificationsEnabled").asFlow().mapToOneOrNull(dispatcher).map { record ->
+            record?.value_?.toBooleanStrictOrNull() ?: true
+        }
+
+    override suspend fun setSmartNotificationsEnabled(enabled: Boolean): Unit = withContext(dispatcher) {
+        queries.set("smartNotificationsEnabled", enabled.toString(), com.cashbuddy.platform.currentTimeMillis())
     }
 }

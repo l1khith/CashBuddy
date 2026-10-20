@@ -52,6 +52,23 @@
             </intent-filter>
         </service>
 
+        <!-- Anomaly Action Receiver for Notification Actions -->
+        <receiver
+            android:name=".notification.AnomalyActionReceiver"
+            android:exported="false" />
+
+        <!-- Home Screen Glance App Widget -->
+        <receiver
+            android:name=".widget.CashBuddyWidgetReceiver"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/cashbuddy_widget_info" />
+        </receiver>
+
     </application>
 
 </manifest>

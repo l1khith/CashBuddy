@@ -24,4 +24,6 @@ interface SettingsRepository {
     suspend fun isPackageIgnored(packageName: String): Boolean
     suspend fun addIgnoredPackage(packageName: String)
     suspend fun removeIgnoredPackage(packageName: String)
+    fun getSmartNotificationsEnabled(): Flow<Boolean>
+    suspend fun setSmartNotificationsEnabled(enabled: Boolean)
 }

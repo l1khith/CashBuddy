@@ -66,7 +66,8 @@ class MessagePipeline(
     private val settingsRepo: SettingsRepository? = null,
     private val budgetAlertScheduler: com.cashbuddy.core.budget.BudgetAlertScheduler? = null,
     private val fraudDetector: com.cashbuddy.core.FraudDetector = com.cashbuddy.core.FraudDetector(transactionRepo),
-    private val recurringPatternRepo: com.cashbuddy.domain.repository.RecurringPatternRepository? = null
+    private val recurringPatternRepo: com.cashbuddy.domain.repository.RecurringPatternRepository? = null,
+    private val anomalyNotifier: com.cashbuddy.core.anomaly.AnomalyNotifier? = null
 ) {
     suspend fun ingest(raw: RawMessage): PipelineOutcome {
         recentStateRepository?.recordRaw(raw.timestamp, raw.packageName)
@@ -231,6 +232,11 @@ class MessagePipeline(
                                     if (finalStatus == TransactionStatus.CONFIRMED) {
                                         transactionRepo.updateStatus(insertedId, TransactionStatus.PENDING)
                                         finalStatus = TransactionStatus.PENDING
+                                    }
+                                    try {
+                                        anomalyNotifier?.sendAnomalyAlert(insertedId, tx.amount, tx.merchant)
+                                    } catch (_: Throwable) {
+                                        // Non-blocking best-effort anomaly alert
                                     }
                                 }
 

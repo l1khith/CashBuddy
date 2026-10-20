@@ -68,4 +68,25 @@ object BudgetPacer {
             projectedOverage = projectedOverage
         )
     }
+
+    fun calculatePacing(
+        spent: Double,
+        budget: Double,
+        period: String,
+        now: Instant,
+        timeZone: TimeZone = TimeZone.currentSystemDefault()
+    ): PacingResult {
+        val budgetPeriod = when (period.uppercase()) {
+            "WEEKLY" -> BudgetPeriod.WEEKLY
+            "YEARLY" -> BudgetPeriod.YEARLY
+            else -> BudgetPeriod.MONTHLY
+        }
+        return calculatePacing(
+            spent = spent,
+            budgetAmount = budget,
+            period = budgetPeriod,
+            now = now,
+            timeZone = timeZone
+        )
+    }
 }

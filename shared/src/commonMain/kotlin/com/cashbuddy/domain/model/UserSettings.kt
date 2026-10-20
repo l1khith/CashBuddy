@@ -5,5 +5,6 @@ data class UserSettings(
     val minConfidenceThreshold: Float = 0.85f,
     val notificationsEnabled: Boolean = true,
     val biometricEnabled: Boolean = false,
-    val preferredCurrency: String = "INR"
+    val preferredCurrency: String = "INR",
+    val smartNotificationsEnabled: Boolean = true
 )

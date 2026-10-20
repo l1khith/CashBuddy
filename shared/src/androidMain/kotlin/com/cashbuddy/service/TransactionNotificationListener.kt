@@ -209,6 +209,19 @@ class TransactionNotificationListener : NotificationListenerService(), KoinCompo
                 if (outcome is com.cashbuddy.core.prob.PipelineOutcome.PendingReview) {
                     showReviewAlert(outcome.txId, outcome.amount, outcome.merchant)
                 }
+
+                // 4. Notify Assistant layer (Glance widget & persistent status) of new transaction
+                if (outcome is com.cashbuddy.core.prob.PipelineOutcome.Logged ||
+                    outcome is com.cashbuddy.core.prob.PipelineOutcome.PendingReview) {
+                    try {
+                        val updateIntent = Intent("com.cashbuddy.ACTION_TRANSACTIONS_UPDATED").apply {
+                            setPackage(packageName)
+                        }
+                        sendBroadcast(updateIntent)
+                    } catch (e: Throwable) {
+                        Log.w(TAG, "Failed sending transactions updated broadcast", e)
+                    }
+                }
             } catch (e: Throwable) {
                 Log.e(TAG, "Failed to process notification from ${activeSbn.packageName}", e)
             }
