@@ -52,6 +52,7 @@ class MainActivity : FragmentActivity() {
 
     private enum class AuthState { LOADING, AUTHENTICATED, LOCKED }
     private var authState by mutableStateOf(AuthState.LOADING)
+    private var currentNavigationRoute by mutableStateOf<String?>(null)
     private var isBiometricRequired = false
     private var lastBackgroundTimestamp: Long = 0L
 
@@ -181,6 +182,7 @@ class MainActivity : FragmentActivity() {
 
         val initialRoute = screenshotInitialRoute
             ?: intent?.getStringExtra("EXTRA_NAVIGATE_TO")
+        currentNavigationRoute = initialRoute
 
         setContent {
             CashBuddyTheme {
@@ -194,7 +196,7 @@ class MainActivity : FragmentActivity() {
                     }
                     AuthState.AUTHENTICATED -> {
                         CashBuddyApp(
-                            initialRoute = initialRoute,
+                            initialRoute = currentNavigationRoute,
                             onOpenNotificationSettings = {
                                 try {
                                     startActivity(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS))
@@ -243,6 +245,15 @@ class MainActivity : FragmentActivity() {
                     }
                 }
             }
+        }
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        val route = intent.getStringExtra("EXTRA_NAVIGATE_TO")
+        if (!route.isNullOrBlank()) {
+            currentNavigationRoute = route
         }
     }
 

@@ -1,6 +1,7 @@
 package com.cashbuddy.screenshot
 
 import android.content.Context
+import android.content.Intent
 import android.net.Uri
 import android.util.Log
 import com.cashbuddy.domain.model.Transaction
@@ -185,6 +186,16 @@ class ScreenshotHandler(private val context: Context) : KoinComponent {
                 Log.e(TAG, "Failed to process screenshot: ${file.name}", e)
             } finally {
                 file.delete()
+            }
+        }
+
+        if (createdIds.isNotEmpty()) {
+            try {
+                context.sendBroadcast(
+                    Intent("com.cashbuddy.ACTION_TRANSACTIONS_UPDATED").setPackage(context.packageName)
+                )
+            } catch (e: Throwable) {
+                Log.w(TAG, "Failed sending transactions updated broadcast", e)
             }
         }
 

@@ -175,6 +175,30 @@ fun SettingsScreen(
                                 )
                             }
 
+                            // Smart Notifications Toggle
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(
+                                        text = "Smart Notifications",
+                                        style = MaterialTheme.typography.titleMedium,
+                                        fontWeight = FontWeight.SemiBold
+                                    )
+                                    Text(
+                                        text = "Budget pacing alerts, anomaly warnings & weekly recaps",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                                Switch(
+                                    checked = state.smartNotificationsEnabled,
+                                    onCheckedChange = { viewModel.setSmartNotificationsEnabled(it) }
+                                )
+                            }
+
                             OutlinedButton(
                                 onClick = onOpenNotificationSettings,
                                 modifier = Modifier.fillMaxWidth(),

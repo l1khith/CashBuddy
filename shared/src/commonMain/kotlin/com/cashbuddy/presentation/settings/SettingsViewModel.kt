@@ -41,7 +41,8 @@ data class SettingsUiState(
     val isMerging: Boolean = false,
     val isOcrAvailable: Boolean = false,
     val ignoredPackages: List<String> = emptyList(),
-    val isImportingCsv: Boolean = false
+    val isImportingCsv: Boolean = false,
+    val smartNotificationsEnabled: Boolean = true
 )
 
 class SettingsViewModel(
@@ -100,7 +101,8 @@ class SettingsViewModel(
                     preferredCurrency = settings.preferredCurrency,
                     isLoading = false,
                     isOcrAvailable = ocrEngine?.isAvailable ?: false,
-                    ignoredPackages = ignoredPkgs
+                    ignoredPackages = ignoredPkgs,
+                    smartNotificationsEnabled = settings.smartNotificationsEnabled
                 )
             }.collect {
                 _uiState.value = it
@@ -134,6 +136,12 @@ class SettingsViewModel(
     fun setNotificationEnabled(enabled: Boolean) {
         viewModelScope.launch {
             settingsRepository.setNotificationEnabled(enabled)
+        }
+    }
+
+    fun setSmartNotificationsEnabled(enabled: Boolean) {
+        viewModelScope.launch {
+            settingsRepository.setSmartNotificationsEnabled(enabled)
         }
     }
 

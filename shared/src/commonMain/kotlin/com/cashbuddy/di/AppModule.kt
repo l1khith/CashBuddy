@@ -101,7 +101,8 @@ val appModule = module {
             recentStateRepository = get(),
             settingsRepo = get(),
             budgetAlertScheduler = getOrNull(),
-            recurringPatternRepo = getOrNull()
+            recurringPatternRepo = getOrNull(),
+            anomalyNotifier = getOrNull()
         )
     }
 
