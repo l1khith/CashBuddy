@@ -59,7 +59,7 @@ class TransactionRepositoryImpl(
     override fun getMonthlySummary(): Flow<List<MonthlySummary>> =
         queries.getMonthlySummary { month, totalDebit, totalCredit, transactionCount ->
             MonthlySummary(
-                month = month ?: "",
+                month = month,
                 totalDebit = totalDebit ?: 0.0,
                 totalCredit = totalCredit ?: 0.0,
                 transactionCount = transactionCount

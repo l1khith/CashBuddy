@@ -2,8 +2,13 @@
 package com.cashbuddy.core.prob
 
 /**
- * Immutable map of normalized brand tokens to standard categories.
- * O(1) lookup. Does NOT contain sender IDs.
+ * Baseline fallback dictionary of normalized Indian brand tokens to standard categories.
+ * 
+ * ARCHITECTURE ROLE:
+ * - Dynamic user overrides in the SQLite `merchant_rules` table take precedence (Tier 1: Confidence 1.0).
+ * - This map acts as the immutable cold-start fallback (Tier 2-4: Confidence 0.70 - 0.95)
+ *   before user corrections or on-device Naive Bayes tokens are learned.
+ * - Does NOT contain sender IDs or bank codes.
  */
 object MerchantMap {
     private val MAP: Map<String, String> = mapOf(

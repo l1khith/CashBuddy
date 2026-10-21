@@ -37,6 +37,7 @@ class ScreenshotHandler(private val context: Context) : KoinComponent {
      * CRITICAL for Samsung/OEM devices: Immediately copy shared image stream to app cache
      * synchronously during intent handling before content URI access expires.
      */
+    @android.annotation.SuppressLint("Recycle")
     fun copyUriToCache(uri: Uri): File? {
         if (uri.scheme != android.content.ContentResolver.SCHEME_CONTENT) {
             Log.w(TAG, "Rejected non-content screenshot URI scheme: ${uri.scheme}")
@@ -48,9 +49,12 @@ class ScreenshotHandler(private val context: Context) : KoinComponent {
 
         repeat(5) { attempt ->
             try {
-                context.contentResolver.openInputStream(uri)?.use { input ->
-                    FileOutputStream(destFile).use { output ->
-                        input.copyTo(output)
+                val input = context.contentResolver.openInputStream(uri)
+                if (input != null) {
+                    input.use { inStream ->
+                        FileOutputStream(destFile).use { output ->
+                            inStream.copyTo(output)
+                        }
                     }
                 }
                 if (destFile.exists() && destFile.length() > 0) {

@@ -69,6 +69,7 @@ import kotlinx.coroutines.flow.collectLatest
 
 import androidx.compose.ui.platform.LocalUriHandler
 import com.cashbuddy.platform.getAppVersionDisplay
+import com.cashbuddy.platform.rememberFilePicker
 import com.cashbuddy.presentation.theme.AccentEmerald
 import com.cashbuddy.presentation.theme.CashBuddyTypography
 import com.cashbuddy.presentation.theme.DangerRed
@@ -915,6 +916,15 @@ fun SettingsScreen(
     // CSV Import Dialog (Feature 6)
     if (showImportDialog) {
         var csvText by remember { mutableStateOf("") }
+        var selectedFileName by remember { mutableStateOf<String?>(null) }
+
+        val openFilePicker = rememberFilePicker(mimeType = "text/csv") { content, fileName ->
+            if (content != null) {
+                csvText = content
+                selectedFileName = fileName ?: "Selected File"
+            }
+        }
+
         AlertDialog(
             onDismissRequest = { showImportDialog = false },
             title = {
@@ -927,20 +937,67 @@ fun SettingsScreen(
             text = {
                 Column(
                     modifier = Modifier.fillMaxWidth(),
-                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     Text(
-                        text = "Paste CSV data below. Supports standard exported ledger columns or 'Amount,Type,Currency,Merchant,Notes'.",
+                        text = "Choose a CSV file from your device storage, or paste CSV text manually below.",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
+
+                    OutlinedButton(
+                        onClick = { openFilePicker() },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RadiusMedium
+                    ) {
+                        Icon(
+                            painter = painterResource(Res.drawable.ic_file_download),
+                            contentDescription = "Pick File",
+                            modifier = Modifier.size(18.dp),
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = if (selectedFileName != null) "Change File ($selectedFileName)" else "Select CSV File from Device",
+                            style = MaterialTheme.typography.labelLarge
+                        )
+                    }
+
+                    if (selectedFileName != null) {
+                        val lineCount = csvText.lineSequence().count { it.isNotBlank() }
+                        Card(
+                            colors = CardDefaults.cardColors(
+                                containerColor = AccentEmerald.copy(alpha = 0.1f)
+                            ),
+                            shape = RadiusSmall,
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text(
+                                text = "Loaded $selectedFileName ($lineCount rows)",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = AccentEmerald,
+                                fontWeight = FontWeight.SemiBold,
+                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)
+                            )
+                        }
+                    }
+
+                    Text(
+                        text = "CSV Preview / Manual Paste:",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+
                     OutlinedTextField(
                         value = csvText,
-                        onValueChange = { csvText = it },
-                        placeholder = { Text("Amount,Type,Currency,Merchant...\n150,DEBIT,INR,Swiggy,Lunch", style = CashBuddyTypography.bodySmall) },
+                        onValueChange = {
+                            csvText = it
+                            selectedFileName = null
+                        },
+                        placeholder = { Text("Amount,Type,Currency,Merchant,Notes...\n150,DEBIT,INR,Swiggy,Lunch", style = CashBuddyTypography.bodySmall) },
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(180.dp),
+                            .height(160.dp),
                         shape = RadiusMedium
                     )
                 }

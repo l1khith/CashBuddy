@@ -56,7 +56,17 @@ fun StatsScreen(
     modifier: Modifier = Modifier
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
+    StatsContent(
+        state = state,
+        modifier = modifier
+    )
+}
 
+@Composable
+fun StatsContent(
+    state: StatsUiState,
+    modifier: Modifier = Modifier
+) {
     Scaffold(modifier = modifier.fillMaxSize()) { innerPadding ->
         if (state.isLoading) {
             Box(

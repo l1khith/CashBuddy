@@ -5,6 +5,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 
 private val DarkColorScheme = darkColorScheme(
     primary = PrimaryIndigo,
@@ -60,7 +61,11 @@ fun CashBuddyTheme(
     MaterialTheme(
         colorScheme = colorScheme,
         typography = CashBuddyTypography,
-        shapes = CashBuddyShapes,
-        content = content
-    )
+        shapes = CashBuddyShapes
+    ) {
+        CompositionLocalProvider(
+            LocalSpacing provides Spacing(),
+            content = content
+        )
+    }
 }

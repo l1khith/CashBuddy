@@ -32,34 +32,43 @@ class EvidenceExtractor(
             // "₹5 lakh", "₹2 crore", "Rs 5 lakhs"
             Regex("""$CURR\s*\d[\d,.]*\s*(?:lakh|lakhs|crore|crores|lac|lacs)\b""", RegexOption.IGNORE_CASE),
             // Salary / stipend phrases near amount
-            Regex("""$CURR\s*\d[\d,.]*[kKlL]?\s*(?:per\s+(?:annum|month|year)|a\s+year|annually|salary|stipend)\b""", RegexOption.IGNORE_CASE),
-            Regex("""\b(?:stipend|salary)\s+(?:up\s*to\s+)?$CURR\s*\d""", RegexOption.IGNORE_CASE)
+            Regex("""$CURR\s*\d[\d,.]*[kKlL]?\s*(?:per\s+(?:annum|month|year)|a\s+year|annually|salary|stipend)\b""", RegexOption.IGNORE_CASE)
         )
 
-        // Structural, not a phrase list
         private val CURRENCY_NEAR_PAID = Regex(
             """(?i)\bpaid\b[^.!?\n]{0,30}(?:₹|Rs\.?|INR|\$|€|£)|(?:₹|Rs\.?|INR|\$|€|£)[^.!?\n]{0,30}\bpaid\b"""
         )
-        private val JOB_PAID_MARKER = Regex("""(?i)\b(?:intern(?:ship)?\s*\(\s*paid\s*\)|\(\s*paid\s*(?:intern(?:ship)?)?\s*\)|paid\s+intern(?:ship)?|(?:engineer|developer|role|position)\s*\(\s*paid\s*\))\b""")
+
+        private val DECIMAL_PROTECT_REGEX = Regex("""(\d)\.(\d)""")
+        private val CURRENCY_ABBREV_REGEX = Regex("""(?i)\b(rs|re|inr)\.""")
+        private val BANKING_ABBREV_REGEX = Regex("""(?i)\b(a/c|ac|no|ref|vpa|co|ltd|dr|mr|mrs)\.""")
+        private val SENTENCE_SPLIT_REGEX = Regex("""[.!?\n\r•·|—]+""")
+
+        private val PAYER_REGEX = Regex("""(?i)(?:^|[\n\r•·|—:]|\b(?:from|by)\s+)\s*([A-Za-z0-9\s&'.-]{2,40}?)\s+(?:paid\s+(?:to\s+)?you|sent\s+you|transferred\s+to\s+you)\b""")
+        private val FVG_REGEX = Regex("""(?i)(?:fvg:?|favoring|in\s+favou?r\s+of|banking\s+name:?)\s*([A-Za-z0-9\s&'.-]{2,30}?)(?:\s+avl|\s+bal|\s+ref|\s+on|\n|\.|\z)""")
+        private val RECIPIENT_REGEX = Regex("""(?i)(?:paid|sent|transferred)\s+(?:(?:₹|Rs[.:]?|INR|[$€£¥])\s*[\d,.]+\s+)?to\s+([A-Za-z0-9\s&'-]{2,30}?)(?:\s+on|\s+ref|\s+via|\s+using|\s+bal|\s+avl|\s+upi|\s+successfully|\n|\.|\z)""")
+        private val RECEIVED_REGEX = Regex("""(?i)\b(?:received\s+(?:(?:₹|Rs[.:]?|INR|[$€£¥])\s*[\d,.]+\s+)?from|received\s+from)\s+([A-Za-z0-9\s&'-]{2,30}?)(?:\s+via|\s+using|\s+on|\s+ref|\s+upi|\s+bal|\s+avl|\n|\.|\z)""")
+        private val PREFIX_REGEX = Regex("""(?i)(?:towards|for|at|to)\s+([A-Za-z0-9\s&'-]{2,30}?)(?:\s+on|\s+ref|\s+via|\s+using|\s+bal|\s+avl|\s+upi|\n|\.|\z)""")
+        private val ALPHANUMERIC_TOKEN_REGEX = Regex("[^a-z0-9]")
+        private val APP_PREFIX_CLEAN_REGEX = Regex("""(?i)^(?:google\s+pay|gpay|phonepe|paytm|bhim|cred)\s*[:·-]?\s*""")
     }
 
     fun sentences(text: String): List<String> {
         if (text.isBlank()) return emptyList()
         // 1. Protect decimal numbers between digits: e.g. "100.00" -> "100\u000000"
-        var s = Regex("""(\d)\.(\d)""").replace(text, "$1\u0000$2")
+        var s = DECIMAL_PROTECT_REGEX.replace(text, "$1\u0000$2")
         // 2. Protect currency abbreviations: "Rs.", "Re.", "INR." -> "Rs\u0001"
-        s = Regex("""(?i)\b(rs|re|inr)\.""").replace(s, "$1\u0001")
+        s = CURRENCY_ABBREV_REGEX.replace(s, "$1\u0001")
         // 3. Protect common bank / text abbreviations: "a/c.", "ac.", "no.", "ref.", "vpa.", "co.", "ltd."
-        s = Regex("""(?i)\b(a/c|ac|no|ref|vpa|co|ltd|dr|mr|mrs)\.""").replace(s, "$1\u0001")
+        s = BANKING_ABBREV_REGEX.replace(s, "$1\u0001")
         // 4. Split on real sentence / clause delimiters: period, !, ?, newline, bullets (•, ·), pipes (|), em-dash (—)
-        return s.split(Regex("""[.!?\n\r•·|—]+"""))
+        return s.split(SENTENCE_SPLIT_REGEX)
             .map { it.replace('\u0000', '.').replace('\u0001', '.').trim() }
             .filter { it.isNotEmpty() }
     }
 
     fun amountAndDebitSameSentence(text: String): Boolean {
-        val sanitized = JOB_PAID_MARKER.replace(text, "")
-        return sentences(sanitized).any { s ->
+        return sentences(text).any { s ->
             (Regexes.AMOUNT.containsMatchIn(s) || Regexes.AMOUNT_SUFFIX.containsMatchIn(s)) &&
             DEBIT_VERBS.containsMatchIn(s)
         }
@@ -73,8 +82,7 @@ class EvidenceExtractor(
     }
 
     fun amountInTransactionContext(text: String): Boolean {
-        val sanitized = JOB_PAID_MARKER.replace(text, "")
-        return sentences(sanitized).any { s ->
+        return sentences(text).any { s ->
             (Regexes.AMOUNT.containsMatchIn(s) || Regexes.AMOUNT_SUFFIX.containsMatchIn(s)) &&
             TRANSACTION_VERBS.containsMatchIn(s)
         }
@@ -207,8 +215,7 @@ class EvidenceExtractor(
         }
 
         // 2. Incoming P2P payer before "paid you", "sent you", "transferred to you"
-        val payerRegex = Regex("""(?i)(?:^|[\n\r•·|—:]|\b(?:from|by)\s+)\s*([A-Za-z0-9\s&'.-]{2,40}?)\s+(?:paid\s+(?:to\s+)?you|sent\s+you|transferred\s+to\s+you)\b""")
-        val mPayer = payerRegex.find(text)
+        val mPayer = PAYER_REGEX.find(text)
         if (mPayer != null) {
             val raw = mPayer.groups[1]?.value?.trim()
             if (!raw.isNullOrBlank() && raw.length in 2..40 && !PAYMENT_RAILS.contains(raw.lowercase())) {
@@ -217,8 +224,7 @@ class EvidenceExtractor(
         }
 
         // 3. Fvg / In favour of / Banking name (as seen in Union Bank, Indian Bank SMS, and GPay receipts)
-        val fvgRegex = Regex("""(?i)(?:fvg:?|favoring|in\s+favou?r\s+of|banking\s+name:?)\s*([A-Za-z0-9\s&'.-]{2,30}?)(?:\s+avl|\s+bal|\s+ref|\s+on|\n|\.|\z)""")
-        val mFvg = fvgRegex.find(text)
+        val mFvg = FVG_REGEX.find(text)
         if (mFvg != null) {
             val raw = mFvg.groups[1]?.value?.trim()
             if (!raw.isNullOrBlank() && raw.length >= 2 && !PAYMENT_RAILS.contains(raw.lowercase())) {
@@ -243,8 +249,7 @@ class EvidenceExtractor(
         }
 
         // 5. Outgoing recipient: "Paid ₹X to ...", "Sent ₹X to ...", "Paid to ...", "Sent to ..."
-        val recipientRegex = Regex("""(?i)(?:paid|sent|transferred)\s+(?:(?:₹|Rs[.:]?|INR|[$€£¥])\s*[\d,.]+\s+)?to\s+([A-Za-z0-9\s&'-]{2,30}?)(?:\s+on|\s+ref|\s+via|\s+using|\s+bal|\s+avl|\s+upi|\s+successfully|\n|\.|\z)""")
-        val mRecipient = recipientRegex.find(text)
+        val mRecipient = RECIPIENT_REGEX.find(text)
         if (mRecipient != null) {
             val raw = mRecipient.groups[1]?.value?.trim()
             if (!raw.isNullOrBlank() && raw.length in 2..30 && !PAYMENT_RAILS.contains(raw.lowercase())) {
@@ -253,8 +258,7 @@ class EvidenceExtractor(
         }
 
         // 6. Incoming from: "Received ₹X from ...", "Received from ..."
-        val receivedRegex = Regex("""(?i)\b(?:received\s+(?:(?:₹|Rs[.:]?|INR|[$€£¥])\s*[\d,.]+\s+)?from|received\s+from)\s+([A-Za-z0-9\s&'-]{2,30}?)(?:\s+via|\s+using|\s+on|\s+ref|\s+upi|\s+bal|\s+avl|\n|\.|\z)""")
-        val mReceived = receivedRegex.find(text)
+        val mReceived = RECEIVED_REGEX.find(text)
         if (mReceived != null) {
             val raw = mReceived.groups[1]?.value?.trim()
             if (!raw.isNullOrBlank() && raw.length in 2..30 && !PAYMENT_RAILS.contains(raw.lowercase())) {
@@ -263,8 +267,7 @@ class EvidenceExtractor(
         }
 
         // 7. General Prefix "towards ...", "for ...", "at ...", "to ..."
-        val prefixRegex = Regex("""(?i)(?:towards|for|at|to)\s+([A-Za-z0-9\s&'-]{2,30}?)(?:\s+on|\s+ref|\s+via|\s+using|\s+bal|\s+avl|\s+upi|\n|\.|\z)""")
-        val m = prefixRegex.find(text)
+        val m = PREFIX_REGEX.find(text)
         if (m != null) {
             val raw = m.groups[1]?.value?.trim()
             if (!raw.isNullOrBlank() && raw.length >= 2 && !PAYMENT_RAILS.contains(raw.lowercase())) {
@@ -273,7 +276,7 @@ class EvidenceExtractor(
         }
 
         // 8. MerchantMap brand token scan in text (e.g. "BMTC", "SmartQ", "Swiggy", "Zomato")
-        val tokens = text.lowercase().split(Regex("[^a-z0-9]")).filter { it.length >= 3 }
+        val tokens = text.lowercase().split(ALPHANUMERIC_TOKEN_REGEX).filter { it.length >= 3 }
         for (token in tokens) {
             val match = MerchantMap.lookup(token)
             if (match.source != MerchantMap.CategorySource.FALLBACK) {
@@ -296,7 +299,7 @@ class EvidenceExtractor(
     }
 
     private fun formatMerchant(name: String): String {
-        val cleaned = name.replace(Regex("""(?i)^(?:google\s+pay|gpay|phonepe|paytm|bhim|cred)\s*[:·-]?\s*"""), "").trim()
+        val cleaned = name.replace(APP_PREFIX_CLEAN_REGEX, "").trim()
             .trim('-', ':', '·', ' ', '•')
         return cleaned.split(" ").filter { it.isNotBlank() }.joinToString(" ") { word ->
             if (word.all { it.isLetter() && it.isUpperCase() }) {

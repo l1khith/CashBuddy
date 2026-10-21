@@ -227,6 +227,36 @@ fun ensureSchema(driver: SqlDriver) {
             FOREIGN KEY (merged_id) REFERENCES transactions(id)
         )
         """.trimIndent(),
+        """
+        CREATE TABLE IF NOT EXISTS learned_token (
+            token TEXT PRIMARY KEY NOT NULL,
+            transaction_count INTEGER NOT NULL DEFAULT 0,
+            non_transaction_count INTEGER NOT NULL DEFAULT 0,
+            first_seen INTEGER NOT NULL,
+            last_updated INTEGER NOT NULL
+        )
+        """.trimIndent(),
+        """
+        CREATE TABLE IF NOT EXISTS recurring_pattern (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            merchant_normalized TEXT NOT NULL,
+            amount_paise INTEGER NOT NULL,
+            occurrence_count INTEGER NOT NULL,
+            median_interval_hours REAL NOT NULL,
+            cv REAL NOT NULL,
+            period_hours INTEGER NOT NULL,
+            autocorrelation_peak REAL NOT NULL,
+            first_seen INTEGER NOT NULL,
+            last_seen INTEGER NOT NULL,
+            last_updated INTEGER NOT NULL,
+            UNIQUE(merchant_normalized, amount_paise)
+        )
+        """.trimIndent(),
+        """
+        CREATE TABLE IF NOT EXISTS ignored_packages (
+            package_name TEXT PRIMARY KEY NOT NULL
+        )
+        """.trimIndent(),
         "CREATE INDEX IF NOT EXISTS idx_debug_log_timestamp ON debug_log(timestamp DESC)",
         "CREATE INDEX IF NOT EXISTS idx_debug_log_policy ON debug_log(policy_action)",
         "CREATE INDEX IF NOT EXISTS idx_debug_log_package ON debug_log(package_name)",
@@ -251,6 +281,9 @@ fun ensureSchema(driver: SqlDriver) {
         "CREATE INDEX IF NOT EXISTS idx_transactions_merged_into ON transactions(merged_into_id)",
         "CREATE INDEX IF NOT EXISTS idx_merge_log_survivor ON merge_log(survivor_id)",
         "CREATE INDEX IF NOT EXISTS idx_merge_log_merged ON merge_log(merged_id)",
+        "CREATE INDEX IF NOT EXISTS idx_learned_token_counts ON learned_token(transaction_count, non_transaction_count)",
+        "CREATE INDEX IF NOT EXISTS idx_pattern_merchant ON recurring_pattern(merchant_normalized)",
+        "CREATE INDEX IF NOT EXISTS idx_pattern_amount ON recurring_pattern(amount_paise)",
         """
         CREATE TRIGGER IF NOT EXISTS update_account_balance_debit
         AFTER INSERT ON transactions
@@ -376,5 +409,30 @@ private fun runMigrations(driver: SqlDriver) {
         );
     """.trimIndent())
     executeQuietly(driver, "CREATE INDEX IF NOT EXISTS idx_learned_token_counts ON learned_token(transaction_count, non_transaction_count);")
+
+    executeQuietly(driver, """
+        CREATE TABLE IF NOT EXISTS recurring_pattern (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            merchant_normalized TEXT NOT NULL,
+            amount_paise INTEGER NOT NULL,
+            occurrence_count INTEGER NOT NULL,
+            median_interval_hours REAL NOT NULL,
+            cv REAL NOT NULL,
+            period_hours INTEGER NOT NULL,
+            autocorrelation_peak REAL NOT NULL,
+            first_seen INTEGER NOT NULL,
+            last_seen INTEGER NOT NULL,
+            last_updated INTEGER NOT NULL,
+            UNIQUE(merchant_normalized, amount_paise)
+        );
+    """.trimIndent())
+    executeQuietly(driver, "CREATE INDEX IF NOT EXISTS idx_pattern_merchant ON recurring_pattern(merchant_normalized);")
+    executeQuietly(driver, "CREATE INDEX IF NOT EXISTS idx_pattern_amount ON recurring_pattern(amount_paise);")
+
+    executeQuietly(driver, """
+        CREATE TABLE IF NOT EXISTS ignored_packages (
+            package_name TEXT PRIMARY KEY NOT NULL
+        );
+    """.trimIndent())
 }
 

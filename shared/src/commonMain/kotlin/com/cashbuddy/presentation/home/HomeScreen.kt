@@ -48,7 +48,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.cashbuddy.presentation.components.BalanceHeaderCard
 import com.cashbuddy.presentation.components.EmptyStateView
+import com.cashbuddy.presentation.components.PaisaPalSectionHeader
 import com.cashbuddy.presentation.components.TransactionItemCard
+import com.cashbuddy.presentation.theme.MaterialSpacing
 import com.cashbuddy.presentation.theme.WarningAmber
 import com.cashbuddy.presentation.theme.TealMintSecondary
 import com.cashbuddy.presentation.theme.TrustBluePrimary
@@ -79,6 +81,29 @@ fun HomeScreen(
         }
     }
 
+    HomeContent(
+        state = state,
+        onReviewClick = { viewModel.onReviewBannerClicked() },
+        onTransactionClick = { viewModel.onTransactionClicked(it) },
+        onAddTransactionClick = { viewModel.onAddTransactionClicked() },
+        onNavigateToBudgets = onNavigateToBudgets,
+        onNavigateToAllTransactions = onNavigateToAllTransactions,
+        modifier = modifier
+    )
+}
+
+@Composable
+fun HomeContent(
+    state: HomeUiState,
+    onReviewClick: () -> Unit,
+    onTransactionClick: (Long) -> Unit,
+    onAddTransactionClick: () -> Unit,
+    onNavigateToBudgets: () -> Unit,
+    onNavigateToAllTransactions: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val spacing = MaterialSpacing
+
     Scaffold(
         modifier = modifier.fillMaxSize()
     ) { innerPadding ->
@@ -96,8 +121,8 @@ fun HomeScreen(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(innerPadding),
-                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp)
+                contentPadding = PaddingValues(horizontal = spacing.lg, vertical = spacing.md),
+                verticalArrangement = Arrangement.spacedBy(spacing.lg)
             ) {
                 // Top App Bar Header
                 item {
@@ -208,7 +233,7 @@ fun HomeScreen(
                         Card(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .clickable { viewModel.onReviewBannerClicked() },
+                                .clickable { onReviewClick() },
                             shape = RoundedCornerShape(14.dp),
                             colors = CardDefaults.cardColors(
                                 containerColor = WarningAmber.copy(alpha = 0.12f)
@@ -269,34 +294,11 @@ fun HomeScreen(
 
                 // Recent Activity Header
                 item {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Column {
-                            Text(
-                                text = "Today's Activity",
-                                style = MaterialTheme.typography.titleLarge,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.onBackground
-                            )
-                            Text(
-                                text = "${state.periodTransactionCount} transactions today",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                        Text(
-                            text = "See All",
-                            style = MaterialTheme.typography.labelLarge,
-                            color = TrustBluePrimary,
-                            fontWeight = FontWeight.SemiBold,
-                            modifier = Modifier
-                                .clickable { onNavigateToAllTransactions() }
-                                .padding(4.dp)
-                        )
-                    }
+                    PaisaPalSectionHeader(
+                        title = "Recent Transactions",
+                        actionText = "See All",
+                        onActionClick = onNavigateToAllTransactions
+                    )
                 }
 
                 // Recent Transactions
@@ -307,14 +309,14 @@ fun HomeScreen(
                             title = "No activity for ${state.selectedPeriod.displayName.lowercase()}",
                             subtitle = "Transactions from bank and UPI notifications will appear here automatically.",
                             actionButtonText = "Add First Transaction",
-                            onActionClick = { viewModel.onAddTransactionClicked() }
+                            onActionClick = onAddTransactionClick
                         )
                     }
                 } else {
                     items(state.recentTransactions, key = { it.id }) { tx ->
                         TransactionItemCard(
                             transaction = tx,
-                            onClick = { viewModel.onTransactionClicked(tx.id) }
+                            onClick = { onTransactionClick(tx.id) }
                         )
                     }
                 }

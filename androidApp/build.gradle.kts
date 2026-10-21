@@ -82,6 +82,12 @@ android {
                 "proguard-rules.pro"
             )
         }
+        create("benchmark") {
+            initWith(buildTypes.getByName("debug"))
+            matchingFallbacks += listOf("debug")
+            signingConfig = signingConfigs.getByName("debug")
+            isDebuggable = true
+        }
     }
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_21
@@ -90,6 +96,20 @@ android {
     buildFeatures {
         compose = true
         buildConfig = true
+    }
+    lint {
+        abortOnError = true
+        checkReleaseBuilds = false
+        warningsAsErrors = false
+        disable += listOf(
+            "OldTargetApi",
+            "GradleDependency",
+            "NewerVersionAvailable",
+            "AndroidGradlePluginVersion",
+            "IconLauncherShape",
+            "IconDuplicates",
+            "UnusedAttribute"
+        )
     }
 }
 
@@ -100,6 +120,7 @@ dependencies {
     implementation(libs.androidx.appcompat)
     implementation(libs.androidx.biometric)
     implementation(libs.androidx.core)
+    implementation(libs.androidx.profileinstaller)
     implementation(libs.androidx.work.runtime.ktx)
     implementation(libs.androidx.glance.appwidget)
     implementation(libs.androidx.glance.material3)
@@ -110,11 +131,11 @@ dependencies {
     implementation(libs.compose.runtime)
     implementation(libs.compose.foundation)
     implementation(libs.compose.material3)
-    implementation(compose.materialIconsExtended)
+    implementation(libs.compose.material.icons.extended)
     implementation(libs.compose.ui)
     implementation(libs.compose.uiToolingPreview)
     debugImplementation(libs.compose.uiTooling)
 
-    "playImplementation"("com.google.mlkit:text-recognition:16.0.1")
-    "fdroidImplementation"("cz.adaptech.tesseract4android:tesseract4android:4.9.0")
+    "playImplementation"(libs.google.mlkit.text.recognition)
+    "fdroidImplementation"(libs.adaptech.tesseract4android)
 }

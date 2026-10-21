@@ -110,6 +110,7 @@ fun DebugLogScreen(
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
+    @Suppress("DEPRECATION")
     val clipboardManager = LocalClipboardManager.current
     val listState = rememberLazyListState()
     var showClearDialog by remember { mutableStateOf(false) }

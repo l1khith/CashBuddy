@@ -198,7 +198,9 @@ class TransactionListViewModel(
         _isLoadingMore,
         _editingTransaction
     ) { args: Array<Any?> ->
+        @Suppress("UNCHECKED_CAST")
         val txs = args[0] as List<Transaction>
+        @Suppress("UNCHECKED_CAST")
         val cats = args[1] as List<Category>
         val query = args[2] as String
         val type = args[3] as TransactionType?

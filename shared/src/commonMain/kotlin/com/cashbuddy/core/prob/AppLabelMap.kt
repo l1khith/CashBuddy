@@ -3,6 +3,9 @@ package com.cashbuddy.core.prob
 
 /**
  * Maps OCR-extracted app names to UI labels.
+ * 
+ * NOTE: For notifications, preferred source of truth is Android's PackageManager.getApplicationLabel().
+ * This fallback dictionary is exclusively used for visual OCR receipts where no PackageManager is available.
  * This is a presentation concern, NOT a classifier or trust gate.
  * Do not use this map for acceptance decisions.
  */
