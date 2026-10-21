@@ -1,8 +1,11 @@
 package com.cashbuddy.notification
 
+import android.Manifest
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
+import androidx.core.app.ActivityCompat
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import com.cashbuddy.MainActivity
@@ -73,7 +76,9 @@ class AndroidAnomalyNotifier(
                     .addAction(0, "Review", reviewPendingIntent)
                     .build()
 
-                NotificationManagerCompat.from(context).notify(notificationId, notification)
+                if (ActivityCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED) {
+                    NotificationManagerCompat.from(context).notify(notificationId, notification)
+                }
             } catch (e: Throwable) {
                 android.util.Log.e("AndroidAnomalyNotifier", "Failed to send anomaly alert", e)
             }

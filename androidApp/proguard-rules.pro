@@ -31,3 +31,7 @@
 -dontwarn cz.adaptech.tesseract4android.**
 -dontwarn com.googlecode.leptonica.android.**
 -dontwarn com.googlecode.tesseract.android.**
+
+# ProfileInstaller (Benchmark support)
+-keep class androidx.profileinstaller.** { *; }
+-dontwarn androidx.profileinstaller.**

@@ -1,11 +1,15 @@
 package com.cashbuddy.worker
 
+import android.Manifest
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
 import android.content.SharedPreferences
+import android.content.pm.PackageManager
+import androidx.core.app.ActivityCompat
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
+import androidx.core.content.edit
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
 import com.cashbuddy.MainActivity
@@ -114,7 +118,7 @@ class BudgetAlertWorker(
                         title = title,
                         message = message
                     )
-                    prefs.edit().putLong(prefKey, now).apply()
+                    prefs.edit { putLong(prefKey, now) }
                     budgetRepository.markAlerted(budget.id, alertState, now)
                 }
             }
@@ -148,7 +152,9 @@ class BudgetAlertWorker(
             .setContentIntent(pendingIntent)
             .build()
 
-        NotificationManagerCompat.from(applicationContext).notify(notificationId, notification)
+        if (ActivityCompat.checkSelfPermission(applicationContext, Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED) {
+            NotificationManagerCompat.from(applicationContext).notify(notificationId, notification)
+        }
     }
 
     private fun formatAmount(amount: Double): String {

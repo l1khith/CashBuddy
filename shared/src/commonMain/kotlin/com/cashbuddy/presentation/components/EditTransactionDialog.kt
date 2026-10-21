@@ -52,6 +52,8 @@ import com.cashbuddy.presentation.theme.DangerRed
 import com.cashbuddy.presentation.theme.RadiusMedium
 import com.cashbuddy.presentation.theme.getCategoryColor
 
+private val AMOUNT_INPUT_REGEX = Regex("""^\d*\.?\d{0,2}$""")
+
 @Composable
 fun EditTransactionDialog(
     initialAmount: Double,
@@ -147,7 +149,7 @@ fun EditTransactionDialog(
                 OutlinedTextField(
                     value = amountText,
                     onValueChange = { input ->
-                        if (input.isEmpty() || input.matches(Regex("""^\d*\.?\d{0,2}$"""))) {
+                        if (input.isEmpty() || input.matches(AMOUNT_INPUT_REGEX)) {
                             amountText = input
                         }
                     },

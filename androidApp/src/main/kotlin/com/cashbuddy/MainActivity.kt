@@ -309,6 +309,11 @@ class MainActivity : FragmentActivity() {
     }
 
     private fun checkAndPromptNotificationPermissions() {
+        // Suppress during automated benchmark runs
+        if (intent.getBooleanExtra("skip_permission_prompts", false) || BuildConfig.BUILD_TYPE == "benchmark") {
+            return
+        }
+
         // 1. Android 13+ POST_NOTIFICATIONS runtime permission
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             if (ContextCompat.checkSelfPermission(this, android.Manifest.permission.POST_NOTIFICATIONS) !=

@@ -49,7 +49,10 @@ object SentenceScopedExtractor {
         Regex("""(?i)\b(?:pre-approved|win\s+cash|apply\s+now|apply\s+for)\b""")
     )
 
-    private val JOB_PAID_MARKER = Regex("""(?i)\b(?:intern(?:ship)?\s*\(\s*paid\s*\)|\(\s*paid\s*(?:intern(?:ship)?)?\s*\)|paid\s+intern(?:ship)?|(?:engineer|developer|role|position)\s*\(\s*paid\s*\))\b""")
+    private val DECIMAL_NUMBER_PROTECT_REGEX = Regex("""(\d)\.(\d)""")
+    private val CURRENCY_ABBREV_PROTECT_REGEX = Regex("""(?i)\b(rs|re|inr)\.""")
+    private val BANKING_ABBREV_PROTECT_REGEX = Regex("""(?i)\b(a/c|ac|no|ref|vpa|co|ltd|dr|mr|mrs)\.""")
+    private val SENTENCE_DELIMITER_REGEX = Regex("""[.!?\n\r•·|—]+""")
 
     /**
      * Splits raw text into independent clauses/sentences,
@@ -60,14 +63,14 @@ object SentenceScopedExtractor {
         if (text.isBlank()) return emptyList()
 
         // 1. Protect decimal numbers between digits: e.g. "140.0" -> "140\u00000"
-        var s = Regex("""(\d)\.(\d)""").replace(text, "$1\u0000$2")
+        var s = DECIMAL_NUMBER_PROTECT_REGEX.replace(text, "$1\u0000$2")
         // 2. Protect currency abbreviations: "Rs.", "Re.", "INR."
-        s = Regex("""(?i)\b(rs|re|inr)\.""").replace(s, "$1\u0001")
+        s = CURRENCY_ABBREV_PROTECT_REGEX.replace(s, "$1\u0001")
         // 3. Protect common banking abbreviations
-        s = Regex("""(?i)\b(a/c|ac|no|ref|vpa|co|ltd|dr|mr|mrs)\.""").replace(s, "$1\u0001")
+        s = BANKING_ABBREV_PROTECT_REGEX.replace(s, "$1\u0001")
 
         // 4. Split on sentence delimiters: period, !, ?, newline, bullets, pipe, em-dash
-        return s.split(Regex("""[.!?\n\r•·|—]+"""))
+        return s.split(SENTENCE_DELIMITER_REGEX)
             .map { it.replace('\u0000', '.').replace('\u0001', '.').trim() }
             .filter { it.isNotBlank() }
     }
@@ -77,20 +80,19 @@ object SentenceScopedExtractor {
      */
     fun isValidTransactionSentence(sentence: String): Boolean {
         if (sentence.isBlank()) return false
-        val sanitized = JOB_PAID_MARKER.replace(sentence, "")
 
         // 1. P_amount(s_i) ≠ ∅
-        val hasAmount = AMOUNT_PREFIX_REGEX.containsMatchIn(sanitized) ||
-                AMOUNT_SUFFIX_REGEX.containsMatchIn(sanitized) ||
-                PAISE_ONLY_REGEX.containsMatchIn(sanitized)
+        val hasAmount = AMOUNT_PREFIX_REGEX.containsMatchIn(sentence) ||
+                AMOUNT_SUFFIX_REGEX.containsMatchIn(sentence) ||
+                PAISE_ONLY_REGEX.containsMatchIn(sentence)
         if (!hasAmount) return false
 
         // 2. P_verb(s_i) ≠ ∅
-        val hasVerb = TRANSACTION_STATE_VERBS.containsMatchIn(sanitized)
+        val hasVerb = TRANSACTION_STATE_VERBS.containsMatchIn(sentence)
         if (!hasVerb) return false
 
         // 3. ∑_{t ∈ N} 𝟙(t ∈ s_i) = 0
-        val hasForbidden = FORBIDDEN_TOKENS.any { it.containsMatchIn(sanitized) }
+        val hasForbidden = FORBIDDEN_TOKENS.any { it.containsMatchIn(sentence) }
         if (hasForbidden) return false
 
         return true

@@ -1,8 +1,11 @@
 package com.cashbuddy.notification
 
+import android.Manifest
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
+import androidx.core.app.ActivityCompat
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import com.cashbuddy.MainActivity
@@ -112,7 +115,9 @@ object QuickGlanceNotification : KoinComponent {
                 .setContentIntent(pendingIntent)
                 .build()
 
-            NotificationManagerCompat.from(context).notify(NOTIFICATION_ID, notification)
+            if (ActivityCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED) {
+                NotificationManagerCompat.from(context).notify(NOTIFICATION_ID, notification)
+            }
         } catch (e: Throwable) {
             android.util.Log.e("QuickGlanceNotification", "Failed to update persistent notification", e)
         }

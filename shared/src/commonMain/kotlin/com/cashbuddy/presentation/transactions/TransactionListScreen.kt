@@ -66,6 +66,7 @@ import com.cashbuddy.domain.model.TimePeriod
 import com.cashbuddy.domain.model.TransactionType
 import com.cashbuddy.platform.currentTimeMillis
 import com.cashbuddy.presentation.components.EmptyStateView
+import com.cashbuddy.presentation.components.PaisaPalFilterChip
 import com.cashbuddy.presentation.components.TransactionCard
 import com.cashbuddy.presentation.components.formatCurrency
 import com.cashbuddy.presentation.theme.AccentEmerald
@@ -195,7 +196,7 @@ fun TransactionListScreen(
                     ) {
                         TimePeriod.entries.forEach { period ->
                             val isSelected = state.selectedPeriod == period
-                            FilterChip(
+                            PaisaPalFilterChip(
                                 selected = isSelected,
                                 onClick = {
                                     if (period == TimePeriod.CUSTOM) {
@@ -204,20 +205,14 @@ fun TransactionListScreen(
                                         viewModel.onPeriodSelected(period)
                                     }
                                 },
-                                label = {
-                                    Text(
-                                        text = period.displayName,
-                                        style = CashBuddyTypography.labelMedium,
-                                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
-                                    )
-                                },
+                                label = period.displayName,
                                 leadingIcon = if (period == TimePeriod.CUSTOM) {
                                     {
                                         Icon(
                                             painter = painterResource(Res.drawable.ic_calendar_today),
                                             contentDescription = "Custom Date Range",
                                             modifier = Modifier.size(14.dp),
-                                            tint = MaterialTheme.colorScheme.primary
+                                            tint = if (isSelected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.primary
                                         )
                                     }
                                 } else null
@@ -230,20 +225,20 @@ fun TransactionListScreen(
                         modifier = Modifier.horizontalScroll(rememberScrollState()),
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        FilterChip(
+                        PaisaPalFilterChip(
                             selected = state.selectedType == null,
                             onClick = { viewModel.onTypeSelected(null) },
-                            label = { Text("All Types", style = CashBuddyTypography.labelMedium) }
+                            label = "All Types"
                         )
-                        FilterChip(
+                        PaisaPalFilterChip(
                             selected = state.selectedType == TransactionType.DEBIT,
                             onClick = { viewModel.onTypeSelected(TransactionType.DEBIT) },
-                            label = { Text("Expenses (Debits)", style = CashBuddyTypography.labelMedium) }
+                            label = "Expenses (Debits)"
                         )
-                        FilterChip(
+                        PaisaPalFilterChip(
                             selected = state.selectedType == TransactionType.CREDIT,
                             onClick = { viewModel.onTypeSelected(TransactionType.CREDIT) },
-                            label = { Text("Income (Credits)", style = CashBuddyTypography.labelMedium) }
+                            label = "Income (Credits)"
                         )
                     }
 
