@@ -100,7 +100,7 @@ object CurrencyRegistry {
         }
 
         if (absAmount != longVal.toDouble()) {
-            val cents = ((absAmount * 100).toLong() % 100)
+            val cents = (kotlin.math.round(absAmount * 100.0).toLong() % 100)
             sb.append('.')
             if (cents < 10) sb.append('0')
             sb.append(cents)

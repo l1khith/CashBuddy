@@ -34,11 +34,14 @@ updateBalance:
 UPDATE accounts SET balance = ?, updated_at = ? WHERE id = ?;
 
 update:
-UPDATE accounts SET name = ?, type = ?, number = ?, bank = ?, is_active = ?, sort_order = ?, updated_at = ? WHERE id = ?;
+UPDATE accounts SET name = ?, type = ?, number = ?, bank = ?, balance = ?, is_active = ?, sort_order = ?, updated_at = ? WHERE id = ?;
 
 deleteById:
 DELETE FROM accounts WHERE id = ?;
 
 getCount:
 SELECT COUNT(*) FROM accounts WHERE is_active = 1;
+
+lastInsertRowId:
+SELECT last_insert_rowid();
 

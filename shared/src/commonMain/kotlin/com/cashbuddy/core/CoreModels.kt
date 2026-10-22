@@ -21,7 +21,8 @@ data class ScreenshotTransaction(
 data class CategoryMatch(
     val category: String,
     val confidence: Float,
-    val source: String
+    val source: String,
+    val reason: String? = null
 )
 
 data class MerchantRuleEntry(

@@ -37,6 +37,7 @@ interface TransactionRepository {
     suspend fun updateStatus(id: Long, status: TransactionStatus)
     suspend fun update(transaction: Transaction)
     suspend fun deleteById(id: Long)
+    suspend fun deleteAll() {}
     fun getBalance(): Flow<Double>
     fun getAverageAmount(): Flow<Double>
     fun getCount(): Flow<Long>

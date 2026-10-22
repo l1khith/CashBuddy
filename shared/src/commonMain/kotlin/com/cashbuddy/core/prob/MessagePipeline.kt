@@ -13,6 +13,8 @@ import com.cashbuddy.domain.repository.RawMessageRepository
 import com.cashbuddy.domain.repository.SettingsRepository
 import com.cashbuddy.domain.repository.TransactionRepository
 import kotlinx.coroutines.flow.firstOrNull
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlin.math.roundToLong
 
 sealed interface PipelineOutcome {
@@ -69,7 +71,9 @@ class MessagePipeline(
     private val recurringPatternRepo: com.cashbuddy.domain.repository.RecurringPatternRepository? = null,
     private val anomalyNotifier: com.cashbuddy.core.anomaly.AnomalyNotifier? = null
 ) {
-    suspend fun ingest(raw: RawMessage): PipelineOutcome {
+    private val mutex = Mutex()
+
+    suspend fun ingest(raw: RawMessage): PipelineOutcome = mutex.withLock {
         recentStateRepository?.recordRaw(raw.timestamp, raw.packageName)
         val logId = debugLogger?.captureRaw(raw, raw.sourceType.name, raw.packageName, raw.senderId) ?: ""
         try {
@@ -110,7 +114,7 @@ class MessagePipeline(
 
             // 5. Policy decision
             val maxAutoConfirm = settingsRepo?.getAutoConfirmThreshold()?.firstOrNull() ?: 10000.0
-            val action = if (isRecurringMatch) {
+            val action = if (isRecurringMatch && (classification.amount ?: 0.0) < maxAutoConfirm) {
                 PolicyEngine.Action.AUTO_LOG
             } else {
                 policy.action(
@@ -171,8 +175,12 @@ class MessagePipeline(
                                     accountRegistry.findOrCreate(it, classification.bankHint)
                                 } ?: 1L
 
-                                // 8. Categorization
-                                val categoryMatch = categoryEngine.getCategory(classification.merchant)
+                                // 8. Categorization via User DB Rules -> VPA Grammar -> Context Prior
+                                val categoryMatch = categoryEngine.getCategory(
+                                    rawMerchant = classification.merchant,
+                                    timestamp = raw.timestamp,
+                                    amount = amount
+                                )
                                 val allCategories = categoryRepo.getAll().firstOrNull() ?: emptyList()
                                 val matchedCategory = allCategories.find {
                                     it.name.equals(categoryMatch.category, ignoreCase = true)
@@ -187,7 +195,13 @@ class MessagePipeline(
                                 }
                                 val categoryId = matchedCategory?.id ?: 1L
 
-                                val status = if (action == PolicyEngine.Action.AUTO_LOG) {
+                                // Strict Human-in-the-Loop Gate:
+                                // Both transaction confidence (PolicyEngine) AND category confidence must be >= 0.85
+                                // to bypass the Review Inbox and auto-log directly as CONFIRMED.
+                                val isCategoryKnownOrConfirmed = categoryMatch.confidence >= 0.85f && categoryMatch.category != "Unknown"
+                                val isPolicyAutoLog = action == PolicyEngine.Action.AUTO_LOG
+
+                                val status = if (isPolicyAutoLog && isCategoryKnownOrConfirmed) {
                                     TransactionStatus.CONFIRMED
                                 } else {
                                     TransactionStatus.PENDING

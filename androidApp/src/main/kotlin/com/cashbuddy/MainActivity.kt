@@ -37,18 +37,25 @@ import androidx.core.content.ContextCompat
 import androidx.fragment.app.FragmentActivity
 import androidx.lifecycle.lifecycleScope
 import com.cashbuddy.domain.repository.SettingsRepository
+import com.cashbuddy.core.prob.MessagePipeline
+import com.cashbuddy.core.prob.PipelineOutcome
+import com.cashbuddy.core.prob.RawMessage
+import com.cashbuddy.core.prob.SourceType
 import com.cashbuddy.ocr.OcrEngine
 import com.cashbuddy.presentation.CashBuddyApp
 import com.cashbuddy.presentation.theme.CashBuddyTheme
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import org.koin.android.ext.android.inject
+import java.util.UUID
 
 class MainActivity : FragmentActivity() {
 
     private val settingsRepository: SettingsRepository by inject()
     private val ocrEngine: OcrEngine by inject()
+    private val pipeline: MessagePipeline by inject()
 
     private enum class AuthState { LOADING, AUTHENTICATED, LOCKED }
     private var authState by mutableStateOf(AuthState.LOADING)
@@ -116,73 +123,10 @@ class MainActivity : FragmentActivity() {
             }
         }
 
-        // Layer 2: Handle incoming shared UPI payment screenshots
-        var screenshotInitialRoute: String? = null
-        val isShareImageIntent = (intent?.action == android.content.Intent.ACTION_SEND ||
-            intent?.action == android.content.Intent.ACTION_SEND_MULTIPLE) &&
-            intent?.type?.startsWith("image/") == true
-
-        if (isShareImageIntent) {
-            if (ocrEngine.isAvailable) {
-                val screenshotHandler = com.cashbuddy.screenshot.ScreenshotHandler(this)
-                val cachedScreenshotFiles = mutableListOf<java.io.File>()
-
-                if (intent?.action == android.content.Intent.ACTION_SEND) {
-                    val imageUri = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
-                        intent?.getParcelableExtra(android.content.Intent.EXTRA_STREAM, android.net.Uri::class.java)
-                    } else {
-                        @Suppress("DEPRECATION")
-                        intent?.getParcelableExtra(android.content.Intent.EXTRA_STREAM)
-                    }
-                    if (imageUri != null) {
-                        screenshotHandler.copyUriToCache(imageUri)?.let { cachedScreenshotFiles.add(it) }
-                    }
-                } else if (intent?.action == android.content.Intent.ACTION_SEND_MULTIPLE) {
-                    val uris = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
-                        intent?.getParcelableArrayListExtra(android.content.Intent.EXTRA_STREAM, android.net.Uri::class.java)
-                    } else {
-                        @Suppress("DEPRECATION")
-                        intent?.getParcelableArrayListExtra(android.content.Intent.EXTRA_STREAM)
-                    }
-                    uris?.forEach { uri ->
-                        screenshotHandler.copyUriToCache(uri)?.let { cachedScreenshotFiles.add(it) }
-                    }
-                }
-
-                // Process screenshots with user feedback
-                if (cachedScreenshotFiles.isNotEmpty()) {
-                    screenshotInitialRoute = "processing_screenshot"
-                    lifecycleScope.launch(Dispatchers.IO) {
-                        val createdIds = screenshotHandler.processScreenshots(cachedScreenshotFiles)
-                        launch(Dispatchers.Main) {
-                            if (createdIds.isNotEmpty()) {
-                                android.widget.Toast.makeText(
-                                    this@MainActivity,
-                                    "${createdIds.size} transaction(s) parsed from screenshot",
-                                    android.widget.Toast.LENGTH_LONG
-                                ).show()
-                            } else {
-                                android.widget.Toast.makeText(
-                                    this@MainActivity,
-                                    "Could not recognize transaction in screenshot",
-                                    android.widget.Toast.LENGTH_LONG
-                                ).show()
-                            }
-                        }
-                    }
-                }
-            } else {
-                android.widget.Toast.makeText(
-                    this@MainActivity,
-                    "Screenshot OCR is not available on this device.",
-                    android.widget.Toast.LENGTH_LONG
-                ).show()
-            }
-        }
-
-        val initialRoute = screenshotInitialRoute
-            ?: intent?.getStringExtra("EXTRA_NAVIGATE_TO")
+        // Layer 2: Handle incoming share intents (text/plain from GPay or image/* screenshots)
+        val initialRoute = intent?.getStringExtra("EXTRA_NAVIGATE_TO")
         currentNavigationRoute = initialRoute
+        handleIncomingShareIntent(intent)
 
         setContent {
             CashBuddyTheme {
@@ -255,6 +199,152 @@ class MainActivity : FragmentActivity() {
         if (!route.isNullOrBlank()) {
             currentNavigationRoute = route
         }
+        handleIncomingShareIntent(intent)
+    }
+
+    private fun handleIncomingShareIntent(intent: Intent?) {
+        if (intent == null) return
+        val action = intent.action
+        if (action != Intent.ACTION_SEND && action != Intent.ACTION_SEND_MULTIPLE) return
+
+        val intentType = intent.type
+        val sharedText = intent.getStringExtra(Intent.EXTRA_TEXT)
+            ?: intent.getCharSequenceExtra(Intent.EXTRA_TEXT)?.toString()
+
+        when {
+            intentType?.startsWith("text/") == true || (!sharedText.isNullOrBlank() && intentType == null) -> {
+                // GPay / PhonePe / Paytm / Bank Share Flow — NO OCR
+                if (!sharedText.isNullOrBlank()) {
+                    handleSharedText(sharedText)
+                }
+            }
+            intentType?.startsWith("image/") == true -> {
+                // Screenshot Flow — RUN OCR
+                handleSharedImages(intent)
+            }
+        }
+    }
+
+    private fun handleSharedText(text: String) {
+        val raw = RawMessage(
+            id = UUID.randomUUID().toString(),
+            sourceType = SourceType.UPI_RECEIPT,
+            packageName = "share_sheet",
+            senderId = null,
+            title = "UPI Receipt",
+            text = text,
+            timestamp = System.currentTimeMillis()
+        )
+        currentNavigationRoute = "review_inbox"
+        lifecycleScope.launch(Dispatchers.IO) {
+            try {
+                val outcome = pipeline.ingest(raw)
+                withContext(Dispatchers.Main) {
+                    when (outcome) {
+                        is PipelineOutcome.Logged -> {
+                            val formattedAmt = if (outcome.amount == outcome.amount.toLong().toDouble()) {
+                                outcome.amount.toLong().toString()
+                            } else {
+                                outcome.amount.toString()
+                            }
+                            android.widget.Toast.makeText(
+                                this@MainActivity,
+                                "Payment of ₹$formattedAmt at ${outcome.merchant} auto-logged!",
+                                android.widget.Toast.LENGTH_LONG
+                            ).show()
+                        }
+                        is PipelineOutcome.PendingReview -> {
+                            android.widget.Toast.makeText(
+                                this@MainActivity,
+                                "Receipt received! Added to Review Inbox.",
+                                android.widget.Toast.LENGTH_LONG
+                            ).show()
+                        }
+                        is PipelineOutcome.Merged -> {
+                            android.widget.Toast.makeText(
+                                this@MainActivity,
+                                "Receipt matched with transaction and merged.",
+                                android.widget.Toast.LENGTH_SHORT
+                            ).show()
+                        }
+                        is PipelineOutcome.DuplicateSkipped -> {
+                            android.widget.Toast.makeText(
+                                this@MainActivity,
+                                "Transaction already recorded (duplicate skipped).",
+                                android.widget.Toast.LENGTH_SHORT
+                            ).show()
+                        }
+                        is PipelineOutcome.Ignored -> {
+                            android.widget.Toast.makeText(
+                                this@MainActivity,
+                                "Could not recognize transaction in shared text.",
+                                android.widget.Toast.LENGTH_LONG
+                            ).show()
+                        }
+                    }
+                }
+            } catch (e: Throwable) {
+                android.util.Log.e("MainActivity", "Failed to ingest shared text receipt", e)
+            }
+        }
+    }
+
+    private fun handleSharedImages(intent: Intent) {
+        if (!ocrEngine.isAvailable) {
+            android.widget.Toast.makeText(
+                this,
+                "Screenshot OCR is not available on this device.",
+                android.widget.Toast.LENGTH_LONG
+            ).show()
+            return
+        }
+
+        val screenshotHandler = com.cashbuddy.screenshot.ScreenshotHandler(this)
+        val cachedScreenshotFiles = mutableListOf<java.io.File>()
+
+        if (intent.action == Intent.ACTION_SEND) {
+            val imageUri = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                intent.getParcelableExtra(Intent.EXTRA_STREAM, android.net.Uri::class.java)
+            } else {
+                @Suppress("DEPRECATION")
+                intent.getParcelableExtra(Intent.EXTRA_STREAM)
+            }
+            if (imageUri != null) {
+                screenshotHandler.copyUriToCache(imageUri)?.let { cachedScreenshotFiles.add(it) }
+            }
+        } else if (intent.action == Intent.ACTION_SEND_MULTIPLE) {
+            val uris = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                intent.getParcelableArrayListExtra(Intent.EXTRA_STREAM, android.net.Uri::class.java)
+            } else {
+                @Suppress("DEPRECATION")
+                intent.getParcelableArrayListExtra(Intent.EXTRA_STREAM)
+            }
+            uris?.forEach { uri ->
+                screenshotHandler.copyUriToCache(uri)?.let { cachedScreenshotFiles.add(it) }
+            }
+        }
+
+        if (cachedScreenshotFiles.isNotEmpty()) {
+            currentNavigationRoute = "processing_screenshot"
+            lifecycleScope.launch(Dispatchers.IO) {
+                val createdIds = screenshotHandler.processScreenshots(cachedScreenshotFiles)
+                withContext(Dispatchers.Main) {
+                    if (createdIds.isNotEmpty()) {
+                        android.widget.Toast.makeText(
+                            this@MainActivity,
+                            "${createdIds.size} transaction(s) parsed from screenshot",
+                            android.widget.Toast.LENGTH_LONG
+                        ).show()
+                    } else {
+                        android.widget.Toast.makeText(
+                            this@MainActivity,
+                            "Could not recognize transaction in screenshot",
+                            android.widget.Toast.LENGTH_LONG
+                        ).show()
+                    }
+                }
+            }
+        }
     }
 
     override fun onStart() {
@@ -286,12 +376,9 @@ class MainActivity : FragmentActivity() {
 
                 override fun onAuthenticationError(errorCode: Int, errString: CharSequence) {
                     super.onAuthenticationError(errorCode, errString)
-                    // If no hardware/enrolled biometrics, allow access as fallback
-                    if (errorCode == BiometricPrompt.ERROR_NO_BIOMETRICS ||
-                        errorCode == BiometricPrompt.ERROR_HW_NOT_PRESENT ||
-                        errorCode == BiometricPrompt.ERROR_HW_UNAVAILABLE) {
-                        authState = AuthState.AUTHENTICATED
-                    }
+                    // Security non-negotiable: Never auto-unlock on error.
+                    // Keep authState as LOCKED. User must tap "Unlock" or retry with PIN/biometrics.
+                    authState = AuthState.LOCKED
                 }
             }
         )

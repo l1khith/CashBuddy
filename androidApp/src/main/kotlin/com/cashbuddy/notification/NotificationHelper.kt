@@ -1,5 +1,6 @@
 package com.cashbuddy.notification
 
+import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.content.Context
@@ -22,6 +23,7 @@ object NotificationHelper {
                 NotificationManager.IMPORTANCE_DEFAULT
             ).apply {
                 description = "Alerts when spending approaches or exceeds budget limits"
+                lockscreenVisibility = Notification.VISIBILITY_PRIVATE
             }
 
             val anomalyChannel = NotificationChannel(
@@ -32,6 +34,7 @@ object NotificationHelper {
                 description = "Real-time alerts for unusually high or irregular transactions"
                 enableVibration(true)
                 vibrationPattern = longArrayOf(0, 250, 150, 250)
+                lockscreenVisibility = Notification.VISIBILITY_PRIVATE
             }
 
             val weeklyChannel = NotificationChannel(
@@ -41,6 +44,7 @@ object NotificationHelper {
             ).apply {
                 description = "Weekly recap of expenses and top spending categories"
                 setShowBadge(false)
+                lockscreenVisibility = Notification.VISIBILITY_PRIVATE
             }
 
             val quickGlanceChannel = NotificationChannel(
@@ -50,6 +54,7 @@ object NotificationHelper {
             ).apply {
                 description = "Persistent daily and monthly spending status"
                 setShowBadge(false)
+                lockscreenVisibility = Notification.VISIBILITY_PRIVATE
             }
 
             notificationManager.createNotificationChannels(

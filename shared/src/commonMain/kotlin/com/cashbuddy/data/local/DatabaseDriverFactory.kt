@@ -29,14 +29,14 @@ private fun executeQuietly(driver: SqlDriver, sql: String) {
 }
 
 fun ensureSchema(driver: SqlDriver) {
-    // Fast path: if critical tables are already present, avoid re-executing 24 DDL operations
+    // Fast path: if critical tables are already present, avoid re-executing DDL operations
     val alreadyCreated = try {
         driver.executeQuery(
             identifier = null,
-            sql = "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name IN ('transactions', 'debug_log');",
+            sql = "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name IN ('transactions', 'debug_log', 'accounts', 'budgets', 'categories', 'merchant_rules', 'recurring_pattern', 'merge_log');",
             mapper = { cursor ->
                 val count = if (cursor.next().value) cursor.getLong(0) ?: 0L else 0L
-                QueryResult.Value(count >= 2L)
+                QueryResult.Value(count >= 8L)
             },
             parameters = 0
         ).value
@@ -287,7 +287,7 @@ fun ensureSchema(driver: SqlDriver) {
         """
         CREATE TRIGGER IF NOT EXISTS update_account_balance_debit
         AFTER INSERT ON transactions
-        WHEN new.type = 'DEBIT' AND new.status = 'CONFIRMED' AND new.account_id IS NOT NULL
+        WHEN new.type = 'DEBIT' AND new.status IN ('CONFIRMED', 'MODIFIED') AND new.account_id IS NOT NULL
         BEGIN
             UPDATE accounts SET balance = balance - new.amount, updated_at = new.created_at WHERE id = new.account_id;
         END
@@ -295,7 +295,7 @@ fun ensureSchema(driver: SqlDriver) {
         """
         CREATE TRIGGER IF NOT EXISTS update_account_balance_credit
         AFTER INSERT ON transactions
-        WHEN new.type = 'CREDIT' AND new.status = 'CONFIRMED' AND new.account_id IS NOT NULL
+        WHEN new.type = 'CREDIT' AND new.status IN ('CONFIRMED', 'MODIFIED') AND new.account_id IS NOT NULL
         BEGIN
             UPDATE accounts SET balance = balance + new.amount, updated_at = new.created_at WHERE id = new.account_id;
         END
@@ -303,7 +303,7 @@ fun ensureSchema(driver: SqlDriver) {
         """
         CREATE TRIGGER IF NOT EXISTS update_account_balance_on_confirm_debit
         AFTER UPDATE OF status ON transactions
-        WHEN old.status != 'CONFIRMED' AND new.status = 'CONFIRMED' AND new.type = 'DEBIT' AND new.account_id IS NOT NULL
+        WHEN old.status NOT IN ('CONFIRMED', 'MODIFIED') AND new.status IN ('CONFIRMED', 'MODIFIED') AND new.type = 'DEBIT' AND new.account_id IS NOT NULL
         BEGIN
             UPDATE accounts SET balance = balance - new.amount, updated_at = new.updated_at WHERE id = new.account_id;
         END
@@ -311,15 +311,31 @@ fun ensureSchema(driver: SqlDriver) {
         """
         CREATE TRIGGER IF NOT EXISTS update_account_balance_on_confirm_credit
         AFTER UPDATE OF status ON transactions
-        WHEN old.status != 'CONFIRMED' AND new.status = 'CONFIRMED' AND new.type = 'CREDIT' AND new.account_id IS NOT NULL
+        WHEN old.status NOT IN ('CONFIRMED', 'MODIFIED') AND new.status IN ('CONFIRMED', 'MODIFIED') AND new.type = 'CREDIT' AND new.account_id IS NOT NULL
         BEGIN
             UPDATE accounts SET balance = balance + new.amount, updated_at = new.updated_at WHERE id = new.account_id;
         END
         """.trimIndent(),
         """
+        CREATE TRIGGER IF NOT EXISTS revert_account_balance_on_unconfirm_debit
+        AFTER UPDATE OF status ON transactions
+        WHEN old.status IN ('CONFIRMED', 'MODIFIED') AND new.status NOT IN ('CONFIRMED', 'MODIFIED') AND old.type = 'DEBIT' AND old.account_id IS NOT NULL
+        BEGIN
+            UPDATE accounts SET balance = balance + old.amount, updated_at = new.updated_at WHERE id = old.account_id;
+        END
+        """.trimIndent(),
+        """
+        CREATE TRIGGER IF NOT EXISTS revert_account_balance_on_unconfirm_credit
+        AFTER UPDATE OF status ON transactions
+        WHEN old.status IN ('CONFIRMED', 'MODIFIED') AND new.status NOT IN ('CONFIRMED', 'MODIFIED') AND old.type = 'CREDIT' AND old.account_id IS NOT NULL
+        BEGIN
+            UPDATE accounts SET balance = balance - old.amount, updated_at = new.updated_at WHERE id = old.account_id;
+        END
+        """.trimIndent(),
+        """
         CREATE TRIGGER IF NOT EXISTS revert_account_balance_on_delete_debit
         AFTER DELETE ON transactions
-        WHEN old.status = 'CONFIRMED' AND old.type = 'DEBIT' AND old.account_id IS NOT NULL
+        WHEN old.status IN ('CONFIRMED', 'MODIFIED') AND old.type = 'DEBIT' AND old.account_id IS NOT NULL
         BEGIN
             UPDATE accounts SET balance = balance + old.amount WHERE id = old.account_id;
         END
@@ -327,7 +343,7 @@ fun ensureSchema(driver: SqlDriver) {
         """
         CREATE TRIGGER IF NOT EXISTS revert_account_balance_on_delete_credit
         AFTER DELETE ON transactions
-        WHEN old.status = 'CONFIRMED' AND old.type = 'CREDIT' AND old.account_id IS NOT NULL
+        WHEN old.status IN ('CONFIRMED', 'MODIFIED') AND old.type = 'CREDIT' AND old.account_id IS NOT NULL
         BEGIN
             UPDATE accounts SET balance = balance - old.amount WHERE id = old.account_id;
         END
@@ -380,7 +396,9 @@ private fun runMigrations(driver: SqlDriver) {
     }
 
     if (needsBudgetMigration) {
-        executeQuietly(driver, "DROP TABLE IF EXISTS budgets;")
+        executeQuietly(driver, "ALTER TABLE budgets ADD COLUMN category TEXT NOT NULL DEFAULT 'Global';")
+        executeQuietly(driver, "ALTER TABLE budgets ADD COLUMN last_alert_state TEXT;")
+        executeQuietly(driver, "ALTER TABLE budgets ADD COLUMN last_alert_at INTEGER;")
         executeQuietly(driver, """
             CREATE TABLE IF NOT EXISTS budgets (
                 id TEXT PRIMARY KEY NOT NULL,

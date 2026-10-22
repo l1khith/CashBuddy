@@ -219,10 +219,7 @@ class SettingsViewModel(
     fun clearAllData() {
         viewModelScope.launch {
             val allTxs = _uiState.value.totalTransactionsCount
-            val list = transactionRepository.getAll().first()
-            list.forEach { tx ->
-                transactionRepository.deleteById(tx.id)
-            }
+            transactionRepository.deleteAll()
             _messageEffect.emit("All data deleted ($allTxs transactions)")
         }
     }

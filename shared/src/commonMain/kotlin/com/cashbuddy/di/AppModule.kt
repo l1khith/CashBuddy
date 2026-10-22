@@ -123,9 +123,22 @@ val appModule = module {
     factoryOf(::GetDateRangeSummaryUseCase)
     factoryOf(::GetUnreviewedCountUseCase)
     factoryOf(::ManualAddTransactionUseCase)
-    factoryOf(::ConfirmTransactionUseCase)
+    factory {
+        ConfirmTransactionUseCase(
+            repository = get(),
+            merchantRuleRepository = get(),
+            categoryEngine = get()
+        )
+    }
     factoryOf(::RejectTransactionUseCase)
-    factoryOf(::ModifyTransactionUseCase)
+    factory {
+        ModifyTransactionUseCase(
+            repository = get(),
+            trainingDataRepository = get(),
+            merchantRuleRepository = get(),
+            categoryEngine = get()
+        )
+    }
     factoryOf(::ExportDataUseCase)
     factoryOf(::ImportDataUseCase)
     factoryOf(::ReviewReducer)

@@ -35,3 +35,11 @@
 # ProfileInstaller (Benchmark support)
 -keep class androidx.profileinstaller.** { *; }
 -dontwarn androidx.profileinstaller.**
+
+# Strip verbose, debug, and info logs in release builds to prevent leaking sensitive financial data
+-assumenosideeffects class android.util.Log {
+    public static boolean isLoggable(java.lang.String, int);
+    public static int v(...);
+    public static int d(...);
+    public static int i(...);
+}

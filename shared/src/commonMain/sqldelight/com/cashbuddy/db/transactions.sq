@@ -28,62 +28,79 @@ CREATE INDEX idx_transactions_merchant ON transactions(merchant);
 CREATE INDEX idx_transactions_summary ON transactions(status, type, timestamp);
 CREATE INDEX idx_transactions_is_merged ON transactions(is_merged);
 CREATE INDEX idx_transactions_merged_into ON transactions(merged_into_id);
+CREATE INDEX idx_transactions_keyset ON transactions(is_merged, timestamp DESC, id DESC);
 
 CREATE TABLE merge_log (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     survivor_id INTEGER NOT NULL,
     merged_id INTEGER NOT NULL,
     merged_at INTEGER NOT NULL,
-    FOREIGN KEY (survivor_id) REFERENCES transactions(id),
-    FOREIGN KEY (merged_id) REFERENCES transactions(id)
+    FOREIGN KEY (survivor_id) REFERENCES transactions(id) ON DELETE CASCADE,
+    FOREIGN KEY (merged_id) REFERENCES transactions(id) ON DELETE CASCADE
 );
 
 CREATE INDEX idx_merge_log_survivor ON merge_log(survivor_id);
 CREATE INDEX idx_merge_log_merged ON merge_log(merged_id);
 
--- Auto-update account balance on confirmed transactions
+-- Auto-update account balance on confirmed/modified transactions
 CREATE TRIGGER update_account_balance_debit
 AFTER INSERT ON transactions
-WHEN new.type = 'DEBIT' AND new.status = 'CONFIRMED' AND new.account_id IS NOT NULL
+WHEN new.type = 'DEBIT' AND new.status IN ('CONFIRMED', 'MODIFIED') AND new.account_id IS NOT NULL
 BEGIN
     UPDATE accounts SET balance = balance - new.amount, updated_at = new.created_at WHERE id = new.account_id;
 END;
 
 CREATE TRIGGER update_account_balance_credit
 AFTER INSERT ON transactions
-WHEN new.type = 'CREDIT' AND new.status = 'CONFIRMED' AND new.account_id IS NOT NULL
+WHEN new.type = 'CREDIT' AND new.status IN ('CONFIRMED', 'MODIFIED') AND new.account_id IS NOT NULL
 BEGIN
     UPDATE accounts SET balance = balance + new.amount, updated_at = new.created_at WHERE id = new.account_id;
 END;
 
--- Balance update when pending transaction is confirmed (DEBIT)
+-- Balance update when pending/rejected transaction is confirmed or modified (DEBIT)
 CREATE TRIGGER update_account_balance_on_confirm_debit
 AFTER UPDATE OF status ON transactions
-WHEN old.status != 'CONFIRMED' AND new.status = 'CONFIRMED' AND new.type = 'DEBIT' AND new.account_id IS NOT NULL
+WHEN old.status NOT IN ('CONFIRMED', 'MODIFIED') AND new.status IN ('CONFIRMED', 'MODIFIED') AND new.type = 'DEBIT' AND new.account_id IS NOT NULL
 BEGIN
     UPDATE accounts SET balance = balance - new.amount, updated_at = new.updated_at WHERE id = new.account_id;
 END;
 
--- Balance update when pending transaction is confirmed (CREDIT)
+-- Balance update when pending/rejected transaction is confirmed or modified (CREDIT)
 CREATE TRIGGER update_account_balance_on_confirm_credit
 AFTER UPDATE OF status ON transactions
-WHEN old.status != 'CONFIRMED' AND new.status = 'CONFIRMED' AND new.type = 'CREDIT' AND new.account_id IS NOT NULL
+WHEN old.status NOT IN ('CONFIRMED', 'MODIFIED') AND new.status IN ('CONFIRMED', 'MODIFIED') AND new.type = 'CREDIT' AND new.account_id IS NOT NULL
 BEGIN
     UPDATE accounts SET balance = balance + new.amount, updated_at = new.updated_at WHERE id = new.account_id;
 END;
 
--- Balance reversal when confirmed DEBIT transaction is deleted
+-- Balance reversal when confirmed/modified transaction is demoted or rejected (DEBIT)
+CREATE TRIGGER revert_account_balance_on_unconfirm_debit
+AFTER UPDATE OF status ON transactions
+WHEN old.status IN ('CONFIRMED', 'MODIFIED') AND new.status NOT IN ('CONFIRMED', 'MODIFIED') AND old.type = 'DEBIT' AND old.account_id IS NOT NULL
+BEGIN
+    UPDATE accounts SET balance = balance + old.amount, updated_at = new.updated_at WHERE id = old.account_id;
+END;
+
+-- Balance reversal when confirmed/modified transaction is demoted or rejected (CREDIT)
+CREATE TRIGGER revert_account_balance_on_unconfirm_credit
+AFTER UPDATE OF status ON transactions
+WHEN old.status IN ('CONFIRMED', 'MODIFIED') AND new.status NOT IN ('CONFIRMED', 'MODIFIED') AND old.type = 'CREDIT' AND old.account_id IS NOT NULL
+BEGIN
+    UPDATE accounts SET balance = balance - old.amount, updated_at = new.updated_at WHERE id = old.account_id;
+END;
+
+-- Balance reversal when confirmed/modified DEBIT transaction is deleted
 CREATE TRIGGER revert_account_balance_on_delete_debit
 AFTER DELETE ON transactions
-WHEN old.status = 'CONFIRMED' AND old.type = 'DEBIT' AND old.account_id IS NOT NULL
+WHEN old.status IN ('CONFIRMED', 'MODIFIED') AND old.type = 'DEBIT' AND old.account_id IS NOT NULL
 BEGIN
     UPDATE accounts SET balance = balance + old.amount WHERE id = old.account_id;
 END;
 
--- Balance reversal when confirmed CREDIT transaction is deleted
+-- Balance reversal when confirmed/modified CREDIT transaction is deleted
 CREATE TRIGGER revert_account_balance_on_delete_credit
 AFTER DELETE ON transactions
-WHEN old.status = 'CONFIRMED' AND old.type = 'CREDIT' AND old.account_id IS NOT NULL
+WHEN old.status IN ('CONFIRMED', 'MODIFIED') AND old.type = 'CREDIT' AND old.account_id IS NOT NULL
 BEGIN
     UPDATE accounts SET balance = balance - old.amount WHERE id = old.account_id;
 END;
@@ -193,7 +210,7 @@ updateStatus:
 UPDATE transactions SET status = ?, updated_at = ? WHERE id = ?;
 
 updateTransaction:
-UPDATE transactions SET amount = ?, type = ?, merchant = ?, category_id = ?, account_id = ?, notes = ?, updated_at = ? WHERE id = ?;
+UPDATE transactions SET amount = ?, type = ?, merchant = ?, category_id = ?, account_id = ?, notes = ?, raw_text = ?, confidence = ?, status = ?, updated_at = ? WHERE id = ?;
 
 deleteById:
 DELETE FROM transactions WHERE id = ?;
@@ -254,6 +271,7 @@ FROM transactions t
 LEFT JOIN categories c ON t.category_id = c.id
 WHERE (c.name = :category OR CAST(t.category_id AS TEXT) = :category)
   AND t.type = 'DEBIT'
+  AND t.status IN ('CONFIRMED', 'MODIFIED')
   AND t.timestamp >= :startTime
   AND t.timestamp <= :endTime
   AND t.is_merged = 0;
@@ -266,6 +284,7 @@ LEFT JOIN categories c ON t.category_id = c.id
 LEFT JOIN accounts a ON t.account_id = a.id
 WHERE (c.name = :category OR CAST(t.category_id AS TEXT) = :category)
   AND t.type = 'DEBIT'
+  AND t.status IN ('CONFIRMED', 'MODIFIED')
   AND t.timestamp >= :startTime
   AND t.timestamp <= :endTime
   AND t.is_merged = 0
@@ -275,6 +294,7 @@ sumAll:
 SELECT COALESCE(SUM(amount), 0.0)
 FROM transactions
 WHERE type = :type
+  AND status IN ('CONFIRMED', 'MODIFIED')
   AND timestamp >= :startTime
   AND timestamp <= :endTime
   AND is_merged = 0;
@@ -331,6 +351,10 @@ getAverageAmount:
 SELECT COALESCE(AVG(amount), 0.0)
 FROM transactions
 WHERE is_merged = 0;
+
+deleteAll:
+DELETE FROM transactions WHERE 1 = 1;
+
 
 
 

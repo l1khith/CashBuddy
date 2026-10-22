@@ -215,7 +215,7 @@ class TransactionNotificationListener : NotificationListenerService(), KoinCompo
                     outcome is com.cashbuddy.core.prob.PipelineOutcome.PendingReview) {
                     try {
                         val updateIntent = Intent("com.cashbuddy.ACTION_TRANSACTIONS_UPDATED").apply {
-                            setPackage(packageName)
+                            setPackage(applicationContext.packageName)
                         }
                         sendBroadcast(updateIntent)
                     } catch (e: Throwable) {

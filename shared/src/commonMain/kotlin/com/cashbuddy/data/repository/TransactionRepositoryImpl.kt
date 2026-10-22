@@ -113,6 +113,9 @@ class TransactionRepositoryImpl(
             category_id = transaction.categoryId,
             account_id = transaction.accountId,
             notes = transaction.notes,
+            raw_text = transaction.rawText,
+            confidence = transaction.confidence.toDouble(),
+            status = transaction.status.name,
             updated_at = com.cashbuddy.platform.currentTimeMillis(),
             id = transaction.id
         )
@@ -147,6 +150,12 @@ class TransactionRepositoryImpl(
 
     override suspend fun deleteById(id: Long): Unit = withContext(dispatcher) {
         queries.deleteById(id)
+    }
+
+    override suspend fun deleteAll(): Unit = withContext(dispatcher) {
+        db.transaction {
+            queries.deleteAll()
+        }
     }
 
     override fun getBalance(): Flow<Double> =

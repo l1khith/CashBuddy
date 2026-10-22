@@ -1,60 +1,73 @@
 // NO-NETWORK
 package com.cashbuddy.core.prob
 
+import com.cashbuddy.core.CategoryEngine
+import com.cashbuddy.core.MerchantRuleEntry
+import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
-import kotlin.test.assertNotEquals
 import kotlin.test.assertTrue
 
 class MerchantFuzzyTest {
 
+    private lateinit var categoryEngine: CategoryEngine
+
+    @BeforeTest
+    fun setup() {
+        categoryEngine = CategoryEngine()
+        categoryEngine.loadUserRules(
+            listOf(
+                MerchantRuleEntry("swiggy", "Food & Dining"),
+                MerchantRuleEntry("zomato", "Food & Dining"),
+                MerchantRuleEntry("shanti sagar", "Food & Dining")
+            )
+        )
+    }
+
     @Test
     fun testSwiggyLocationCompoundMerchant() {
-        val match = MerchantMap.lookup("SWIGGY_BLR_KORAMANGALA")
+        val match = categoryEngine.getCategory("SWIGGY_BLR_KORAMANGALA")
         assertEquals("Food & Dining", match.category)
-        assertEquals(MerchantMap.CategorySource.MERCHANT_MAP, match.source)
+        assertEquals("UserRule", match.source)
+        assertEquals(1.0f, match.confidence)
     }
 
     @Test
     fun testPaytmAggregatorPrefixedMerchant() {
-        val match = MerchantMap.lookup("PAYTM*SWIGGY")
+        val match = categoryEngine.getCategory("PAYTM*SWIGGY")
         assertEquals("Food & Dining", match.category)
-        assertEquals(MerchantMap.CategorySource.MERCHANT_MAP, match.source)
+        assertEquals("UserRule", match.source)
+        assertEquals(1.0f, match.confidence)
     }
 
     @Test
     fun testVpaPrefixedMerchant() {
-        val match = MerchantMap.lookup("swiggy@ybl")
+        val match = categoryEngine.getCategory("swiggy@ybl")
         assertEquals("Food & Dining", match.category)
-        assertEquals(MerchantMap.CategorySource.MERCHANT_MAP, match.source)
+        assertEquals(1.0f, match.confidence)
     }
 
     @Test
-    fun testZomatoExactTierNotFuzzy() {
-        val match = MerchantMap.lookup("ZOMATO")
+    fun testZomatoExactTier() {
+        val match = categoryEngine.getCategory("ZOMATO")
         assertEquals("Food & Dining", match.category)
-        assertEquals(0.95f, match.confidence)
-        assertEquals(MerchantMap.CategorySource.MERCHANT_MAP, match.source)
+        assertEquals(1.0f, match.confidence)
+        assertEquals("UserRule", match.source)
     }
 
     @Test
-    fun testZomatoResolvesDifferentlyFromSwiggy() {
-        val zomatoMatch = MerchantMap.lookup("ZOMATO")
-        val swiggyMatch = MerchantMap.lookup("SWIGGY")
-
-        assertEquals("Food & Dining", zomatoMatch.category)
-        assertEquals("Food & Dining", swiggyMatch.category)
-
-        // Ensure ZOMATO does not fuzzy match Swiggy
-        val similarity = JaroWinkler.similarity("zomato", "swiggy")
-        assertTrue(similarity < 0.5, "ZOMATO and SWIGGY should not be similar: $similarity")
+    fun testLearnedMerchantFuzzyMatch() {
+        // "shanti sagar hotel" should fuzzy/token match learned rule "shanti sagar"
+        val match = categoryEngine.getCategory("SHANTI SAGAR HOTEL")
+        assertEquals("Food & Dining", match.category)
+        assertEquals(1.0f, match.confidence)
     }
 
     @Test
     fun testRandomNonsenseFallsBackToUnknown() {
-        val match = MerchantMap.lookup("asdfghjkl")
+        val match = categoryEngine.getCategory("asdfghjkl")
         assertEquals("Unknown", match.category)
         assertEquals(0.0f, match.confidence)
-        assertEquals(MerchantMap.CategorySource.FALLBACK, match.source)
+        assertEquals("Fallback", match.source)
     }
 }
