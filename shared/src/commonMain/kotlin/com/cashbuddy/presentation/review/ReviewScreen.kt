@@ -404,28 +404,6 @@ private fun PendingReviewCard(
                 }
             }
 
-            // Contextual Heuristic Suggestion Badge
-            val suggested = com.cashbuddy.core.prob.HeuristicCategorizer.matchContext(transaction.timestamp, transaction.amount)
-                ?: com.cashbuddy.core.prob.HeuristicCategorizer.matchVpa(transaction.merchant)
-            if (suggested != null) {
-                Spacer(modifier = Modifier.height(10.dp))
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clip(RadiusMedium)
-                        .background(MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f))
-                        .padding(horizontal = 12.dp, vertical = 6.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = "💡 Suggested: ${suggested.category} (${suggested.reason})",
-                        style = CashBuddyTypography.labelMedium,
-                        fontWeight = FontWeight.SemiBold,
-                        color = MaterialTheme.colorScheme.onPrimaryContainer
-                    )
-                }
-            }
-
             Spacer(modifier = Modifier.height(12.dp))
 
             // Category Quick-Chip Selector

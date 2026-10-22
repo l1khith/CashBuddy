@@ -279,26 +279,18 @@ class EvidenceExtractor(
             }
         }
 
-        // 8. Structural VPA/Brand token scan in text (e.g. "food", "cafe", "cab", "ride")
-        val tokens = text.lowercase().split(ALPHANUMERIC_TOKEN_REGEX).filter { it.length >= 3 }
-        for (token in tokens) {
-            val match = HeuristicCategorizer.matchVpa(token)
-            if (match != null) {
-                return token.replaceFirstChar { if (it.isLowerCase()) it.titlecase() else it.toString() }
-            }
-        }
-
-        // 9. Structural Brand token scan in packageName (e.g. "com.cab.ride" -> "Ride")
+        // 8. Fallback to package brand if available (e.g. "com.smartq" -> "Smartq")
         if (!packageName.isNullOrBlank()) {
-            val pkgTokens = packageName.lowercase().split('.', '_', '-').filter { it.length >= 3 }
-            for (token in pkgTokens) {
-                val match = HeuristicCategorizer.matchVpa(token)
-                if (match != null) {
-                    return token.replaceFirstChar { if (it.isLowerCase()) it.titlecase() else it.toString() }
-                }
+            val pkgBrand = packageName.lowercase()
+                .split('.', '_', '-')
+                .filter { it.length >= 3 && it != "com" && it != "app" && it != "apps" && it != "android" && it != "user" }
+                .lastOrNull()
+            if (!pkgBrand.isNullOrBlank() && !PAYMENT_RAILS.contains(pkgBrand)) {
+                return pkgBrand.replaceFirstChar { if (it.isLowerCase()) it.titlecase() else it.toString() }
             }
         }
 
+        // 9. If no explicit merchant/recipient could be extracted, return null to let user label it in Review Inbox
         return null
     }
 

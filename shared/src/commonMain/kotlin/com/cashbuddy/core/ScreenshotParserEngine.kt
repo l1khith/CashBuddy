@@ -92,38 +92,41 @@ class ScreenshotParserEngine(
         val lines = text.lines().map { it.trim() }.filter { it.isNotEmpty() }
 
         // Strategy 1: Look for "<AppName> Transaction ID" header pattern
-        // e.g. "PhonePe Transaction ID", "Google Pay Transaction ID"
+        // e.g. "PhonePe Transaction ID" -> extracts "PhonePe"
         val txIdHeaderRegex = Regex("""(?i)^(.+?)\s+transaction\s+id$""")
         for (line in lines) {
             val m = txIdHeaderRegex.matchEntire(line.trim())
             if (m != null) {
                 val candidate = m.groupValues[1].trim()
-                if (candidate.isNotBlank() && candidate.length in 2..30) {
+                if (candidate.isNotBlank() && candidate.length in 2..30 && !candidate.equals("upi", ignoreCase = true)) {
                     return candidate
                 }
             }
         }
 
-        // Strategy 2: Look for "Powered by <AppName>" or "<AppName> UPI" footer
+        // Strategy 2: Look for "Powered by <Brand>" footer pattern
         val poweredByRegex = Regex("""(?i)powered\s+by\s+(.+)""")
         for (line in lines) {
             val m = poweredByRegex.find(line.trim())
             if (m != null) {
                 val candidate = m.groupValues[1].trim()
-                if (candidate.isNotBlank() && candidate.length in 2..30) {
+                if (candidate.isNotBlank() && candidate.length in 2..30 && !candidate.equals("upi", ignoreCase = true)) {
                     return candidate
                 }
             }
         }
 
-        // Strategy 3: If UPI structural indicators are present, default to "UPI"
-        val lower = text.lowercase()
-        val hasUpiIndicators = lower.contains("upi ref") ||
-            lower.contains("upi transaction") ||
-            lower.contains("unified payments interface") ||
-            Regex("""[a-z0-9._-]+@[a-z]+""").containsMatchIn(lower) ||
-            lower.contains("utr:") || lower.contains("utr ")
-        if (hasUpiIndicators) return "UPI"
+        // Strategy 3: Check if first line is a short title brand (e.g. "Google Pay", "Navi", "BHIM")
+        // but not a transaction status, amount, or date
+        val firstLine = lines.firstOrNull()?.trim() ?: ""
+        if (firstLine.length in 3..25 &&
+            !firstLine.contains(Regex("""\d""")) &&
+            !isSystemLabel(firstLine) &&
+            !firstLine.equals("paid to", ignoreCase = true) &&
+            !firstLine.equals("received from", ignoreCase = true)
+        ) {
+            return firstLine
+        }
 
         return null
     }
@@ -288,15 +291,6 @@ class ScreenshotParserEngine(
                 if (cleaned.isNotEmpty()) {
                     return cleaned.replaceFirstChar { it.uppercase() }
                 }
-            }
-        }
-
-        // Strategy 3: Check for commercial keywords via HeuristicCategorizer
-        val tokens = text.lowercase().split(Regex("[^a-z0-9]")).filter { it.length >= 3 }
-        for (token in tokens) {
-            val match = HeuristicCategorizer.matchVpa(token)
-            if (match != null) {
-                return token.replaceFirstChar { it.uppercase() }
             }
         }
 

@@ -134,17 +134,24 @@ class TransactionDetailViewModel(
                     newCategory = targetLabel,
                     timestamp = currentTimeMillis()
                 )
-                merchantRuleRepository.learnRule(
-                    merchant = updated.merchant,
-                    categoryId = categoryId,
-                    priority = 100L
-                )
+                // Zero-Map rule hygiene: Never learn rules for blank or sentinel merchants
+                if (updated.merchant.isNotBlank() && !updated.merchant.equals("Unknown Merchant", ignoreCase = true) && !updated.merchant.equals("Manual Entry", ignoreCase = true)) {
+                    merchantRuleRepository.learnRule(
+                        merchant = updated.merchant,
+                        categoryId = categoryId,
+                        priority = 100L
+                    )
+                }
             }
         }
     }
 
     fun onDeleteClicked() {
         viewModelScope.launch {
+            val tx = _uiState.value.transaction
+            if (tx != null && tx.rawText.isNotBlank()) {
+                recordTokens(tx.rawText, isTransaction = false)
+            }
             transactionRepository.deleteById(transactionId)
             _navBackEffect.emit(Unit)
         }
