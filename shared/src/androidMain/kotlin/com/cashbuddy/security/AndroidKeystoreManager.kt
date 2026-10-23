@@ -57,6 +57,15 @@ class AndroidKeystoreManager(private val context: Context) {
             }
         }
 
+        // Check if existing database exists before generating new passphrase
+        val dbFile = context.getDatabasePath("cashbuddy.db")
+        if (dbFile.exists() && dbFile.length() > 0) {
+            throw IllegalStateException(
+                "Encrypted database exists on disk, but keystore vault passphrase was lost or missing. " +
+                "Refusing to generate a new key to prevent irreversible database corruption."
+            )
+        }
+
         // Generate cryptographically secure random 32-byte passphrase
         val freshPassphrase = ByteArray(PASSPHRASE_BYTE_LENGTH)
         SecureRandom().nextBytes(freshPassphrase)

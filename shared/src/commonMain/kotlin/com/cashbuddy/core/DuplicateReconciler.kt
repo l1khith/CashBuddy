@@ -208,7 +208,7 @@ class DuplicateReconciler(
                     val acc = accountRepository.getById(dup.accountId).firstOrNull()
                     if (acc != null) {
                         val delta = if (dup.type == TransactionType.DEBIT) dup.amount else -dup.amount
-                        accountRepository.update(acc.copy(balance = acc.balance + delta))
+                        accountRepository.updateBalance(acc.id, acc.balance + delta)
                     }
                 }
                 mergedCount++
@@ -241,7 +241,7 @@ class DuplicateReconciler(
                 val acc = accountRepository.getById(dup.accountId).firstOrNull()
                 if (acc != null) {
                     val delta = if (dup.type == TransactionType.DEBIT) -dup.amount else dup.amount
-                    accountRepository.update(acc.copy(balance = acc.balance + delta))
+                    accountRepository.updateBalance(acc.id, acc.balance + delta)
                 }
             }
         }

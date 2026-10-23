@@ -46,7 +46,8 @@ class PersonalizationViewModel(
     private val merchantRuleRepository: MerchantRuleRepository,
     private val transactionRepository: TransactionRepository,
     private val batchCategorizeUseCase: BatchCategorizeUseCase,
-    private val fileExporter: FileExporter? = null
+    private val fileExporter: FileExporter? = null,
+    private val learnedTokenRepository: com.cashbuddy.domain.repository.LearnedTokenRepository? = null
 ) : ViewModel() {
 
     private val rawPager = RawTrainingDataPager(trainingDataRepository, pageSize = 50L)
@@ -182,6 +183,7 @@ class PersonalizationViewModel(
     fun resetLearningData() {
         viewModelScope.launch(ioDispatcher) {
             trainingDataRepository.clearTrainingData()
+            learnedTokenRepository?.clear()
             val rules = merchantRuleRepository.getAll().firstOrNull() ?: emptyList()
             rules.forEach {
                 merchantRuleRepository.deleteById(it.id)
@@ -189,7 +191,7 @@ class PersonalizationViewModel(
             rawPager.reset()
             correctionsPager.reset()
             loadData()
-            _messageEffect.emit("Reset complete: training samples, corrections & learned rules wiped")
+            _messageEffect.emit("Reset complete: training samples, learned tokens & merchant rules wiped")
         }
     }
 }

@@ -404,11 +404,11 @@ private fun PendingReviewCard(
                 }
             }
 
-            Spacer(modifier = Modifier.height(14.dp))
+            Spacer(modifier = Modifier.height(12.dp))
 
             // Category Quick-Chip Selector
             Text(
-                text = "Assigned Category:",
+                text = "Assigned Category (Confirm to teach app):",
                 style = CashBuddyTypography.labelMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )

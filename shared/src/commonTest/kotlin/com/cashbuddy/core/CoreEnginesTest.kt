@@ -17,15 +17,14 @@ class CoreEnginesTest {
     fun testCategoryEnginePriority() {
         val engine = CategoryEngine()
 
-        // Initially Zomato matches KeywordMap -> Food & Dining
-        val res = engine.getCategory("Zomato India")
-        assertEquals("Food & Dining", res.category)
-        assertEquals(0.90f, res.confidence)
-        assertEquals("KeywordMap", res.source)
+        // Before learning, unknown merchant returns fallback
+        val res = engine.getCategory("XYZ Unknown Merchant")
+        assertEquals("Unknown", res.category)
+        assertEquals(0.0f, res.confidence)
 
-        // User overrides Zomato to Entertainment & Recreation
-        engine.learnCorrection("Zomato", "Entertainment & Recreation")
-        val res2 = engine.getCategory("Zomato India")
+        // User learns rule for merchant
+        engine.learnCorrection("XYZ Unknown Merchant", "Entertainment & Recreation")
+        val res2 = engine.getCategory("XYZ Unknown Merchant")
         assertEquals("Entertainment & Recreation", res2.category)
         assertEquals(1.0f, res2.confidence)
         assertEquals("UserRule", res2.source)
@@ -36,7 +35,7 @@ class CoreEnginesTest {
         val engine = CategoryEngine()
         val res = engine.getCategory("XYZ Random Merchant 999")
         assertEquals("Unknown", res.category)
-        assertEquals(0.50f, res.confidence)
+        assertEquals(0.0f, res.confidence)
         assertEquals("Fallback", res.source)
     }
 
@@ -162,5 +161,63 @@ class CoreEnginesTest {
         assertEquals(com.cashbuddy.domain.model.TransactionType.CREDIT, nextState.transactions[0].type)
         assertEquals("Likhith", nextState.transactions[0].merchant)
         assertEquals(2L, nextState.transactions[0].categoryId)
+    }
+
+    @Test
+    fun testScreenshotGooglePayLiveDeviceOCR() {
+        val engine = ScreenshotParserEngine()
+        val text = """
+            To Mr Madhu Sudhan Chandra Reddy
+            UPI transaction ID
+            666039066385
+            M
+            1,149
+            Union Bank of India 0383
+            Pay again
+            O Completed
+            21 Oct 2026, 12:09 pm
+            CICAgPi-ld-SWA
+            To: Mr Madhu Sudhan Chandra Reddy
+            o**2509@p
+        """.trimIndent()
+
+        val tx = engine.parse(text)
+        assertNotNull(tx, "Parser should successfully parse live Google Pay receipt screenshot")
+        assertEquals(1149.0, tx.amount)
+        assertEquals(TransactionType.DEBIT, tx.transactionType)
+        assertEquals("Mr Madhu Sudhan Chandra Reddy", tx.merchant)
+        // Generic content-first detection: "UPI transaction ID" header -> extracts "UPI"
+        assertEquals("UPI", tx.appName)
+        assertEquals("666039066385", tx.utrOrRef)
+    }
+
+    @Test
+    fun testScreenshotPhonePeReceivedCreditOCR() {
+        val engine = ScreenshotParserEngine()
+        val text = """
+            Transaction Successful
+            12:58 pm on 03 Oct 2026
+            Received from
+            XXXXXXXX4298
+            ₹7,000
+            Transfer Details
+            PhonePe Transaction ID
+            T2610031258506712813993
+            Credited to
+            G Pay • ailikhith2116@okaxis
+            ₹7,000
+            UTR: 995780225143
+            View History
+            Share Receipt
+        """.trimIndent()
+
+        val tx = engine.parse(text)
+        assertNotNull(tx, "Parser should successfully parse PhonePe received payment screenshot")
+        assertEquals(7000.0, tx.amount)
+        assertEquals(TransactionType.CREDIT, tx.transactionType)
+        assertEquals("Income", tx.category)
+        assertEquals("XXXXXXXX4298", tx.merchant)
+        assertEquals("PhonePe", tx.appName)
+        assertEquals("995780225143", tx.utrOrRef)
     }
 }

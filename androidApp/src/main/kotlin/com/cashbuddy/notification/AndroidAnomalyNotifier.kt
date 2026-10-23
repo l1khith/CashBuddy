@@ -64,6 +64,14 @@ class AndroidAnomalyNotifier(
                     String.format("%.2f", amount)
                 }
 
+                val itsMineAction = NotificationCompat.Action.Builder(0, "It's mine", itsMinePendingIntent)
+                    .setAuthenticationRequired(true)
+                    .build()
+
+                val reviewAction = NotificationCompat.Action.Builder(0, "Review", reviewPendingIntent)
+                    .setAuthenticationRequired(true)
+                    .build()
+
                 val notification = NotificationCompat.Builder(context, NotificationHelper.CHANNEL_ANOMALY_ALERTS)
                     .setSmallIcon(android.R.drawable.stat_notify_more)
                     .setContentTitle("Unusual Transaction")
@@ -72,8 +80,8 @@ class AndroidAnomalyNotifier(
                     .setVibrate(longArrayOf(0, 250, 150, 250))
                     .setAutoCancel(true)
                     .setContentIntent(reviewPendingIntent)
-                    .addAction(0, "It's mine", itsMinePendingIntent)
-                    .addAction(0, "Review", reviewPendingIntent)
+                    .addAction(itsMineAction)
+                    .addAction(reviewAction)
                     .build()
 
                 if (ActivityCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED) {

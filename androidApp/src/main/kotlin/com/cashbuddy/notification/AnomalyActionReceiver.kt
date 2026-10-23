@@ -14,7 +14,7 @@ import org.koin.core.component.inject
 
 class AnomalyActionReceiver : BroadcastReceiver(), KoinComponent {
 
-    private val transactionRepository: TransactionRepository by inject()
+    private val confirmTransactionUseCase: com.cashbuddy.domain.usecase.ConfirmTransactionUseCase by inject()
 
     companion object {
         const val ACTION_ITS_MINE = "com.cashbuddy.ACTION_ANOMALY_ITS_MINE"
@@ -34,7 +34,7 @@ class AnomalyActionReceiver : BroadcastReceiver(), KoinComponent {
                 val pendingResult = goAsync()
                 CoroutineScope(Dispatchers.IO).launch {
                     try {
-                        transactionRepository.updateStatus(transactionId, TransactionStatus.CONFIRMED)
+                        confirmTransactionUseCase(transactionId)
                         context.sendBroadcast(
                             Intent("com.cashbuddy.ACTION_TRANSACTIONS_UPDATED").setPackage(context.packageName)
                         )

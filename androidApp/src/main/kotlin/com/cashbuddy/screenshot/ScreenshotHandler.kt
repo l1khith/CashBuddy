@@ -92,7 +92,10 @@ class ScreenshotHandler(private val context: Context) : KoinComponent {
                 }
 
                 val timestamp = System.currentTimeMillis()
-                val fullStructuredText = "Paid ₹${parsed.amount} to ${parsed.merchant}. ${parsed.rawText}"
+                val fullStructuredText = when (parsed.transactionType) {
+                    com.cashbuddy.core.TransactionType.CREDIT -> "Received ₹${parsed.amount} from ${parsed.merchant}. Credited to account. ${parsed.rawText}"
+                    com.cashbuddy.core.TransactionType.DEBIT -> "Paid ₹${parsed.amount} to ${parsed.merchant}. ${parsed.rawText}"
+                }
                 val rawMessage = com.cashbuddy.core.prob.RawMessage(
                     id = "scr_${timestamp}_${(1000..9999).random()}",
                     sourceType = com.cashbuddy.core.prob.SourceType.SCREENSHOT,

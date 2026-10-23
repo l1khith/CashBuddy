@@ -46,9 +46,9 @@ class EvidenceExtractor(
 
         private val PAYER_REGEX = Regex("""(?i)(?:^|[\n\r•·|—:]|\b(?:from|by)\s+)\s*([A-Za-z0-9\s&'.-]{2,40}?)\s+(?:paid\s+(?:to\s+)?you|sent\s+you|transferred\s+to\s+you)\b""")
         private val FVG_REGEX = Regex("""(?i)(?:fvg:?|favoring|in\s+favou?r\s+of|banking\s+name:?)\s*([A-Za-z0-9\s&'.-]{2,30}?)(?:\s+avl|\s+bal|\s+ref|\s+on|\n|\.|\z)""")
-        private val RECIPIENT_REGEX = Regex("""(?i)(?:paid|sent|transferred)\s+(?:(?:₹|Rs[.:]?|INR|[$€£¥])\s*[\d,.]+\s+)?to\s+([A-Za-z0-9\s&'-]{2,30}?)(?:\s+on|\s+ref|\s+via|\s+using|\s+bal|\s+avl|\s+upi|\s+successfully|\n|\.|\z)""")
+        private val RECIPIENT_REGEX = Regex("""(?i)(?:paid|sent|transferred|payment(?:\s+of)?)\s+(?:(?:₹|Rs[.:]?|INR|[$€£¥])\s*[\d,.]+\s+)?to\s+([A-Za-z0-9\s&'-]{2,30}?)(?:\s*\(|\s+is\b|\s+was\b|\s+on\b|\s+ref\b|\s+via\b|\s+using\b|\s+bal\b|\s+avl\b|\s+upi\b|\s+successfully\b|\n|\.|\z)""")
         private val RECEIVED_REGEX = Regex("""(?i)\b(?:received\s+(?:(?:₹|Rs[.:]?|INR|[$€£¥])\s*[\d,.]+\s+)?from|received\s+from)\s+([A-Za-z0-9\s&'-]{2,30}?)(?:\s+via|\s+using|\s+on|\s+ref|\s+upi|\s+bal|\s+avl|\n|\.|\z)""")
-        private val PREFIX_REGEX = Regex("""(?i)(?:towards|for|at|to)\s+([A-Za-z0-9\s&'-]{2,30}?)(?:\s+on|\s+ref|\s+via|\s+using|\s+bal|\s+avl|\s+upi|\n|\.|\z)""")
+        private val PREFIX_REGEX = Regex("""(?i)(?:towards|for|at|to)\s+([A-Za-z0-9\s&'-]{2,30}?)(?:\s*\(|\s+is\b|\s+was\b|\s+on|\s+ref|\s+via|\s+using|\s+bal|\s+avl|\s+upi|\n|\.|\z)""")
         private val ALPHANUMERIC_TOKEN_REGEX = Regex("[^a-z0-9]")
         private val APP_PREFIX_CLEAN_REGEX = Regex("""(?i)^(?:google\s+pay|gpay|phonepe|paytm|bhim|cred)\s*[:·-]?\s*""")
     }
@@ -155,7 +155,7 @@ class EvidenceExtractor(
         if (pkg.isBlank()) return false
         val segments = pkg.lowercase().split('.', '_', '-')
         return segments.any { segment ->
-            MerchantMap.lookup(segment).source != MerchantMap.CategorySource.FALLBACK
+            HeuristicCategorizer.matchVpa(segment) != null
         }
     }
 
@@ -209,7 +209,11 @@ class EvidenceExtractor(
         val vpa = Regexes.UPI_HANDLE.find(text)?.value
         if (vpa != null) {
             val handle = vpa.substringBefore("@").replace(".", " ").replace("-", " ").trim()
-            if (handle.length >= 3 && !PAYMENT_RAILS.contains(handle.lowercase())) {
+            if (handle.length >= 3 && !handle.all { it.isDigit() } && !PAYMENT_RAILS.contains(handle.lowercase())) {
+                val explicitRecipient = RECIPIENT_REGEX.find(text)?.groups?.get(1)?.value?.trim()
+                if (!explicitRecipient.isNullOrBlank() && explicitRecipient.length in 2..30 && !PAYMENT_RAILS.contains(explicitRecipient.lowercase())) {
+                    return formatMerchant(explicitRecipient)
+                }
                 return formatMerchant(handle)
             }
         }
@@ -275,26 +279,18 @@ class EvidenceExtractor(
             }
         }
 
-        // 8. MerchantMap brand token scan in text (e.g. "BMTC", "SmartQ", "Swiggy", "Zomato")
-        val tokens = text.lowercase().split(ALPHANUMERIC_TOKEN_REGEX).filter { it.length >= 3 }
-        for (token in tokens) {
-            val match = MerchantMap.lookup(token)
-            if (match.source != MerchantMap.CategorySource.FALLBACK) {
-                return token.replaceFirstChar { if (it.isLowerCase()) it.titlecase() else it.toString() }
-            }
-        }
-
-        // 9. MerchantMap brand token scan in packageName (e.g. "com.smartq" -> "Smartq")
+        // 8. Fallback to package brand if available (e.g. "com.smartq" -> "Smartq")
         if (!packageName.isNullOrBlank()) {
-            val pkgTokens = packageName.lowercase().split('.', '_', '-').filter { it.length >= 3 }
-            for (token in pkgTokens) {
-                val match = MerchantMap.lookup(token)
-                if (match.source != MerchantMap.CategorySource.FALLBACK) {
-                    return token.replaceFirstChar { if (it.isLowerCase()) it.titlecase() else it.toString() }
-                }
+            val pkgBrand = packageName.lowercase()
+                .split('.', '_', '-')
+                .filter { it.length >= 3 && it != "com" && it != "app" && it != "apps" && it != "android" && it != "user" }
+                .lastOrNull()
+            if (!pkgBrand.isNullOrBlank() && !PAYMENT_RAILS.contains(pkgBrand)) {
+                return pkgBrand.replaceFirstChar { if (it.isLowerCase()) it.titlecase() else it.toString() }
             }
         }
 
+        // 9. If no explicit merchant/recipient could be extracted, return null to let user label it in Review Inbox
         return null
     }
 

@@ -15,7 +15,8 @@ data class RawMessage(
 enum class SourceType {
     SMS,
     NOTIFICATION,
-    SCREENSHOT
+    SCREENSHOT,
+    UPI_RECEIPT
 }
 
 enum class NotificationSource {

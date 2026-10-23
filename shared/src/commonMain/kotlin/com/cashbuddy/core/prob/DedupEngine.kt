@@ -80,7 +80,7 @@ object DedupEngine {
                 accountLast4 = chosenAccount,
                 merchant = chosenMerchant,
                 pTransaction = maxP,
-                clearReview = maxP >= 0.90
+                clearReview = maxP >= 0.90 && newTx.amount < 10000.0 && target.amount < 10000.0
             )
         )
     }

@@ -122,10 +122,38 @@ val appModule = module {
     factoryOf(::GetTransactionsByDateRangeWithLimitUseCase)
     factoryOf(::GetDateRangeSummaryUseCase)
     factoryOf(::GetUnreviewedCountUseCase)
-    factoryOf(::ManualAddTransactionUseCase)
-    factoryOf(::ConfirmTransactionUseCase)
-    factoryOf(::RejectTransactionUseCase)
-    factoryOf(::ModifyTransactionUseCase)
+    factory {
+        ManualAddTransactionUseCase(
+            transactionRepository = get(),
+            accountRepository = get(),
+            merchantRuleRepository = get(),
+            categoryEngine = get(),
+            learnedTokenRepository = get()
+        )
+    }
+    factory {
+        ConfirmTransactionUseCase(
+            repository = get(),
+            merchantRuleRepository = get(),
+            categoryEngine = get(),
+            learnedTokenRepository = get()
+        )
+    }
+    factory {
+        RejectTransactionUseCase(
+            repository = get(),
+            learnedTokenRepository = get()
+        )
+    }
+    factory {
+        ModifyTransactionUseCase(
+            repository = get(),
+            trainingDataRepository = get(),
+            merchantRuleRepository = get(),
+            categoryEngine = get(),
+            learnedTokenRepository = get()
+        )
+    }
     factoryOf(::ExportDataUseCase)
     factoryOf(::ImportDataUseCase)
     factoryOf(::ReviewReducer)
@@ -153,7 +181,7 @@ val appModule = module {
         )
     }
     viewModel { SettingsViewModel(get(), get(), get(), get(), get(), getOrNull(), getOrNull(), getOrNull(), getOrNull(), getOrNull()) }
-    viewModel { PersonalizationViewModel(get(), get(), get(), get(), getOrNull()) }
+    viewModel { PersonalizationViewModel(get(), get(), get(), get(), getOrNull(), getOrNull()) }
     viewModelOf(::AddTransactionViewModel)
     viewModel { DebugLogViewModel(get(), get(), getOrNull()) }
 }

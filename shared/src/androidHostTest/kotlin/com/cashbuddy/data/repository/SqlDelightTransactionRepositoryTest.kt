@@ -136,4 +136,57 @@ class SqlDelightTransactionRepositoryTest {
         val total = repository.sumAll(1_000L, 5_000L, TransactionType.DEBIT)
         assertEquals(0.0, total)
     }
+
+    @Test
+    fun testBalanceTriggersOnStatusTransitionsAndReversals() = runBlocking {
+        // Create an account with 10,000 opening balance
+        database.accountsQueries.insert(
+            name = "Test Bank",
+            type = "BANK",
+            number = "1234",
+            bank = "HDFC",
+            balance = 10_000.0,
+            currency = "INR",
+            is_active = true,
+            sort_order = 1L,
+            created_at = 1000L,
+            updated_at = 1000L
+        )
+        val accountId = database.accountsQueries.lastInsertRowId().executeAsOne()
+
+        // 1. Insert CONFIRMED debit of 1,000 -> balance becomes 9,000
+        val txId = repository.insert(
+            Transaction(
+                amount = 1000.0,
+                type = TransactionType.DEBIT,
+                merchant = "Store",
+                categoryId = 1L,
+                accountId = accountId,
+                sourceApp = "SMS",
+                rawText = "text",
+                confidence = 0.95f,
+                status = TransactionStatus.CONFIRMED,
+                timestamp = 1000L
+            )
+        )
+        var acc = database.accountsQueries.getById(accountId).executeAsOne()
+        assertEquals(9000.0, acc.balance)
+
+        // 2. Anomaly flags transaction: demote from CONFIRMED -> PENDING
+        // Trigger revert_account_balance_on_unconfirm_debit restores 1,000 -> balance 10,000
+        repository.updateStatus(txId, TransactionStatus.PENDING)
+        acc = database.accountsQueries.getById(accountId).executeAsOne()
+        assertEquals(10_000.0, acc.balance)
+
+        // 3. User reviews and approves: PENDING -> CONFIRMED
+        // Trigger update_account_balance_on_confirm_debit deducts 1,000 -> balance 9,000
+        repository.updateStatus(txId, TransactionStatus.CONFIRMED)
+        acc = database.accountsQueries.getById(accountId).executeAsOne()
+        assertEquals(9000.0, acc.balance)
+
+        // 4. Delete confirmed transaction -> balance restored to 10,000
+        repository.deleteById(txId)
+        acc = database.accountsQueries.getById(accountId).executeAsOne()
+        assertEquals(10_000.0, acc.balance)
+    }
 }

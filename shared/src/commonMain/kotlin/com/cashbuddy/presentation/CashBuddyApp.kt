@@ -61,25 +61,25 @@ fun CashBuddyApp(
         } ?: true
 
         val startDestination = when {
+            initialRoute?.contains("add", ignoreCase = true) == true -> ScreenRoute.AddTransaction()
             initialRoute?.contains("review", ignoreCase = true) == true -> ScreenRoute.ReviewInbox
             initialRoute?.contains("transact", ignoreCase = true) == true -> ScreenRoute.Transactions
             initialRoute?.contains("screenshot", ignoreCase = true) == true -> ScreenRoute.Transactions
             initialRoute?.contains("stat", ignoreCase = true) == true -> ScreenRoute.Stats
             initialRoute?.contains("setting", ignoreCase = true) == true -> ScreenRoute.Settings
             initialRoute?.contains("budget", ignoreCase = true) == true -> ScreenRoute.Budgets
-            initialRoute?.contains("add", ignoreCase = true) == true -> ScreenRoute.AddTransaction()
             else -> ScreenRoute.Home
         }
 
         androidx.compose.runtime.LaunchedEffect(initialRoute) {
             if (!initialRoute.isNullOrBlank()) {
                 when {
+                    initialRoute.contains("add", ignoreCase = true) -> navController.navigate(ScreenRoute.AddTransaction()) { launchSingleTop = true }
                     initialRoute.contains("review", ignoreCase = true) -> navController.navigate(ScreenRoute.ReviewInbox) { launchSingleTop = true }
                     initialRoute.contains("transact", ignoreCase = true) || initialRoute.contains("screenshot", ignoreCase = true) -> navController.navigate(ScreenRoute.Transactions) { launchSingleTop = true }
                     initialRoute.contains("stat", ignoreCase = true) -> navController.navigate(ScreenRoute.Stats) { launchSingleTop = true }
                     initialRoute.contains("setting", ignoreCase = true) -> navController.navigate(ScreenRoute.Settings) { launchSingleTop = true }
                     initialRoute.contains("budget", ignoreCase = true) -> navController.navigate(ScreenRoute.Budgets) { launchSingleTop = true }
-                    initialRoute.contains("add", ignoreCase = true) -> navController.navigate(ScreenRoute.AddTransaction()) { launchSingleTop = true }
                 }
             }
         }
@@ -222,10 +222,12 @@ fun CashBuddyApp(
                     )
                 }
 
-                composable<ScreenRoute.AddTransaction> {
+                composable<ScreenRoute.AddTransaction> { backStackEntry ->
+                    val route: ScreenRoute.AddTransaction = backStackEntry.toRoute()
                     val addViewModel: AddTransactionViewModel = koinViewModel()
                     AddTransactionScreen(
                         viewModel = addViewModel,
+                        prefilledId = route.prefilledId,
                         onNavigateBack = { navController.popBackStack() }
                     )
                 }

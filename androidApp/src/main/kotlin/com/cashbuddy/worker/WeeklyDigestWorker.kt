@@ -47,7 +47,11 @@ class WeeklyDigestWorker(
             val startWindow = now - SEVEN_DAYS_MS
             val txList = transactionRepository.getByDateRange(startWindow, now).firstOrNull() ?: emptyList()
 
-            val debits = txList.filter { it.type == TransactionType.DEBIT && it.amount > 0 }
+            val debits = txList.filter { 
+                it.type == TransactionType.DEBIT && 
+                it.amount > 0 && 
+                (it.status == com.cashbuddy.domain.model.TransactionStatus.CONFIRMED || it.status == com.cashbuddy.domain.model.TransactionStatus.MODIFIED)
+            }
             val totalSpent = debits.sumOf { it.amount }
 
             val message = if (debits.isEmpty() || totalSpent <= 0.0) {

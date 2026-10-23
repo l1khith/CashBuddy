@@ -63,6 +63,7 @@ import com.cashbuddy.presentation.theme.getCategoryColor
 @Composable
 fun AddTransactionScreen(
     viewModel: AddTransactionViewModel,
+    prefilledId: Long? = null,
     onNavigateBack: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -74,6 +75,19 @@ fun AddTransactionScreen(
     var selectedCategoryId by remember { mutableStateOf<Long?>(null) }
     var selectedAccountId by remember { mutableStateOf<Long?>(null) }
     var notes by remember { mutableStateOf("") }
+
+    LaunchedEffect(prefilledId) {
+        if (prefilledId != null && prefilledId > 0L) {
+            viewModel.prefillTransaction(prefilledId) { amt, type, merch, catId, accId, nts ->
+                amountString = if (amt == amt.toLong().toDouble()) amt.toLong().toString() else amt.toString()
+                selectedType = type
+                merchant = merch
+                selectedCategoryId = catId
+                selectedAccountId = accId
+                notes = nts ?: ""
+            }
+        }
+    }
 
     LaunchedEffect(state.categories, state.accounts) {
         if (selectedCategoryId == null && state.categories.isNotEmpty()) {

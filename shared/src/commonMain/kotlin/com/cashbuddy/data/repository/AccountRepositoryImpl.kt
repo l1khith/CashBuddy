@@ -44,7 +44,7 @@ class AccountRepositoryImpl(
             created_at = account.createdAt,
             updated_at = account.updatedAt
         )
-        account.id
+        queries.lastInsertRowId().executeAsOne()
     }
 
     override suspend fun updateBalance(id: Long, balance: Double): Unit = withContext(dispatcher) {
@@ -57,6 +57,7 @@ class AccountRepositoryImpl(
             type = account.type.name,
             number = account.number,
             bank = account.bank,
+            balance = account.balance,
             is_active = account.isActive,
             sort_order = account.sortOrder,
             updated_at = com.cashbuddy.platform.currentTimeMillis(),

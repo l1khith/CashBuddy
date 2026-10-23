@@ -11,41 +11,38 @@ class SourceDetector {
         val tLower = text.lowercase()
         val pLower = packageNameOrSender.lowercase()
 
-        // 1. Content-first signals
+        // 1. Content-first signals (Highest priority)
+        val hasUpiContent = Regexes.UPI_HANDLE.containsMatchIn(text) ||
+                tLower.contains("upi ref") ||
+                tLower.contains("upi id") ||
+                tLower.contains("vpa") ||
+                tLower.contains("unified payments interface")
+
         val hasBankContent = tLower.contains("a/c") ||
                 tLower.contains("acct") ||
-                tLower.contains("account") ||
+                tLower.contains("account no") ||
                 tLower.contains("avl bal") ||
-                tLower.contains("balance") ||
+                tLower.contains("available balance") ||
                 tLower.contains("neft") ||
                 tLower.contains("rtgs") ||
                 tLower.contains("imps")
 
-        val hasUpiContent = Regexes.UPI_HANDLE.containsMatchIn(text) ||
-                tLower.contains("upi ref") ||
-                tLower.contains("upi id") ||
-                tLower.contains("vpa")
+        val hasMerchantContent = (tLower.contains("order #") || tLower.contains("order id") ||
+                tLower.contains("delivered") || tLower.contains("delivery")) &&
+                !hasBankContent && !hasUpiContent
 
-        val hasMerchantContent = tLower.contains("order") ||
-                tLower.contains("delivery") ||
-                tLower.contains("ride") ||
-                tLower.contains("food") ||
-                tLower.contains("dining") ||
-                tLower.contains("trip") ||
-                tLower.contains("ticket")
-
-        if (hasBankContent) return NotificationSource.BANK
         if (hasUpiContent) return NotificationSource.UPI_APP
+        if (hasBankContent) return NotificationSource.BANK
         if (hasMerchantContent) return NotificationSource.MERCHANT_APP
 
-        // 2. Package name hints (soft)
-        if (pLower.contains("bank")) return NotificationSource.BANK
-        if (pLower.contains("paisa") || pLower.contains("pay") || pLower.contains("wallet")) {
+        // 2. Package / Sender structural heuristics (Soft hints)
+        if (pLower.contains("phonepe") || pLower.contains(".upi") || pLower.contains("npci") ||
+            pLower.contains("pay") || pLower.contains("paisa") || pLower.contains("wallet")) {
             return NotificationSource.UPI_APP
         }
-        if (pLower.contains("food") || pLower.contains("order") || pLower.contains("shop") ||
-            pLower.contains("cab") || pLower.contains("ride") || pLower.contains("mart")) {
-            return NotificationSource.MERCHANT_APP
+
+        if (pLower.contains("bank") || SenderFingerprint.isBankLike(packageNameOrSender)) {
+            return NotificationSource.BANK
         }
 
         return NotificationSource.UNKNOWN

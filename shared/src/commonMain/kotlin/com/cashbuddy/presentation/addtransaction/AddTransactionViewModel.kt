@@ -19,6 +19,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.launch
 import kotlinx.datetime.Clock
 import kotlinx.datetime.TimeZone
@@ -128,8 +129,7 @@ class AddTransactionViewModel(
                 val suggestedCategory = if (mostFrequentCatId != null && cats.any { it.id == mostFrequentCatId }) {
                     mostFrequentCatId
                 } else {
-                    val defaultCategory = getTimeBasedDefaultCategory(cats)
-                    defaultCategory?.id ?: cats.firstOrNull()?.id
+                    cats.firstOrNull()?.id
                 }
 
                 AddTransactionUiState(
@@ -148,15 +148,18 @@ class AddTransactionViewModel(
     }
 
     /**
-     * Smart pre-fill: Predict category from user rules -> history -> time-based defaults.
+     * Smart pre-fill: Predict category from user rules -> history -> CategoryEngine.
+     * No hardcoded keyword lists. Learns from user's own transaction data.
      */
     fun onMerchantChanged(merchant: String): Long? {
         val cleanMerchant = merchant.trim()
-        if (cleanMerchant.isBlank()) {
-            return getTimeBasedDefaultCategory(_uiState.value.categories)?.id
-        }
-
         val categories = _uiState.value.categories
+        if (cleanMerchant.isBlank()) {
+            // Default to user's most frequently used category, or first available
+            val defaultCatId = getMostFrequentCategoryId(categories)
+            _uiState.value = _uiState.value.copy(suggestedCategoryId = defaultCatId)
+            return defaultCatId
+        }
 
         // 1. Check local DB history: Find most frequent category previously used for this merchant
         val matchingTx = allTransactions.filter { it.merchant.equals(cleanMerchant, ignoreCase = true) }
@@ -172,61 +175,48 @@ class AddTransactionViewModel(
             }
         }
 
-        // 2. MerchantMap lookup & generic keyword matching heuristic
-        val lowerMerchant = cleanMerchant.lowercase()
-        val merchantMatch = com.cashbuddy.core.prob.MerchantMap.lookup(lowerMerchant)
-        val keywordMatchedCat = if (merchantMatch.source != com.cashbuddy.core.prob.MerchantMap.CategorySource.FALLBACK) {
-            categories.find { cat ->
+        // 2. Delegate to CategoryEngine (handles user rules, VPA grammar, learned tokens)
+        val categoryEngine = com.cashbuddy.core.CategoryEngine()
+        val engineMatch = categoryEngine.getCategory(rawMerchant = cleanMerchant)
+        if (engineMatch.category != "Unknown" && engineMatch.confidence >= 0.80f) {
+            val matchedCat = categories.find { cat ->
                 val catLower = cat.name.lowercase()
-                val target = merchantMatch.category.lowercase()
+                val target = engineMatch.category.lowercase()
                 catLower == target || catLower.contains(target.take(4)) || target.contains(catLower.take(4))
             }
-        } else {
-            categories.find { cat ->
-                val catLower = cat.name.lowercase()
-                when {
-                    lowerMerchant.contains("chai") || lowerMerchant.contains("cafe") || lowerMerchant.contains("food") -> catLower.contains("food")
-                    lowerMerchant.contains("metro") || lowerMerchant.contains("petrol") || lowerMerchant.contains("fuel") -> catLower.contains("transport")
-                    lowerMerchant.contains("grocer") -> catLower.contains("grocer")
-                    lowerMerchant.contains("electricity") || lowerMerchant.contains("bill") -> catLower.contains("bill") || catLower.contains("util")
-                    lowerMerchant.contains("pharm") || lowerMerchant.contains("hospital") || lowerMerchant.contains("clinic") -> catLower.contains("health")
-                    else -> false
-                }
+            if (matchedCat != null) {
+                _uiState.value = _uiState.value.copy(suggestedCategoryId = matchedCat.id)
+                return matchedCat.id
             }
         }
-        if (keywordMatchedCat != null) {
-            _uiState.value = _uiState.value.copy(suggestedCategoryId = keywordMatchedCat.id)
-            return keywordMatchedCat.id
-        }
 
-        // 3. Fallback to time-based defaults
-        val timeDefault = getTimeBasedDefaultCategory(categories)
-        if (timeDefault != null) {
-            _uiState.value = _uiState.value.copy(suggestedCategoryId = timeDefault.id)
-            return timeDefault.id
-        }
-
-        return categories.firstOrNull()?.id
+        // 3. Fallback: user's most frequently used category, or first available
+        val fallbackCatId = getMostFrequentCategoryId(categories)
+        _uiState.value = _uiState.value.copy(suggestedCategoryId = fallbackCatId)
+        return fallbackCatId
     }
 
-    private fun getTimeBasedDefaultCategory(categories: List<Category>): Category? {
-        val nowMillis = com.cashbuddy.platform.currentTimeMillis()
-        val now = kotlinx.datetime.Instant.fromEpochMilliseconds(nowMillis)
-            .toLocalDateTime(TimeZone.currentSystemDefault())
-        val hour = now.hour
+    /**
+     * Returns the category ID the user uses most frequently,
+     * based on their own transaction history. No hardcoded assumptions.
+     */
+    private fun getMostFrequentCategoryId(categories: List<Category>): Long? {
+        if (allTransactions.isEmpty()) return categories.firstOrNull()?.id
 
-        val targetCategoryName = when (hour) {
-            in 7..10 -> "Food & Dining"       // Breakfast
-            in 12..14 -> "Food & Dining"      // Lunch
-            in 17..19 -> "Transportation"     // Evening commute
-            in 20..22 -> "Food & Dining"      // Dinner
-            else -> "Shopping & Retail"
+        val mostUsedCatId = allTransactions
+            .groupingBy { it.categoryId }
+            .eachCount()
+            .maxByOrNull { it.value }
+            ?.key
+
+        return if (mostUsedCatId != null && categories.any { it.id == mostUsedCatId }) {
+            mostUsedCatId
+        } else {
+            categories.firstOrNull()?.id
         }
-
-        return categories.find { it.name.equals(targetCategoryName, ignoreCase = true) }
-            ?: categories.find { it.name.contains("Food", ignoreCase = true) }
-            ?: categories.firstOrNull()
     }
+
+    private var isSaving = false
 
     fun saveTransaction(
         amount: Double,
@@ -236,35 +226,59 @@ class AddTransactionViewModel(
         accountId: Long,
         notes: String?
     ) {
+        if (isSaving) return
+        isSaving = true
         viewModelScope.launch {
-            val now = com.cashbuddy.platform.currentTimeMillis()
-            val cleanMerchant = merchant.ifBlank { "Manual Entry" }
+            try {
+                val now = com.cashbuddy.platform.currentTimeMillis()
+                val cleanMerchant = merchant.ifBlank { "Manual Entry" }
 
-            val tx = Transaction(
-                id = 0L,
-                amount = amount,
-                type = type,
-                currency = "INR",
-                merchant = cleanMerchant,
-                categoryId = categoryId,
-                accountId = accountId,
-                sourceApp = "manual",
-                rawText = "Manual transaction entry",
-                confidence = 1.0f,
-                status = TransactionStatus.CONFIRMED,
-                notes = notes,
-                timestamp = now,
-                createdAt = now,
-                updatedAt = now
-            )
+                val tx = Transaction(
+                    id = 0L,
+                    amount = amount,
+                    type = type,
+                    currency = "INR",
+                    merchant = cleanMerchant,
+                    categoryId = categoryId,
+                    accountId = accountId,
+                    sourceApp = "manual",
+                    rawText = "Manual transaction entry",
+                    confidence = 1.0f,
+                    status = TransactionStatus.CONFIRMED,
+                    notes = notes,
+                    timestamp = now,
+                    createdAt = now,
+                    updatedAt = now
+                )
 
-            // Learn rule for future auto-categorization
-            if (cleanMerchant != "Manual Entry") {
-                merchantRuleRepository.learnRule(cleanMerchant, categoryId)
+                // Learn rule for future auto-categorization
+                if (cleanMerchant != "Manual Entry") {
+                    merchantRuleRepository.learnRule(cleanMerchant, categoryId)
+                }
+
+                manualAddTransactionUseCase(tx)
+                _savedEffect.emit(Unit)
+            } finally {
+                isSaving = false
             }
+        }
+    }
 
-            manualAddTransactionUseCase(tx)
-            _savedEffect.emit(Unit)
+    fun prefillTransaction(
+        id: Long,
+        onLoaded: (amount: Double, type: TransactionType, merchant: String, categoryId: Long, accountId: Long, notes: String?) -> Unit
+    ) {
+        viewModelScope.launch {
+            transactionRepository.getById(id).firstOrNull()?.let { tx ->
+                onLoaded(
+                    tx.amount,
+                    tx.type,
+                    tx.merchant,
+                    tx.categoryId,
+                    tx.accountId ?: 1L,
+                    tx.notes
+                )
+            }
         }
     }
 }

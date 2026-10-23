@@ -1,8 +1,7 @@
 // NO-NETWORK
 package com.cashbuddy.core
 
-import com.cashbuddy.core.prob.AppLabelMap
-import com.cashbuddy.core.prob.MerchantMap
+import com.cashbuddy.core.prob.HeuristicCategorizer
 
 /**
  * Screenshot Parser for CashBuddy.
@@ -49,9 +48,20 @@ class ScreenshotParserEngine(
         // 5. Extract UTR / Reference ID
         val utrOrRef = extractUtr(trimmed)
 
+        // 5b. Extract VPA (UPI ID)
+        val vpa = vpaRegex.find(trimmed)?.groupValues?.getOrNull(1)
+
         // 6. Category mapping via CategoryEngine
-        val categoryMatch = categoryEngine.getCategory(merchant)
-        val category = categoryMatch.category
+        val category = if (txType == TransactionType.CREDIT) {
+            "Income"
+        } else {
+            val categoryMatch = categoryEngine.getCategory(
+                rawMerchant = merchant,
+                vpa = vpa,
+                amount = amount
+            )
+            categoryMatch.category
+        }
 
         // 7. Calculate Confidence
         var confidence = 0.85f
@@ -72,14 +82,53 @@ class ScreenshotParserEngine(
         )
     }
 
+    /**
+     * Detects the source app name from OCR text using content-first signals.
+     * No hardcoded app allowlist — any UPI app works automatically.
+     * The app brand is extracted dynamically from receipt headers,
+     * transaction ID prefixes, or UPI structural indicators.
+     */
     private fun detectAppName(text: String): String? {
-        AppLabelMap.label(text)?.let { return it }
-        val lower = text.lowercase()
-        return if (lower.contains("powered by upi") || lower.contains("unified payments interface")) {
-            "UPI"
-        } else {
-            null
+        val lines = text.lines().map { it.trim() }.filter { it.isNotEmpty() }
+
+        // Strategy 1: Look for "<AppName> Transaction ID" header pattern
+        // e.g. "PhonePe Transaction ID" -> extracts "PhonePe"
+        val txIdHeaderRegex = Regex("""(?i)^(.+?)\s+transaction\s+id$""")
+        for (line in lines) {
+            val m = txIdHeaderRegex.matchEntire(line.trim())
+            if (m != null) {
+                val candidate = m.groupValues[1].trim()
+                if (candidate.isNotBlank() && candidate.length in 2..30 && !candidate.equals("upi", ignoreCase = true)) {
+                    return candidate
+                }
+            }
         }
+
+        // Strategy 2: Look for "Powered by <Brand>" footer pattern
+        val poweredByRegex = Regex("""(?i)powered\s+by\s+(.+)""")
+        for (line in lines) {
+            val m = poweredByRegex.find(line.trim())
+            if (m != null) {
+                val candidate = m.groupValues[1].trim()
+                if (candidate.isNotBlank() && candidate.length in 2..30 && !candidate.equals("upi", ignoreCase = true)) {
+                    return candidate
+                }
+            }
+        }
+
+        // Strategy 3: Check if first line is a short title brand (e.g. "Google Pay", "Navi", "BHIM")
+        // but not a transaction status, amount, or date
+        val firstLine = lines.firstOrNull()?.trim() ?: ""
+        if (firstLine.length in 3..25 &&
+            !firstLine.contains(Regex("""\d""")) &&
+            !isSystemLabel(firstLine) &&
+            !firstLine.equals("paid to", ignoreCase = true) &&
+            !firstLine.equals("received from", ignoreCase = true)
+        ) {
+            return firstLine
+        }
+
+        return null
     }
 
     private fun extractAmount(text: String): Double? {
@@ -97,7 +146,7 @@ class ScreenshotParserEngine(
             numStr.toDoubleOrNull()?.let { return it }
         }
 
-        // Strategy 3: Line containing ₹ or Rs
+        // Strategy 3: Line containing ₹ or Rs or INR
         for (line in text.lines()) {
             val trimmed = line.trim()
             if (trimmed.contains('₹') || trimmed.startsWith("Rs", ignoreCase = true) || trimmed.startsWith("INR", ignoreCase = true)) {
@@ -106,17 +155,35 @@ class ScreenshotParserEngine(
             }
         }
 
-        // Strategy 4: Standalone line with just a number between 1 and 100,000 surrounded by transit/payment context
+        val lines = text.lines().map { it.trim() }.filter { it.isNotEmpty() }
+
+        // Strategy 4: Line immediately following an isolated currency glyph (e.g. ML Kit reading '₹' as 'M', '₹', 'F', 'T', '?')
+        for (i in lines.indices) {
+            val l = lines[i]
+            if (l.equals("₹") || l.equals("M", ignoreCase = true) || l.equals("F", ignoreCase = true) ||
+                l.equals("Rs", ignoreCase = true) || l.equals("INR", ignoreCase = true) || l == "?" || l == "•"
+            ) {
+                val next = lines.getOrNull(i + 1)?.replace(",", "")?.toDoubleOrNull()
+                if (next != null && next in 1.0..500000.0) {
+                    return next
+                }
+            }
+        }
+
+        // Strategy 5: Standalone line with a numeric amount (with or without comma separators e.g. "1,149" or "1,149.00")
         val lower = text.lowercase()
         val hasPaymentContext = lower.contains("completed") || lower.contains("successful") ||
                 lower.contains("confirmed") || lower.contains("paid") || lower.contains("payment") ||
-                lower.contains("banking name") || lower.contains("upi")
+                lower.contains("banking name") || lower.contains("upi") || lower.contains("pay again")
         if (hasPaymentContext) {
-            for (line in text.lines()) {
-                val trimmed = line.trim().removePrefix("?").removePrefix("=").removePrefix("*").trim()
-                val num = trimmed.toDoubleOrNull()
-                if (num != null && num in 1.0..100000.0) {
-                    return num
+            for (line in lines) {
+                val clean = line.removePrefix("?").removePrefix("=").removePrefix("*")
+                    .removePrefix("M").removePrefix("m").removePrefix("₹").trim()
+                if (clean.isNotEmpty() && clean.all { it.isDigit() || it == ',' || it == '.' }) {
+                    val num = clean.replace(",", "").toDoubleOrNull()
+                    if (num != null && num in 1.0..500000.0) {
+                        return num
+                    }
                 }
             }
         }
@@ -126,11 +193,17 @@ class ScreenshotParserEngine(
 
     private fun detectTxType(text: String): TransactionType {
         val lower = text.lowercase()
-        return if (lower.contains("received from") ||
+        val isCredit = lower.contains("received from") ||
             lower.contains("payment received") ||
             lower.contains("money received") ||
-            lower.contains("credited to")
-        ) {
+            lower.contains("credited to your") ||
+            lower.contains("received into") ||
+            (lower.contains("credited to") && !lower.contains("debited from")) ||
+            lower.contains("deposited to") ||
+            lower.contains("refund received") ||
+            lower.contains("cashback received")
+
+        return if (isCredit) {
             TransactionType.CREDIT
         } else {
             TransactionType.DEBIT
@@ -150,14 +223,14 @@ class ScreenshotParserEngine(
 
         val lines = text.lines().map { it.trim() }.filter { it.isNotEmpty() }
 
-        // Strategy 1: Line right after or on "Paid to", "To:", "Payment to", etc.
+        // Strategy 1: Line right after or on "Received from", "Paid to", "To:", "Payment to", etc.
         for (i in lines.indices) {
             val line = lines[i]
             val lower = line.lowercase()
 
-            if (lower == "paid to" || lower == "payment to" || lower == "payment of" ||
+            if (lower == "received from" || lower == "received" || lower == "from" || lower == "from:" ||
+                lower == "paid to" || lower == "payment to" || lower == "payment of" ||
                 lower == "sent to" || lower == "to" || lower == "to:" ||
-                lower == "received from" || lower == "from" || lower == "from:" ||
                 lower.endsWith("successfully to")
             ) {
                 val nextLine = lines.getOrNull(i + 1)
@@ -169,7 +242,11 @@ class ScreenshotParserEngine(
                 }
             }
 
-            // Inline checks: "Paid to Chai Point", "To: BMTC", etc.
+            // Inline checks: "Received from John", "Paid to Chai Point", "To: BMTC", etc.
+            if (lower.startsWith("received from ")) {
+                val candidate = cleanMerchantLine(line.substring(14))
+                if (candidate.isNotEmpty() && !isSystemLabel(candidate)) return candidate
+            }
             if (lower.startsWith("paid to ")) {
                 val candidate = cleanMerchantLine(line.substring(8))
                 if (candidate.isNotEmpty() && !isSystemLabel(candidate)) return candidate
@@ -182,33 +259,38 @@ class ScreenshotParserEngine(
                 val candidate = cleanMerchantLine(line.substring(3))
                 if (candidate.isNotEmpty() && !isSystemLabel(candidate)) return candidate
             }
-            if (lower.startsWith("received from ")) {
-                val candidate = cleanMerchantLine(line.substring(14))
-                if (candidate.isNotEmpty() && !isSystemLabel(candidate)) return candidate
-            }
             if (lower.startsWith("payment to ")) {
                 val candidate = cleanMerchantLine(line.substring(11))
                 if (candidate.isNotEmpty() && !isSystemLabel(candidate)) return candidate
             }
         }
 
-        // Strategy 2: VPA identifier (e.g. swiggy@icici -> "Swiggy")
-        val vpaMatch = vpaRegex.find(text)
-        if (vpaMatch != null) {
-            val vpa = vpaMatch.groupValues[1]
-            val username = vpa.substringBefore('@')
-            val cleaned = cleanMerchantLine(username)
-            if (cleaned.isNotEmpty()) {
-                return cleaned.replaceFirstChar { it.uppercase() }
+        // Strategy 2: If this is CREDIT and "received from" wasn't explicitly caught, look for payer before "credited to"
+        val lowerText = text.lowercase()
+        if (lowerText.contains("received from")) {
+            val after = text.substringAfter("Received from", "").substringAfter("received from", "")
+            val firstLine = after.lines().map { it.trim() }.firstOrNull { it.isNotEmpty() && !isSystemLabel(it) }
+            if (firstLine != null) {
+                return cleanMerchantLine(firstLine)
             }
         }
 
-        // Strategy 3: Check for known merchants in MerchantMap mentioned anywhere in text
-        val tokens = text.lowercase().split(Regex("[^a-z0-9]")).filter { it.length >= 3 }
-        for (token in tokens) {
-            val match = MerchantMap.lookup(token)
-            if (match.source != MerchantMap.CategorySource.FALLBACK) {
-                return token.replaceFirstChar { it.uppercase() }
+        // Strategy 3: VPA identifier (e.g. swiggy@icici -> "Swiggy")
+        // But only use if not "Credited to <User VPA>"
+        val vpaMatch = vpaRegex.find(text)
+        if (vpaMatch != null) {
+            val vpa = vpaMatch.groupValues[1]
+            // If the VPA comes immediately after "credited to", it is the user's account receiving the funds
+            val vpaIdx = text.indexOf(vpa)
+            val textBeforeVpa = if (vpaIdx > 0) text.substring(0, vpaIdx).lowercase() else ""
+            val isUserReceivingAccount = textBeforeVpa.takeLast(30).contains("credited to")
+
+            if (!isUserReceivingAccount) {
+                val username = vpa.substringBefore('@')
+                val cleaned = cleanMerchantLine(username)
+                if (cleaned.isNotEmpty()) {
+                    return cleaned.replaceFirstChar { it.uppercase() }
+                }
             }
         }
 
@@ -216,6 +298,14 @@ class ScreenshotParserEngine(
     }
 
     private fun extractUtr(text: String): String? {
+        // Priority 1: Official 12-digit banking UTR / RRN (e.g. UTR: 995780225143)
+        val bankingUtrRegex = Regex("""(?i)\b(?:UTR|UPI\s+ref(?:\s+no|\s+id|\s+number)?|RRN)[:\s]+(\d{12})\b""")
+        val bMatch = bankingUtrRegex.find(text)
+        if (bMatch != null) {
+            return bMatch.groups[1]?.value?.trim()
+        }
+
+        // Priority 2: Generic UPI / Transaction ID
         val match = utrRegex.find(text) ?: return null
         return match.groups[1]?.value?.trim()
     }
@@ -247,10 +337,15 @@ class ScreenshotParserEngine(
             lower == "failed" ||
             lower == "pending" ||
             lower == "paid to" ||
+            lower == "received from" ||
+            lower == "credited to" ||
+            lower == "view history" ||
+            lower == "share receipt" ||
             lower == "transfer details" ||
             lower == "transaction details" ||
             lower.startsWith("upi transaction id") ||
             lower.startsWith("transaction id") ||
+            lower.startsWith("phonepe transaction id") ||
             lower.startsWith("google transaction id") ||
             lower.startsWith("utr") ||
             lower.startsWith("powered by") ||

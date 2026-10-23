@@ -3,7 +3,6 @@ package com.cashbuddy.core
 
 import com.cashbuddy.core.prob.DedupEngine
 import com.cashbuddy.core.prob.EvidenceExtractor
-import com.cashbuddy.core.prob.MerchantMap
 import com.cashbuddy.core.prob.NoOpCalibrator
 import com.cashbuddy.core.prob.NotificationSource
 import com.cashbuddy.core.prob.PolicyEngine
@@ -239,11 +238,11 @@ class ProbabilisticEngineTest {
     }
 
     @Test
-    fun testMerchantMap_LookupSwiggyReturnsFoodWithHighConfidence() {
-        val match = MerchantMap.lookup("swiggy")
+    fun testHeuristicCategorizer_VpaFoodReturnsHighConfidence() {
+        val match = com.cashbuddy.core.prob.HeuristicCategorizer.matchVpa("swiggy.food@icici")
+        assertNotNull(match)
         assertEquals("Food & Dining", match.category)
-        assertTrue(match.confidence >= 0.90f)
-        assertEquals(MerchantMap.CategorySource.MERCHANT_MAP, match.source)
+        assertTrue(match.confidence >= 0.85f)
     }
 
     @Test
@@ -633,6 +632,94 @@ class ProbabilisticEngineTest {
         assertEquals(101L, merge.existingId)
         assertEquals("0383", merge.upgradedFields.accountLast4, "Must preserve the verified account number from bank SMS")
         assertTrue(merge.upgradedFields.clearReview)
+    }
+
+    @Test
+    fun testUpiTextShare_GooglePayFormat() {
+        val text = "Paid ₹500 to Zomato. UPI Ref: 123456789012."
+        val raw = RawMessage(
+            id = "gpay-share-1",
+            sourceType = SourceType.UPI_RECEIPT,
+            packageName = "share_sheet",
+            senderId = null,
+            title = "UPI Receipt",
+            text = text,
+            timestamp = 1727000000000L
+        )
+
+        assertEquals(500.0, evidenceExtractor.extractAmount(text))
+        assertEquals("Zomato", evidenceExtractor.extractMerchant(text, raw.packageName))
+        assertEquals("123456789012", evidenceExtractor.extractUtr(text))
+
+        val evidence = evidenceExtractor.extract(raw, NotificationSource.UPI_APP)
+        val classification = classifier.classify(evidence, text, NotificationSource.UPI_APP)
+        assertTrue(classification.pTransaction >= 0.85, "Expected high confidence for valid UPI receipt")
+    }
+
+    @Test
+    fun testUpiTextShare_PhonePeFormat() {
+        val text = "Payment of ₹500 to Zomato is successful. Transaction ID: T1234567890."
+        val raw = RawMessage(
+            id = "phonepe-share-1",
+            sourceType = SourceType.UPI_RECEIPT,
+            packageName = "share_sheet",
+            senderId = null,
+            title = "UPI Receipt",
+            text = text,
+            timestamp = 1727000000000L
+        )
+
+        assertEquals(500.0, evidenceExtractor.extractAmount(text))
+        assertEquals("Zomato", evidenceExtractor.extractMerchant(text, raw.packageName))
+        assertEquals("T1234567890", evidenceExtractor.extractUtr(text))
+
+        val evidence = evidenceExtractor.extract(raw, NotificationSource.UPI_APP)
+        val classification = classifier.classify(evidence, text, NotificationSource.UPI_APP)
+        assertTrue(classification.pTransaction >= 0.85, "Expected high confidence for valid PhonePe receipt")
+    }
+
+    @Test
+    fun testUpiTextShare_PaytmFormat() {
+        val text = "You have paid ₹500 to Zomato via Paytm UPI. UTR: 1234567890."
+        val raw = RawMessage(
+            id = "paytm-share-1",
+            sourceType = SourceType.UPI_RECEIPT,
+            packageName = "share_sheet",
+            senderId = null,
+            title = "UPI Receipt",
+            text = text,
+            timestamp = 1727000000000L
+        )
+
+        assertEquals(500.0, evidenceExtractor.extractAmount(text))
+        assertEquals("Zomato", evidenceExtractor.extractMerchant(text, raw.packageName))
+        assertEquals("1234567890", evidenceExtractor.extractUtr(text))
+
+        val evidence = evidenceExtractor.extract(raw, NotificationSource.UPI_APP)
+        val classification = classifier.classify(evidence, text, NotificationSource.UPI_APP)
+        assertTrue(classification.pTransaction >= 0.85, "Expected high confidence for valid Paytm receipt")
+    }
+
+    @Test
+    fun testUpiTextShare_GenericBankFormat() {
+        val text = "Sent ₹500 to Zomato (zomato@ybl) on 24 Oct. Ref: 1234567890."
+        val raw = RawMessage(
+            id = "generic-share-1",
+            sourceType = SourceType.UPI_RECEIPT,
+            packageName = "share_sheet",
+            senderId = null,
+            title = "UPI Receipt",
+            text = text,
+            timestamp = 1727000000000L
+        )
+
+        assertEquals(500.0, evidenceExtractor.extractAmount(text))
+        assertEquals("Zomato", evidenceExtractor.extractMerchant(text, raw.packageName))
+        assertEquals("1234567890", evidenceExtractor.extractUtr(text))
+
+        val evidence = evidenceExtractor.extract(raw, NotificationSource.UPI_APP)
+        val classification = classifier.classify(evidence, text, NotificationSource.UPI_APP)
+        assertTrue(classification.pTransaction >= 0.85, "Expected high confidence for valid bank receipt")
     }
 }
 

@@ -67,7 +67,7 @@ class BudgetEngine(
                 val occurrences = categoryTxs.count { tx ->
                     tx.type == TransactionType.DEBIT &&
                     tx.merchant.trim().equals(pattern.merchantNormalized, ignoreCase = true) &&
-                    (tx.amount * 100.0).toLong() == pattern.amountPaise
+                    kotlin.math.round(tx.amount * 100.0).toLong() == pattern.amountPaise
                 }
                 if (occurrences > 0) {
                     committed += (pattern.amountPaise / 100.0) * occurrences
