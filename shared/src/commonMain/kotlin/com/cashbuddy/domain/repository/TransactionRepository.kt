@@ -54,6 +54,7 @@ interface TransactionRepository {
     suspend fun sumAll(startTime: Long, endTime: Long, type: TransactionType = TransactionType.DEBIT): Double = 0.0
     suspend fun getAmountsAtMerchant(merchant: String, fromTimestamp: Long, toTimestamp: Long): List<Double> = emptyList()
     suspend fun updateNotes(id: Long, notes: String) {}
+    suspend fun findByUtr(utr: String): Transaction? = null
     suspend fun getHistoryPage(
         searchQuery: String? = null,
         type: String? = null,

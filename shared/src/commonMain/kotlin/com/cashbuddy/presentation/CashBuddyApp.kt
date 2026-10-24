@@ -97,7 +97,7 @@ fun CashBuddyApp(
                 val utr = clipboardUtr
                 onConsumeClipboardUtr()
                 val result = snackbarHostState.showSnackbar(
-                    message = "UPI Ref $utr detected in clipboard.",
+                    message = "UPI Ref $utr detected.",
                     actionLabel = "Log it",
                     duration = SnackbarDuration.Short
                 )

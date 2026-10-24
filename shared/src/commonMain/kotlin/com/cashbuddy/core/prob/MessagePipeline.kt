@@ -144,7 +144,9 @@ class MessagePipeline(
                         val windowMs = if (utr != null) 24 * 60 * 60 * 1000L else DedupEngine.WINDOW_MS
                         val recentTxs = transactionRepo.getByDateRange(now - windowMs, now + windowMs).firstOrNull() ?: emptyList()
                         val candidates = recentTxs.map {
-                            val candidateUtr = evidenceExtractor.extractUtr(it.rawText)
+                            val candidateUtr = it.utr
+                                ?: evidenceExtractor.extractUtr(it.rawText)
+                                ?: (if (it.notes != null) evidenceExtractor.extractUtr(it.notes) else null)
                             DedupEngine.ExistingCandidate(
                                 id = it.id,
                                 amount = it.amount,

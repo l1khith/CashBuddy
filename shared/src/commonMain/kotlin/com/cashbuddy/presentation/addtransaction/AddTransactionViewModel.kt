@@ -50,6 +50,13 @@ class AddTransactionViewModel(
     private val _uiState = MutableStateFlow(AddTransactionUiState())
     val uiState: StateFlow<AddTransactionUiState> = _uiState.asStateFlow()
 
+    private val _prefilledUtr = MutableStateFlow<String?>(null)
+    val prefilledUtr: StateFlow<String?> = _prefilledUtr.asStateFlow()
+
+    fun setPrefilledUtr(utr: String?) {
+        _prefilledUtr.value = utr
+    }
+
     private val _savedEffect = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
     val savedEffect: SharedFlow<Unit> = _savedEffect.asSharedFlow()
 
@@ -232,6 +239,17 @@ class AddTransactionViewModel(
             try {
                 val now = com.cashbuddy.platform.currentTimeMillis()
                 val cleanMerchant = merchant.ifBlank { "Manual Entry" }
+                val utr = _prefilledUtr.value
+                val effectiveNotes = when {
+                    !utr.isNullOrBlank() && (notes.isNullOrBlank() || !notes.contains(utr)) ->
+                        if (notes.isNullOrBlank()) "UPI Ref: $utr" else "$notes (UPI Ref: $utr)"
+                    else -> notes
+                }
+                val effectiveRaw = when {
+                    !utr.isNullOrBlank() -> "Manual transaction entry (UTR: $utr)"
+                    !effectiveNotes.isNullOrBlank() -> "Manual transaction entry ($effectiveNotes)"
+                    else -> "Manual transaction entry"
+                }
 
                 val tx = Transaction(
                     id = 0L,
@@ -242,13 +260,14 @@ class AddTransactionViewModel(
                     categoryId = categoryId,
                     accountId = accountId,
                     sourceApp = "manual",
-                    rawText = if (!notes.isNullOrBlank()) "Manual transaction entry ($notes)" else "Manual transaction entry",
+                    rawText = effectiveRaw,
                     confidence = 1.0f,
                     status = TransactionStatus.CONFIRMED,
-                    notes = notes,
+                    notes = effectiveNotes,
                     timestamp = now,
                     createdAt = now,
-                    updatedAt = now
+                    updatedAt = now,
+                    utr = utr
                 )
 
                 // Learn rule for future auto-categorization

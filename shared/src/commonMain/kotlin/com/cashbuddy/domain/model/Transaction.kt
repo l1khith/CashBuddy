@@ -37,5 +37,6 @@ data class Transaction(
     val categoryColor: String? = null,
     val categoryIcon: String? = null,
     val accountName: String? = null,
-    val accountType: String? = null
+    val accountType: String? = null,
+    val utr: String? = null
 )

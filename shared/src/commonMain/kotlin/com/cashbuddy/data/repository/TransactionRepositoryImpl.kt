@@ -299,6 +299,20 @@ class TransactionRepositoryImpl(
         )
     }
 
+    override suspend fun findByUtr(utr: String): Transaction? = withContext(dispatcher) {
+        val cleanUtr = utr.trim()
+        if (cleanUtr.isBlank()) return@withContext null
+        val now = com.cashbuddy.platform.currentTimeMillis()
+        val thirtyDaysMs = 30L * 24 * 60 * 60 * 1000L
+        val recent = queries.getByDateRange(now - thirtyDaysMs, now + thirtyDaysMs, ::mapTransaction).executeAsList()
+        recent.firstOrNull { tx ->
+            val txUtr = com.cashbuddy.core.prob.Regexes.UTR.find(tx.rawText)?.groupValues?.getOrNull(1)?.trim()
+                ?: com.cashbuddy.core.prob.Regexes.UTR.find(tx.notes ?: "")?.groupValues?.getOrNull(1)?.trim()
+                ?: if (tx.rawText.contains(cleanUtr) || tx.notes?.contains(cleanUtr) == true) cleanUtr else null
+            txUtr != null && txUtr.equals(cleanUtr, ignoreCase = true)
+        }
+    }
+
     private fun mapTransaction(
         id: Long,
         amount: Double,
@@ -345,7 +359,9 @@ class TransactionRepositoryImpl(
             categoryColor = categoryColor,
             categoryIcon = categoryIcon,
             accountName = accountName,
-            accountType = accountType
+            accountType = accountType,
+            utr = com.cashbuddy.core.prob.Regexes.UTR.find(rawText)?.groupValues?.getOrNull(1)?.trim()
+                ?: com.cashbuddy.core.prob.Regexes.UTR.find(notes ?: "")?.groupValues?.getOrNull(1)?.trim()
         )
     }
 }

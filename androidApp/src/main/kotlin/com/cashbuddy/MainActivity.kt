@@ -144,7 +144,10 @@ class MainActivity : FragmentActivity() {
                         CashBuddyApp(
                             initialRoute = currentNavigationRoute,
                             clipboardUtr = pendingClipboardUtr,
-                            onConsumeClipboardUtr = { pendingClipboardUtr = null },
+                            onConsumeClipboardUtr = {
+                                pendingClipboardUtr = null
+                                com.cashbuddy.clipboard.ClipboardMonitor.setLastProcessedUtr(null)
+                            },
                             onOpenNotificationSettings = {
                                 try {
                                     startActivity(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS))

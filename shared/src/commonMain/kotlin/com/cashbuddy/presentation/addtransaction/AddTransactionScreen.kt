@@ -78,8 +78,11 @@ fun AddTransactionScreen(
     var notes by remember { mutableStateOf("") }
 
     LaunchedEffect(prefilledUtr) {
-        if (!prefilledUtr.isNullOrBlank() && notes.isBlank()) {
-            notes = "UPI Ref: $prefilledUtr"
+        if (!prefilledUtr.isNullOrBlank()) {
+            viewModel.setPrefilledUtr(prefilledUtr)
+            if (notes.isBlank()) {
+                notes = "UPI Ref: $prefilledUtr"
+            }
         }
     }
 
