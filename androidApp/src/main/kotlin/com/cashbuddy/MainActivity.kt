@@ -60,6 +60,7 @@ class MainActivity : FragmentActivity() {
     private enum class AuthState { LOADING, AUTHENTICATED, LOCKED }
     private var authState by mutableStateOf(AuthState.LOADING)
     private var currentNavigationRoute by mutableStateOf<String?>(null)
+    private var pendingClipboardUtr by mutableStateOf<String?>(null)
     private var isBiometricRequired = false
     private var lastBackgroundTimestamp: Long = 0L
 
@@ -96,6 +97,7 @@ class MainActivity : FragmentActivity() {
                 promptBiometricUnlock()
             } else {
                 authState = AuthState.AUTHENTICATED
+                checkClipboardForUtr()
             }
         }
 
@@ -141,6 +143,8 @@ class MainActivity : FragmentActivity() {
                     AuthState.AUTHENTICATED -> {
                         CashBuddyApp(
                             initialRoute = currentNavigationRoute,
+                            clipboardUtr = pendingClipboardUtr,
+                            onConsumeClipboardUtr = { pendingClipboardUtr = null },
                             onOpenNotificationSettings = {
                                 try {
                                     startActivity(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS))
@@ -347,6 +351,19 @@ class MainActivity : FragmentActivity() {
         }
     }
 
+    override fun onResume() {
+        super.onResume()
+        if (authState == AuthState.AUTHENTICATED) {
+            checkClipboardForUtr()
+        }
+    }
+
+    private fun checkClipboardForUtr() {
+        com.cashbuddy.clipboard.ClipboardMonitor.checkClipboard(this)?.let { utr ->
+            pendingClipboardUtr = utr
+        }
+    }
+
     override fun onStart() {
         super.onStart()
         if (isBiometricRequired && lastBackgroundTimestamp > 0) {
@@ -372,6 +389,7 @@ class MainActivity : FragmentActivity() {
                 override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult) {
                     super.onAuthenticationSucceeded(result)
                     authState = AuthState.AUTHENTICATED
+                    checkClipboardForUtr()
                 }
 
                 override fun onAuthenticationError(errorCode: Int, errString: CharSequence) {

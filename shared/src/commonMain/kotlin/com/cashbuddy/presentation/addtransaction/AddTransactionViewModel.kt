@@ -242,7 +242,7 @@ class AddTransactionViewModel(
                     categoryId = categoryId,
                     accountId = accountId,
                     sourceApp = "manual",
-                    rawText = "Manual transaction entry",
+                    rawText = if (!notes.isNullOrBlank()) "Manual transaction entry ($notes)" else "Manual transaction entry",
                     confidence = 1.0f,
                     status = TransactionStatus.CONFIRMED,
                     notes = notes,
