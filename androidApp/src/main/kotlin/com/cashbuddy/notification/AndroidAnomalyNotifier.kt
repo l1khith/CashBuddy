@@ -15,6 +15,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.launch
+import java.util.Locale
 import kotlin.math.roundToLong
 
 class AndroidAnomalyNotifier(
@@ -61,7 +62,7 @@ class AndroidAnomalyNotifier(
                 val formattedAmount = if (amount == amount.roundToLong().toDouble()) {
                     amount.roundToLong().toString()
                 } else {
-                    String.format("%.2f", amount)
+                    String.format(Locale.US, "%.2f", amount)
                 }
 
                 val itsMineAction = NotificationCompat.Action.Builder(0, "It's mine", itsMinePendingIntent)

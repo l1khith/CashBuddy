@@ -21,8 +21,6 @@ class ScreenshotHandler(private val context: Context) : KoinComponent {
 
     private val transactionRepository: TransactionRepository by inject()
     private val categoryRepository: CategoryRepository by inject()
-    // private val accountRepository: AccountRepository by inject()
-    // private val settingsRepository: SettingsRepository by inject()
     private val trainingDataRepository: TrainingDataRepository by inject()
     private val pipeline: com.cashbuddy.core.prob.MessagePipeline by inject()
     private val ocrEngine: com.cashbuddy.ocr.OcrEngine by inject()
@@ -30,7 +28,6 @@ class ScreenshotHandler(private val context: Context) : KoinComponent {
 
     companion object {
         private const val TAG = "ScreenshotHandler"
-        private const val DEDUP_WINDOW_SECS = 300L
     }
 
     /**

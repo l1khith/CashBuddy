@@ -25,6 +25,34 @@ object BudgetPacer {
         spent: Double,
         budgetAmount: Double,
         period: BudgetPeriod,
+        nowEpochMs: Long,
+        timeZone: TimeZone = TimeZone.currentSystemDefault()
+    ): PacingResult = calculatePacing(
+        spent = spent,
+        budgetAmount = budgetAmount,
+        period = period,
+        now = Instant.fromEpochMilliseconds(nowEpochMs),
+        timeZone = timeZone
+    )
+
+    fun calculatePacing(
+        spent: Double,
+        budget: Double,
+        period: String,
+        nowEpochMs: Long,
+        timeZone: TimeZone = TimeZone.currentSystemDefault()
+    ): PacingResult = calculatePacing(
+        spent = spent,
+        budget = budget,
+        period = period,
+        now = Instant.fromEpochMilliseconds(nowEpochMs),
+        timeZone = timeZone
+    )
+
+    fun calculatePacing(
+        spent: Double,
+        budgetAmount: Double,
+        period: BudgetPeriod,
         now: Instant,
         timeZone: TimeZone = TimeZone.currentSystemDefault()
     ): PacingResult {

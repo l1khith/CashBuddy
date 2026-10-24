@@ -17,13 +17,10 @@ import com.cashbuddy.domain.repository.BudgetRepository
 import com.cashbuddy.domain.repository.SettingsRepository
 import com.cashbuddy.domain.repository.TransactionRepository
 import kotlinx.coroutines.flow.firstOrNull
-import kotlinx.datetime.Clock
-import kotlinx.datetime.Instant
-import kotlinx.datetime.TimeZone
-import kotlinx.datetime.toLocalDateTime
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.inject
 import java.util.Calendar
+import java.util.Locale
 import kotlin.math.roundToInt
 import kotlin.math.roundToLong
 
@@ -75,7 +72,7 @@ object QuickGlanceNotification : KoinComponent {
                     spent = status.spent,
                     budgetAmount = budget.amount,
                     period = budget.period,
-                    now = Instant.fromEpochMilliseconds(now)
+                    nowEpochMs = now
                 )
                 Pair(budget.category, pacing.actualPercent)
             }.maxByOrNull { it.second }
@@ -135,7 +132,7 @@ object QuickGlanceNotification : KoinComponent {
         return if (amount == amount.roundToLong().toDouble()) {
             amount.roundToLong().toString()
         } else {
-            String.format("%.2f", amount)
+            String.format(Locale.US, "%.2f", amount)
         }
     }
 }

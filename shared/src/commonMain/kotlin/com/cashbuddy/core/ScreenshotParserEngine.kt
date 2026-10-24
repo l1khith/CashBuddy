@@ -1,7 +1,6 @@
 // NO-NETWORK
 package com.cashbuddy.core
 
-import com.cashbuddy.core.prob.HeuristicCategorizer
 
 /**
  * Screenshot Parser for CashBuddy.

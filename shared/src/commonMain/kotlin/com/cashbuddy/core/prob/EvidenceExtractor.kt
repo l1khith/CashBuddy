@@ -153,10 +153,8 @@ class EvidenceExtractor(
 
     private fun isMerchantPackageHint(pkg: String): Boolean {
         if (pkg.isBlank()) return false
-        val segments = pkg.lowercase().split('.', '_', '-')
-        return segments.any { segment ->
-            HeuristicCategorizer.matchVpa(segment) != null
-        }
+        val brand = DynamicMerchantResolver.extractBrandFromPackage(pkg)
+        return !brand.isNullOrBlank() && brand.length >= 3
     }
 
     fun extractAmount(text: String): Double? {
