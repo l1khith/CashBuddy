@@ -2,7 +2,6 @@
 package com.cashbuddy.core
 
 import com.cashbuddy.core.prob.ConcurrentHashMap
-import com.cashbuddy.core.prob.HeuristicCategorizer
 import com.cashbuddy.core.prob.JaroWinkler
 
 class CategoryEngine {
@@ -37,27 +36,7 @@ class CategoryEngine {
         vpa: String? = null
     ): CategoryMatch {
         if (rawMerchant.isNullOrBlank()) {
-            val vpaMatch = HeuristicCategorizer.matchVpa(vpa)
-            if (vpaMatch != null) {
-                return CategoryMatch(
-                    category = vpaMatch.category,
-                    confidence = vpaMatch.confidence,
-                    source = "VpaGrammar",
-                    reason = vpaMatch.reason
-                )
-            }
-            // Check if contextual prior can suggest a category for review
-            val contextPrior = HeuristicCategorizer.matchContext(timestamp, amount)
-            return if (contextPrior != null) {
-                CategoryMatch(
-                    category = contextPrior.category,
-                    confidence = contextPrior.confidence,
-                    source = "ContextHeuristic",
-                    reason = contextPrior.reason
-                )
-            } else {
-                CategoryMatch(category = "Unknown", confidence = 0.0f, source = "Fallback")
-            }
+            return CategoryMatch(category = "Unknown", confidence = 0.0f, source = "Fallback")
         }
 
         val m = normalize(rawMerchant)
@@ -108,41 +87,7 @@ class CategoryEngine {
             }
         }
 
-        // Tier 2. Structural VPA grammar inspection (Confidence 0.85)
-        val vpaTarget = vpa ?: if (rawMerchant.contains('@')) rawMerchant else null
-        val vpaMatch = HeuristicCategorizer.matchVpa(vpaTarget ?: m)
-        if (vpaMatch != null) {
-            return CategoryMatch(
-                category = vpaMatch.category,
-                confidence = vpaMatch.confidence,
-                source = "VpaGrammar",
-                reason = vpaMatch.reason
-            )
-        }
-
-        // Tier 2b. Structural banking / income keywords
-        if (m.contains("salary") || m.contains("payroll") || m.contains("stipend")) {
-            return CategoryMatch(category = "Salary", confidence = 0.95f, source = "FinancialRail")
-        }
-        if (m.contains("refund") || m.contains("reversal")) {
-            return CategoryMatch(category = "Refund", confidence = 0.95f, source = "FinancialRail")
-        }
-        if (m.contains("cashback") || m.contains("reward")) {
-            return CategoryMatch(category = "Gift", confidence = 0.90f, source = "FinancialRail")
-        }
-
-        // Tier 3. Contextual Heuristic Prior (Time + Amount) (Confidence 0.60 - Smart Review Suggestion)
-        val contextPrior = HeuristicCategorizer.matchContext(timestamp, amount)
-        if (contextPrior != null) {
-            return CategoryMatch(
-                category = contextPrior.category,
-                confidence = contextPrior.confidence,
-                source = "ContextHeuristic",
-                reason = contextPrior.reason
-            )
-        }
-
-        // Tier 4. Unknown Fallback (Confidence 0.0)
+        // Tier 2. Fallback to Unknown for user review confirmation
         return CategoryMatch(category = "Unknown", confidence = 0.0f, source = "Fallback")
     }
 
@@ -153,7 +98,7 @@ class CategoryEngine {
         .trim()
 
     private fun isGenericMerchantToken(token: String): Boolean {
-        val generic = setOf("upi", "merchant", "unknown", "payment", "bank", "user", "vpa", "sent", "received")
-        return token.length < 3 || generic.contains(token)
+        val norm = token.trim()
+        return norm.length < 2 || norm.equals("unknown", ignoreCase = true)
     }
 }

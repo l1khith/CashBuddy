@@ -5,7 +5,6 @@ import com.cashbuddy.domain.model.AlertState
 import com.cashbuddy.domain.model.BudgetCategories
 import com.cashbuddy.domain.repository.BudgetRepository
 import com.cashbuddy.platform.currentTimeMillis
-import kotlinx.datetime.Instant
 import kotlin.math.roundToInt
 
 data class AlertEvent(
@@ -50,7 +49,7 @@ class BudgetAlertScheduler(
                 spent = status.spent,
                 budgetAmount = budget.amount,
                 period = budget.period,
-                now = Instant.fromEpochMilliseconds(now)
+                nowEpochMs = now
             )
 
             val daysRemaining = pacing.daysRemaining

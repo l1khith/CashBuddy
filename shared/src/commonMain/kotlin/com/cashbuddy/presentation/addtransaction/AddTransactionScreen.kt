@@ -64,6 +64,7 @@ import com.cashbuddy.presentation.theme.getCategoryColor
 fun AddTransactionScreen(
     viewModel: AddTransactionViewModel,
     prefilledId: Long? = null,
+    prefilledUtr: String? = null,
     onNavigateBack: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -75,6 +76,15 @@ fun AddTransactionScreen(
     var selectedCategoryId by remember { mutableStateOf<Long?>(null) }
     var selectedAccountId by remember { mutableStateOf<Long?>(null) }
     var notes by remember { mutableStateOf("") }
+
+    LaunchedEffect(prefilledUtr) {
+        if (!prefilledUtr.isNullOrBlank()) {
+            viewModel.setPrefilledUtr(prefilledUtr)
+            if (notes.isBlank()) {
+                notes = "UPI Ref: $prefilledUtr"
+            }
+        }
+    }
 
     LaunchedEffect(prefilledId) {
         if (prefilledId != null && prefilledId > 0L) {

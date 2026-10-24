@@ -23,25 +23,26 @@ object DynamicMerchantResolver {
 
     const val FUZZY_THRESHOLD: Double = 0.70
 
-    // Prefix patterns injected by payment aggregators, switches, and bank gateways
+    // Prefix patterns injected by payment aggregators, switches, and bank gateways (structural, no hardcoded brand lists)
     private val GATEWAY_PREFIXES = listOf(
-        Regex("""(?i)^(?:PAYTM[-*_\s]|INF\*|UPI[/_\s]|RAZORPAY\*|BILLDESK\*|CCAVENUE\*|AMZN\*|AMAZON\*|GPAY\*|PHONEPE\*|CRED\*|POS\s+|ECOM\s+|VPA\s+)"""),
+        Regex("""(?i)^[a-z0-9]{2,12}[*/\-_]\s*"""),
+        Regex("""(?i)^(?:pos\s+|ecom\s+|vpa\s+|upi\s+)"""),
         Regex("""(?i)^(?:to\s+|paid\s+to\s+|sent\s+to\s+|at\s+)""")
     )
 
     // Suffix patterns (locations, corporate abbreviations, random transaction hashes)
     private val GATEWAY_SUFFIXES = listOf(
-        Regex("""(?i)(?:\*BLR|\*MUM|\*DEL|\*HYD|\*CHE|\*KOL|\*PUN|\*BANGALORE|\*MUMBAI|\*DELHI)$"""),
-        Regex("""(?i)(?:\s+(?:pvt\s+ltd|private\s+limited|limited|ltd|india|store|online|pay|media\s+pvt\s+ltd|marketplace|designs|systems|commerce|services|retail|solutions|enterprises|ventures|infra))\b.*$"""),
+        Regex("""(?i)\*[a-z]{3,4}$"""),
+        Regex("""(?i)\s+(?:pvt\s+ltd|private\s+limited|limited|ltd)\b.*$"""),
         Regex("""(?i)[-_*#]\d{4,16}$""")
     )
 
     // UPI handles to strip: @icici, @ybl, @paytm, @okaxis, etc.
     private val UPI_HANDLE_REGEX = Regex("""(?i)@[a-zA-Z0-9.\-_]{2,32}\b""")
 
-    // Common namespace domain prefixes to skip when parsing package names
+    // Standard internet domain segments to skip when parsing package names
     private val IGNORED_PACKAGE_SEGMENTS = setOf(
-        "com", "in", "org", "net", "io", "app", "apps", "co", "android", "mobile", "client", "customer", "user"
+        "com", "in", "org", "net", "io", "co"
     )
 
     data class Resolution(

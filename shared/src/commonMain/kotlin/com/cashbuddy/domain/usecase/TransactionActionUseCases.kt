@@ -18,6 +18,40 @@ class ManualAddTransactionUseCase(
     private val learnedTokenRepository: com.cashbuddy.domain.repository.LearnedTokenRepository? = null
 ) {
     suspend operator fun invoke(transaction: Transaction): Long {
+        val candidateUtr = transaction.utr
+            ?: com.cashbuddy.core.prob.Regexes.UTR.find(transaction.rawText)?.groupValues?.getOrNull(1)?.trim()
+            ?: com.cashbuddy.core.prob.Regexes.UTR.find(transaction.notes ?: "")?.groupValues?.getOrNull(1)?.trim()
+
+        if (!candidateUtr.isNullOrBlank()) {
+            val existing = transactionRepository.findByUtr(candidateUtr)
+            if (existing != null) {
+                // Deduplicate: update existing transaction with merchant, category, account, and set status to CONFIRMED
+                val updatedTx = existing.copy(
+                    merchant = if (isValidMerchantName(transaction.merchant)) transaction.merchant else existing.merchant,
+                    categoryId = transaction.categoryId,
+                    accountId = transaction.accountId ?: existing.accountId,
+                    notes = transaction.notes ?: existing.notes,
+                    status = TransactionStatus.CONFIRMED,
+                    updatedAt = currentTimeMillis()
+                )
+                transactionRepository.update(updatedTx)
+
+                if (isValidMerchantName(updatedTx.merchant)) {
+                    val merchantNorm = updatedTx.merchant.trim()
+                    merchantRuleRepository?.learnRule(
+                        merchant = merchantNorm,
+                        categoryId = updatedTx.categoryId,
+                        priority = USER_RULE_PRIORITY
+                    )
+                    val catName = transaction.categoryName ?: updatedTx.categoryName
+                    if (!catName.isNullOrBlank()) {
+                        categoryEngine?.learn(merchantNorm, catName)
+                    }
+                }
+                return existing.id
+            }
+        }
+
         val confirmedTx = transaction.copy(
             status = TransactionStatus.CONFIRMED,
             confidence = 1.0f,

@@ -19,6 +19,7 @@ import com.cashbuddy.notification.NotificationHelper
 import kotlinx.coroutines.flow.firstOrNull
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.inject
+import java.util.Locale
 import kotlin.math.roundToLong
 
 class WeeklyDigestWorker(
@@ -110,7 +111,7 @@ class WeeklyDigestWorker(
         return if (amount == amount.roundToLong().toDouble()) {
             amount.roundToLong().toString()
         } else {
-            String.format("%.2f", amount)
+            String.format(Locale.US, "%.2f", amount)
         }
     }
 }

@@ -48,7 +48,7 @@ class LearnedTokenRepositoryImpl(
 
     override fun getAllSignificantSync(): Map<String, TokenStats> {
         return try {
-            queries.getSignificant().executeAsList().associate { row ->
+            queries.getAll().executeAsList().associate { row ->
                 row.token to TokenStats(
                     token = row.token,
                     transactionCount = row.transaction_count.toInt(),
