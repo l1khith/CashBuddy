@@ -35,13 +35,12 @@ class SourceDetector {
         if (hasBankContent) return NotificationSource.BANK
         if (hasMerchantContent) return NotificationSource.MERCHANT_APP
 
-        // 2. Package / Sender structural heuristics (Soft hints)
-        if (pLower.contains("phonepe") || pLower.contains(".upi") || pLower.contains("npci") ||
-            pLower.contains("pay") || pLower.contains("paisa") || pLower.contains("wallet")) {
+        // 2. Structural sender heuristics (Soft hints)
+        if (pLower.contains(".upi") || pLower.contains(".npci.") || pLower.endsWith(".npci")) {
             return NotificationSource.UPI_APP
         }
 
-        if (pLower.contains("bank") || SenderFingerprint.isBankLike(packageNameOrSender)) {
+        if (SenderFingerprint.isBankLike(packageNameOrSender)) {
             return NotificationSource.BANK
         }
 

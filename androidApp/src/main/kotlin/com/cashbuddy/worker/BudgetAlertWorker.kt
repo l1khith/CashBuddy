@@ -21,9 +21,9 @@ import com.cashbuddy.domain.repository.BudgetRepository
 import com.cashbuddy.domain.repository.SettingsRepository
 import com.cashbuddy.notification.NotificationHelper
 import kotlinx.coroutines.flow.firstOrNull
-import kotlinx.datetime.Instant
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.inject
+import java.util.Locale
 import kotlin.math.roundToInt
 import kotlin.math.roundToLong
 
@@ -66,7 +66,7 @@ class BudgetAlertWorker(
                     spent = status.spent,
                     budgetAmount = budget.amount,
                     period = budget.period,
-                    now = Instant.fromEpochMilliseconds(now)
+                    nowEpochMs = now
                 )
 
                 val daysRemaining = pacing.daysRemaining
@@ -161,7 +161,7 @@ class BudgetAlertWorker(
         return if (amount == amount.roundToLong().toDouble()) {
             amount.roundToLong().toString()
         } else {
-            String.format("%.2f", amount)
+            String.format(Locale.US, "%.2f", amount)
         }
     }
 }

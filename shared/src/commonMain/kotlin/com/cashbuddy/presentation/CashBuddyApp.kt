@@ -3,6 +3,11 @@ package com.cashbuddy.presentation
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarDuration
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.SnackbarResult
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.Composable
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.getValue
@@ -42,11 +47,14 @@ import org.koin.core.parameter.parametersOf
 @Composable
 fun CashBuddyApp(
     initialRoute: String? = null,
+    clipboardUtr: String? = null,
+    onConsumeClipboardUtr: () -> Unit = {},
     onOpenNotificationSettings: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     CashBuddyTheme {
         val navController = rememberNavController()
+        val snackbarHostState = remember { SnackbarHostState() }
         val navBackStackEntry by navController.currentBackStackEntryAsState()
         val currentDestination = navBackStackEntry?.destination
 
@@ -84,8 +92,24 @@ fun CashBuddyApp(
             }
         }
 
+        androidx.compose.runtime.LaunchedEffect(clipboardUtr) {
+            if (!clipboardUtr.isNullOrBlank()) {
+                val utr = clipboardUtr
+                onConsumeClipboardUtr()
+                val result = snackbarHostState.showSnackbar(
+                    message = "UPI Ref $utr detected.",
+                    actionLabel = "Log it",
+                    duration = SnackbarDuration.Short
+                )
+                if (result == SnackbarResult.ActionPerformed) {
+                    navController.navigate(ScreenRoute.AddTransaction(prefilledUtr = utr))
+                }
+            }
+        }
+
         Scaffold(
             modifier = modifier.fillMaxSize(),
+            snackbarHost = { SnackbarHost(snackbarHostState) },
             bottomBar = {
                 if (isTopLevelDestination) {
                     val currentRouteStr = currentDestination?.route ?: ""
@@ -228,6 +252,7 @@ fun CashBuddyApp(
                     AddTransactionScreen(
                         viewModel = addViewModel,
                         prefilledId = route.prefilledId,
+                        prefilledUtr = route.prefilledUtr,
                         onNavigateBack = { navController.popBackStack() }
                     )
                 }
