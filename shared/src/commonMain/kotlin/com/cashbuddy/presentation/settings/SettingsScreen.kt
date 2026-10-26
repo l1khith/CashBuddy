@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
@@ -54,6 +55,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -89,11 +91,11 @@ fun SettingsScreen(
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
     val uriHandler = LocalUriHandler.current
-    var showClearDialog by remember { mutableStateOf(false) }
-    var showClearTrainingDialog by remember { mutableStateOf(false) }
-    var showDuplicateDialog by remember { mutableStateOf(false) }
-    var showIgnoreDialog by remember { mutableStateOf(false) }
-    var showImportDialog by remember { mutableStateOf(false) }
+    var showClearDialog by rememberSaveable { mutableStateOf(false) }
+    var showClearTrainingDialog by rememberSaveable { mutableStateOf(false) }
+    var showDuplicateDialog by rememberSaveable { mutableStateOf(false) }
+    var showIgnoreDialog by rememberSaveable { mutableStateOf(false) }
+    var showImportDialog by rememberSaveable { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {
         viewModel.messageEffect.collectLatest { msg ->
@@ -733,9 +735,10 @@ fun SettingsScreen(
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier
+                                .defaultMinSize(minHeight = 48.dp)
                                 .clip(RoundedCornerShape(8.dp))
                                 .clickable { viewModel.onVersionClicked() }
-                                .padding(horizontal = 12.dp, vertical = 6.dp)
+                                .padding(horizontal = 16.dp, vertical = 12.dp)
                         )
                         if (state.isDebugLogEnabled) {
                             Spacer(modifier = Modifier.height(4.dp))
@@ -815,7 +818,7 @@ fun SettingsScreen(
 
     // Ignore List Dialog (Feature 4)
     if (showIgnoreDialog) {
-        var newPkgText by remember { mutableStateOf("") }
+        var newPkgText by rememberSaveable { mutableStateOf("") }
         AlertDialog(
             onDismissRequest = { showIgnoreDialog = false },
             title = {
@@ -915,8 +918,8 @@ fun SettingsScreen(
 
     // CSV Import Dialog (Feature 6)
     if (showImportDialog) {
-        var csvText by remember { mutableStateOf("") }
-        var selectedFileName by remember { mutableStateOf<String?>(null) }
+        var csvText by rememberSaveable { mutableStateOf("") }
+        var selectedFileName by rememberSaveable { mutableStateOf<String?>(null) }
 
         val openFilePicker = rememberFilePicker(mimeType = "text/csv") { content, fileName ->
             if (content != null) {

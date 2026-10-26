@@ -20,6 +20,7 @@ import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.update
@@ -69,6 +70,18 @@ class PersonalizationViewModel(
             rawPager.reset()
             correctionsPager.reset()
 
+            val initialCorrections = correctionsPager.loadNextPage(limit = 20L)
+            val initialRaw = rawPager.loadNextPage(limit = 50L)
+
+            _uiState.update {
+                it.copy(
+                    recentCorrections = initialCorrections,
+                    rawNotifications = initialRaw,
+                    isEndReachedCorrections = correctionsPager.isEndReached,
+                    isEndReachedRaw = rawPager.isEndReached
+                )
+            }
+
             combine(
                 trainingDataRepository.getStats(),
                 transactionRepository.getCount()
@@ -83,23 +96,17 @@ class PersonalizationViewModel(
                 }
 
                 val rulesCount = merchantRuleRepository.getCount()
-                val initialCorrections = correctionsPager.loadNextPage(limit = 20L)
-                val initialRaw = rawPager.loadNextPage(limit = 50L)
 
-                PersonalizationUiState(
-                    accuracyRate = accuracy,
-                    correctionsCount = stats.correctionsCount,
-                    rawSamplesCount = stats.rawCount,
-                    learnedMerchantsCount = rulesCount,
-                    recentCorrections = initialCorrections,
-                    rawNotifications = initialRaw,
-                    isLoading = false,
-                    isEndReachedCorrections = correctionsPager.isEndReached,
-                    isEndReachedRaw = rawPager.isEndReached
-                )
-            }.collect { newState ->
-                _uiState.value = newState
-            }
+                _uiState.update { current ->
+                    current.copy(
+                        accuracyRate = accuracy,
+                        correctionsCount = stats.correctionsCount,
+                        rawSamplesCount = stats.rawCount,
+                        learnedMerchantsCount = rulesCount,
+                        isLoading = false
+                    )
+                }
+            }.collect()
         }
     }
 

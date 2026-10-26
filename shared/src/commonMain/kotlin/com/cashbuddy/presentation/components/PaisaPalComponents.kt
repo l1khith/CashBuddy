@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
@@ -233,16 +234,21 @@ fun PaisaPalSectionHeader(
         )
 
         if (!actionText.isNullOrBlank() && onActionClick != null) {
-            Text(
-                text = actionText,
-                style = MaterialTheme.typography.labelMedium,
-                fontWeight = FontWeight.SemiBold,
-                color = MaterialTheme.colorScheme.primary,
+            Box(
                 modifier = Modifier
-                    .clip(RoundedCornerShape(6.dp))
-                    .clickable(onClick = onActionClick)
-                    .padding(horizontal = spacing.xs, vertical = spacing.xxs)
-            )
+                    .defaultMinSize(minWidth = 48.dp, minHeight = 48.dp)
+                    .clip(RoundedCornerShape(8.dp))
+                    .clickable(onClick = onActionClick),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = actionText,
+                    style = MaterialTheme.typography.labelMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.padding(horizontal = spacing.xs, vertical = spacing.xxs)
+                )
+            }
         }
     }
 }

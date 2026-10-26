@@ -34,6 +34,7 @@ data class AddTransactionUiState(
     val frequentAmounts: List<Double> = listOf(50.0, 100.0, 200.0, 500.0, 1000.0, 2000.0),
     val suggestedCategoryId: Long? = null,
     val defaultMerchant: String = "",
+    val isSaving: Boolean = false,
     val isLoading: Boolean = true
 )
 
@@ -235,6 +236,7 @@ class AddTransactionViewModel(
     ) {
         if (isSaving) return
         isSaving = true
+        _uiState.value = _uiState.value.copy(isSaving = true)
         viewModelScope.launch {
             try {
                 val now = com.cashbuddy.platform.currentTimeMillis()
@@ -276,9 +278,11 @@ class AddTransactionViewModel(
                 }
 
                 manualAddTransactionUseCase(tx)
+                com.cashbuddy.platform.notifyTransactionsUpdated()
                 _savedEffect.emit(Unit)
             } finally {
                 isSaving = false
+                _uiState.value = _uiState.value.copy(isSaving = false)
             }
         }
     }

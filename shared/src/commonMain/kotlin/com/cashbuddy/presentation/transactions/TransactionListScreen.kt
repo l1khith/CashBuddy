@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
@@ -54,6 +55,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import kotlinx.coroutines.launch
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -87,8 +91,8 @@ fun TransactionListScreen(
     modifier: Modifier = Modifier
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
-    var showCustomRangeDialog by remember { mutableStateOf(false) }
-    var showFilterSheet by remember { mutableStateOf(false) }
+    var showCustomRangeDialog by rememberSaveable { mutableStateOf(false) }
+    var showFilterSheet by rememberSaveable { mutableStateOf(false) }
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val listState = rememberLazyListState()
 
@@ -373,13 +377,15 @@ fun TransactionListScreen(
             onDismissRequest = { showFilterSheet = false },
             sheetState = sheetState
         ) {
-            var minAmtText by remember { mutableStateOf(state.minAmount?.toString() ?: "") }
-            var maxAmtText by remember { mutableStateOf(state.maxAmount?.toString() ?: "") }
+            var minAmtText by rememberSaveable { mutableStateOf(state.minAmount?.toString() ?: "") }
+            var maxAmtText by rememberSaveable { mutableStateOf(state.maxAmount?.toString() ?: "") }
 
+            val filterScope = rememberCoroutineScope()
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 24.dp, vertical = 16.dp),
+                    .padding(horizontal = 24.dp, vertical = 16.dp)
+                    .imePadding(),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
                 Row(
@@ -473,7 +479,10 @@ fun TransactionListScreen(
                         val min = minAmtText.toDoubleOrNull()
                         val max = maxAmtText.toDoubleOrNull()
                         viewModel.onAmountRangeSelected(min, max)
-                        showFilterSheet = false
+                        filterScope.launch {
+                            sheetState.hide()
+                            showFilterSheet = false
+                        }
                     },
                     modifier = Modifier.fillMaxWidth(),
                     shape = RadiusMedium
@@ -506,11 +515,11 @@ private fun CustomDateRangeDialog(
     val now = currentTimeMillis()
     val oneDayMs = 24L * 60 * 60 * 1000
 
-    var startDateMillis by remember { mutableStateOf(now - (30L * oneDayMs)) }
-    var endDateMillis by remember { mutableStateOf(now) }
+    var startDateMillis by rememberSaveable { mutableStateOf(now - (30L * oneDayMs)) }
+    var endDateMillis by rememberSaveable { mutableStateOf(now) }
 
-    var isPickingStartDate by remember { mutableStateOf(false) }
-    var isPickingEndDate by remember { mutableStateOf(false) }
+    var isPickingStartDate by rememberSaveable { mutableStateOf(false) }
+    var isPickingEndDate by rememberSaveable { mutableStateOf(false) }
 
     AlertDialog(
         onDismissRequest = onDismiss,

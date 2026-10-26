@@ -23,8 +23,10 @@ import cashbuddy.shared.generated.resources.Res
 import cashbuddy.shared.generated.resources.ic_delete_forever
 import cashbuddy.shared.generated.resources.ic_edit
 import org.jetbrains.compose.resources.painterResource
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -40,6 +42,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -73,7 +76,8 @@ fun TransactionDetailScreen(
     modifier: Modifier = Modifier
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
-    var showEditDialog by remember { mutableStateOf(false) }
+    var showEditDialog by rememberSaveable { mutableStateOf(false) }
+    var showDeleteConfirmDialog by rememberSaveable { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {
         viewModel.navBackEffect.collectLatest {
@@ -273,7 +277,7 @@ fun TransactionDetailScreen(
 
                 // Delete Button
                 OutlinedButton(
-                    onClick = { viewModel.onDeleteClicked() },
+                    onClick = { showDeleteConfirmDialog = true },
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(48.dp),
@@ -294,6 +298,30 @@ fun TransactionDetailScreen(
 
                 Spacer(modifier = Modifier.height(16.dp))
             }
+        }
+
+        if (showDeleteConfirmDialog) {
+            AlertDialog(
+                onDismissRequest = { showDeleteConfirmDialog = false },
+                title = { Text("Delete Transaction?", style = CashBuddyTypography.titleMedium, fontWeight = FontWeight.Bold) },
+                text = { Text("Are you sure you want to permanently delete this transaction? This action cannot be undone.", style = CashBuddyTypography.bodyMedium) },
+                confirmButton = {
+                    Button(
+                        onClick = {
+                            showDeleteConfirmDialog = false
+                            viewModel.onDeleteClicked()
+                        },
+                        colors = ButtonDefaults.buttonColors(containerColor = DangerRed)
+                    ) {
+                        Text("Delete", color = Color.White)
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { showDeleteConfirmDialog = false }) {
+                        Text("Cancel")
+                    }
+                }
+            )
         }
 
         if (showEditDialog && state.transaction != null) {

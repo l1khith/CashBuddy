@@ -50,6 +50,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -84,9 +85,9 @@ fun ReviewScreen(
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
-    var editingTransaction by remember { mutableStateOf<Transaction?>(null) }
-    val discardCounts = remember { mutableMapOf<String, Int>() }
-    var packageToIgnorePrompt by remember { mutableStateOf<String?>(null) }
+    var editingTransactionId by rememberSaveable { mutableStateOf<Long?>(null) }
+    val editingTransaction = state.transactions.find { it.id == editingTransactionId }
+    var packageToIgnorePrompt by rememberSaveable { mutableStateOf<String?>(null) }
 
     LaunchedEffect(Unit) {
         viewModel.effects.collectLatest { effect ->
@@ -239,16 +240,11 @@ fun ReviewScreen(
                             onConfirm = { viewModel.processIntent(ReviewIntent.ConfirmTransaction(tx.id)) },
                             onReject = {
                                 viewModel.processIntent(ReviewIntent.RejectTransaction(tx.id))
-                                val pkg = tx.sourceApp
-                                if (pkg.isNotBlank() && !pkg.equals("manual", ignoreCase = true) && !pkg.equals("csv_import", ignoreCase = true)) {
-                                    val count = (discardCounts[pkg] ?: 0) + 1
-                                    discardCounts[pkg] = count
-                                    if (count >= 3) {
-                                        packageToIgnorePrompt = pkg
-                                    }
+                                if (viewModel.onTransactionDiscarded(tx.sourceApp)) {
+                                    packageToIgnorePrompt = tx.sourceApp
                                 }
                             },
-                            onEdit = { editingTransaction = tx },
+                            onEdit = { editingTransactionId = tx.id },
                             onCategoryChange = { newCatId ->
                                 viewModel.processIntent(ReviewIntent.ModifyCategory(tx.id, newCatId))
                             }
@@ -268,7 +264,7 @@ fun ReviewScreen(
                     Button(
                         onClick = {
                             viewModel.ignorePackage(pkg)
-                            discardCounts.remove(pkg)
+                            viewModel.clearDiscardCount(pkg)
                             packageToIgnorePrompt = null
                         }
                     ) {
@@ -278,7 +274,7 @@ fun ReviewScreen(
                 dismissButton = {
                     TextButton(
                         onClick = {
-                            discardCounts.remove(pkg)
+                            viewModel.clearDiscardCount(pkg)
                             packageToIgnorePrompt = null
                         }
                     ) {
@@ -289,7 +285,7 @@ fun ReviewScreen(
         }
 
         if (editingTransaction != null) {
-            val txToEdit = editingTransaction!!
+            val txToEdit = editingTransaction
             EditTransactionDialog(
                 initialAmount = txToEdit.amount,
                 initialType = txToEdit.type,
@@ -309,9 +305,9 @@ fun ReviewScreen(
                             categoryId = categoryId
                         )
                     )
-                    editingTransaction = null
+                    editingTransactionId = null
                 },
-                onDismiss = { editingTransaction = null },
+                onDismiss = { editingTransactionId = null },
                 onConfirm = { amount, type, merchant, categoryId ->
                     viewModel.processIntent(
                         ReviewIntent.UpdatePendingTransaction(
@@ -322,7 +318,7 @@ fun ReviewScreen(
                             categoryId = categoryId
                         )
                     )
-                    editingTransaction = null
+                    editingTransactionId = null
                 }
             )
         }
@@ -456,7 +452,7 @@ private fun PendingReviewCard(
                 ) {
                     Icon(
                         imageVector = Icons.Default.Close,
-                        contentDescription = null,
+                        contentDescription = "Discard transaction",
                         modifier = Modifier.size(16.dp),
                         tint = DangerRed
                     )
@@ -488,7 +484,7 @@ private fun PendingReviewCard(
                 ) {
                     Icon(
                         imageVector = Icons.Default.Check,
-                        contentDescription = null,
+                        contentDescription = "Confirm transaction",
                         modifier = Modifier.size(16.dp),
                         tint = Color.White
                     )

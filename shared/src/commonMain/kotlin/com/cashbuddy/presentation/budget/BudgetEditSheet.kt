@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
@@ -39,6 +40,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import kotlinx.coroutines.launch
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -46,6 +49,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import com.cashbuddy.domain.model.Budget
 import com.cashbuddy.domain.model.BudgetPeriod
@@ -97,10 +101,12 @@ fun BudgetEditSheet(
         containerColor = MaterialTheme.colorScheme.surface,
         modifier = modifier
     ) {
+        val coroutineScope = rememberCoroutineScope()
         Column(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 24.dp)
+                .imePadding()
                 .padding(bottom = 32.dp, top = 8.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
@@ -219,7 +225,7 @@ fun BudgetEditSheet(
                     },
                     prefix = { Text("₹", fontWeight = FontWeight.Bold) },
                     placeholder = { Text("e.g. 5000") },
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal, imeAction = ImeAction.Done),
                     singleLine = true,
                     shape = RadiusMedium,
                     modifier = Modifier.fillMaxWidth()
@@ -275,7 +281,7 @@ fun BudgetEditSheet(
             ) {
                 if (initialBudget != null && onDelete != null) {
                     OutlinedButton(
-                        onClick = { onDelete(initialBudget.id) },
+                        onClick = { coroutineScope.launch { sheetState.hide(); onDelete(initialBudget.id) } },
                         colors = ButtonDefaults.outlinedButtonColors(contentColor = DangerRed),
                         shape = RadiusMedium,
                         modifier = Modifier.weight(1f)
@@ -305,7 +311,10 @@ fun BudgetEditSheet(
                             inlineError = error
                         } else {
                             val amount = amountText.toDouble()
-                            onSave(selectedCategory, amount, selectedPeriod)
+                            coroutineScope.launch {
+                                sheetState.hide()
+                                onSave(selectedCategory, amount, selectedPeriod)
+                            }
                         }
                     },
                     colors = ButtonDefaults.buttonColors(containerColor = TrustBluePrimary),
