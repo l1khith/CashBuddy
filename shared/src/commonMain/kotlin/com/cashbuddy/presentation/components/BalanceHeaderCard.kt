@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -105,8 +106,10 @@ fun BalanceHeader(
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
                         modifier = Modifier
+                            .defaultMinSize(minWidth = 48.dp, minHeight = 48.dp)
+                            .clip(RoundedCornerShape(8.dp))
                             .clickable { isBalanceVisible = !isBalanceVisible }
-                            .padding(4.dp)
+                            .padding(horizontal = 8.dp, vertical = 6.dp)
                     ) {
                         Icon(
                             painter = painterResource(if (isBalanceVisible) Res.drawable.ic_visibility_off else Res.drawable.ic_visibility),

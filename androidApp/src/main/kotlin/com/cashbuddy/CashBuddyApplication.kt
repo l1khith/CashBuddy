@@ -79,6 +79,7 @@ class CashBuddyApplication : Application() {
 
         // Configure DebugConfig with BuildConfig.DEBUG and dynamic app version info
         get<DebugConfig>().isDebugBuild = BuildConfig.DEBUG
+        com.cashbuddy.platform.setAppContext(this)
         com.cashbuddy.platform.setAppVersionInfo(
             versionName = BuildConfig.VERSION_NAME,
             versionCode = BuildConfig.VERSION_CODE

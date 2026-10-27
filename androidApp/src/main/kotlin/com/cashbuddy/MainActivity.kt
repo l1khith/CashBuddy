@@ -89,15 +89,28 @@ class MainActivity : FragmentActivity() {
 
         checkAndPromptNotificationPermissions()
 
-        lifecycleScope.launch {
-            val biometricEnabled = settingsRepository.getBiometricEnabled().firstOrNull() ?: false
-            if (biometricEnabled) {
-                isBiometricRequired = true
-                authState = AuthState.LOCKED
-                promptBiometricUnlock()
-            } else {
+        if (savedInstanceState != null) {
+            lastBackgroundTimestamp = savedInstanceState.getLong("KEY_LAST_BACKGROUND_TIMESTAMP", 0L)
+            isBiometricRequired = savedInstanceState.getBoolean("KEY_BIOMETRIC_REQUIRED", false)
+            currentNavigationRoute = savedInstanceState.getString("KEY_CURRENT_NAV_ROUTE")
+            val savedAuth = savedInstanceState.getString("KEY_AUTH_STATE")
+            val restoredState = savedAuth?.let { runCatching { AuthState.valueOf(it) }.getOrNull() }
+            if (restoredState == AuthState.AUTHENTICATED) {
                 authState = AuthState.AUTHENTICATED
-                checkClipboardForUtr()
+            }
+        }
+
+        if (savedInstanceState == null || authState == AuthState.LOADING) {
+            lifecycleScope.launch {
+                val biometricEnabled = settingsRepository.getBiometricEnabled().firstOrNull() ?: false
+                if (biometricEnabled) {
+                    isBiometricRequired = true
+                    authState = AuthState.LOCKED
+                    promptBiometricUnlock()
+                } else {
+                    authState = AuthState.AUTHENTICATED
+                    checkClipboardForUtr()
+                }
             }
         }
 
@@ -126,9 +139,13 @@ class MainActivity : FragmentActivity() {
         }
 
         // Layer 2: Handle incoming share intents (text/plain from GPay or image/* screenshots)
-        val initialRoute = intent?.getStringExtra("EXTRA_NAVIGATE_TO")
-        currentNavigationRoute = initialRoute
-        handleIncomingShareIntent(intent)
+        if (savedInstanceState == null) {
+            val initialRoute = intent?.getStringExtra("EXTRA_NAVIGATE_TO")
+            if (!initialRoute.isNullOrBlank()) {
+                currentNavigationRoute = initialRoute
+            }
+            handleIncomingShareIntent(intent)
+        }
 
         setContent {
             CashBuddyTheme {
@@ -143,6 +160,7 @@ class MainActivity : FragmentActivity() {
                     AuthState.AUTHENTICATED -> {
                         CashBuddyApp(
                             initialRoute = currentNavigationRoute,
+                            onRouteConsumed = { currentNavigationRoute = null },
                             clipboardUtr = pendingClipboardUtr,
                             onConsumeClipboardUtr = {
                                 pendingClipboardUtr = null
@@ -334,24 +352,38 @@ class MainActivity : FragmentActivity() {
         if (cachedScreenshotFiles.isNotEmpty()) {
             currentNavigationRoute = "processing_screenshot"
             lifecycleScope.launch(Dispatchers.IO) {
-                val createdIds = screenshotHandler.processScreenshots(cachedScreenshotFiles)
-                withContext(Dispatchers.Main) {
-                    if (createdIds.isNotEmpty()) {
-                        android.widget.Toast.makeText(
-                            this@MainActivity,
-                            "${createdIds.size} transaction(s) parsed from screenshot",
-                            android.widget.Toast.LENGTH_LONG
-                        ).show()
-                    } else {
-                        android.widget.Toast.makeText(
-                            this@MainActivity,
-                            "Could not recognize transaction in screenshot",
-                            android.widget.Toast.LENGTH_LONG
-                        ).show()
+                try {
+                    val createdIds = screenshotHandler.processScreenshots(cachedScreenshotFiles)
+                    withContext(Dispatchers.Main) {
+                        if (createdIds.isNotEmpty()) {
+                            android.widget.Toast.makeText(
+                                this@MainActivity,
+                                "${createdIds.size} transaction(s) parsed from screenshot",
+                                android.widget.Toast.LENGTH_LONG
+                            ).show()
+                        } else {
+                            android.widget.Toast.makeText(
+                                this@MainActivity,
+                                "Could not recognize transaction in screenshot",
+                                android.widget.Toast.LENGTH_LONG
+                            ).show()
+                        }
+                    }
+                } finally {
+                    cachedScreenshotFiles.forEach { file ->
+                        runCatching { file.delete() }
                     }
                 }
             }
         }
+    }
+
+    override fun onSaveInstanceState(outState: Bundle) {
+        super.onSaveInstanceState(outState)
+        outState.putString("KEY_AUTH_STATE", authState.name)
+        outState.putLong("KEY_LAST_BACKGROUND_TIMESTAMP", lastBackgroundTimestamp)
+        outState.putBoolean("KEY_BIOMETRIC_REQUIRED", isBiometricRequired)
+        outState.putString("KEY_CURRENT_NAV_ROUTE", currentNavigationRoute)
     }
 
     override fun onResume() {

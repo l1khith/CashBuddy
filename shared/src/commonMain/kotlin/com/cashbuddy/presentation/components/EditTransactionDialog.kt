@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
@@ -42,6 +43,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.cashbuddy.domain.model.Category
@@ -79,6 +81,7 @@ fun EditTransactionDialog(
     val isAmountValid = parsedAmount != null && parsedAmount > 0.0
 
     AlertDialog(
+        modifier = Modifier.imePadding(),
         onDismissRequest = onDismiss,
         title = {
             Text(
@@ -155,7 +158,7 @@ fun EditTransactionDialog(
                     },
                     label = { Text("Amount (₹)") },
                     singleLine = true,
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal, imeAction = ImeAction.Next),
                     isError = amountText.isNotBlank() && !isAmountValid,
                     modifier = Modifier.fillMaxWidth()
                 )
@@ -166,6 +169,7 @@ fun EditTransactionDialog(
                     onValueChange = { merchantText = it },
                     label = { Text("Merchant / Description") },
                     singleLine = true,
+                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
                     modifier = Modifier.fillMaxWidth()
                 )
 

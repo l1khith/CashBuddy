@@ -45,6 +45,21 @@ class ReviewViewModel(
     private val _effects = MutableSharedFlow<ReviewEffect>(extraBufferCapacity = 1)
     val effects: SharedFlow<ReviewEffect> = _effects.asSharedFlow()
 
+    private val discardCounts = mutableMapOf<String, Int>()
+
+    fun clearDiscardCount(packageName: String) {
+        discardCounts.remove(packageName)
+    }
+
+    fun onTransactionDiscarded(packageName: String): Boolean {
+        if (packageName.isBlank() || packageName.equals("manual", ignoreCase = true) || packageName.equals("csv_import", ignoreCase = true)) {
+            return false
+        }
+        val count = (discardCounts[packageName] ?: 0) + 1
+        discardCounts[packageName] = count
+        return count >= 3
+    }
+
     init {
         processIntent(ReviewIntent.LoadPending)
     }
@@ -83,6 +98,7 @@ class ReviewViewModel(
     private fun confirmTransaction(transactionId: Long) {
         viewModelScope.launch {
             confirmTransactionUseCase(transactionId)
+            com.cashbuddy.platform.notifyTransactionsUpdated()
             _uiState.value = reducer.reduce(_uiState.value, ReviewResult.TransactionConfirmed(transactionId))
             _effects.emit(ReviewEffect.ShowSnackbar("Transaction confirmed"))
         }
@@ -91,6 +107,7 @@ class ReviewViewModel(
     private fun rejectTransaction(transactionId: Long) {
         viewModelScope.launch {
             rejectTransactionUseCase(transactionId)
+            com.cashbuddy.platform.notifyTransactionsUpdated()
             _uiState.value = reducer.reduce(_uiState.value, ReviewResult.TransactionRejected(transactionId))
             _effects.emit(ReviewEffect.ShowSnackbar("Transaction discarded"))
         }
@@ -111,6 +128,7 @@ class ReviewViewModel(
                 oldCategoryName = oldCategoryName,
                 newCategoryName = newCategory?.name
             )
+            com.cashbuddy.platform.notifyTransactionsUpdated()
             _uiState.value = reducer.reduce(_uiState.value, ReviewResult.CategoryModified(transactionId, newCategoryId))
         }
     }
@@ -125,6 +143,7 @@ class ReviewViewModel(
             highConfidence.forEach { tx ->
                 confirmTransactionUseCase(tx.id)
             }
+            com.cashbuddy.platform.notifyTransactionsUpdated()
             _uiState.value = reducer.reduce(_uiState.value, ReviewResult.AllHighConfidenceConfirmed)
             _effects.emit(ReviewEffect.ShowSnackbar("Confirmed ${highConfidence.size} high-confidence transactions"))
         }
@@ -155,6 +174,7 @@ class ReviewViewModel(
                 oldCategoryName = oldCategoryName,
                 newCategoryName = newCategory?.name
             )
+            com.cashbuddy.platform.notifyTransactionsUpdated()
             _uiState.value = reducer.reduce(_uiState.value, ReviewResult.TransactionUpdated(updatedTx))
             _effects.emit(ReviewEffect.ShowSnackbar("Pending transaction updated"))
         }

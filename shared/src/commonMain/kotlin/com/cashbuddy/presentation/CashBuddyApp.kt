@@ -7,16 +7,20 @@ import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarResult
-import androidx.compose.runtime.remember
 import androidx.compose.runtime.Composable
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.navigation.NavDestination.Companion.hasRoute
+import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.toRoute
+import com.cashbuddy.domain.usecase.GetUnreviewedCountUseCase
 import com.cashbuddy.presentation.addtransaction.AddTransactionScreen
 import com.cashbuddy.presentation.addtransaction.AddTransactionViewModel
 import com.cashbuddy.presentation.budget.BudgetDrilldownScreen
@@ -36,251 +40,290 @@ import com.cashbuddy.presentation.settings.SettingsScreen
 import com.cashbuddy.presentation.settings.SettingsViewModel
 import com.cashbuddy.presentation.stats.StatsScreen
 import com.cashbuddy.presentation.stats.StatsViewModel
-import com.cashbuddy.presentation.theme.CashBuddyTheme
 import com.cashbuddy.presentation.transactions.TransactionDetailScreen
 import com.cashbuddy.presentation.transactions.TransactionDetailViewModel
 import com.cashbuddy.presentation.transactions.TransactionListScreen
 import com.cashbuddy.presentation.transactions.TransactionListViewModel
+import org.koin.compose.koinInject
 import org.koin.compose.viewmodel.koinViewModel
 import org.koin.core.parameter.parametersOf
 
 @Composable
 fun CashBuddyApp(
     initialRoute: String? = null,
+    onRouteConsumed: () -> Unit = {},
     clipboardUtr: String? = null,
     onConsumeClipboardUtr: () -> Unit = {},
     onOpenNotificationSettings: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
-    CashBuddyTheme {
-        val navController = rememberNavController()
-        val snackbarHostState = remember { SnackbarHostState() }
-        val navBackStackEntry by navController.currentBackStackEntryAsState()
-        val currentDestination = navBackStackEntry?.destination
+    val navController = rememberNavController()
+    val snackbarHostState = remember { SnackbarHostState() }
+    val navBackStackEntry by navController.currentBackStackEntryAsState()
+    val currentDestination = navBackStackEntry?.destination
 
-        val homeViewModel: HomeViewModel = koinViewModel()
-        val unreviewedCount by homeViewModel.unreviewedCount.collectAsStateWithLifecycle()
+    val getUnreviewedCountUseCase: GetUnreviewedCountUseCase = koinInject()
+    val unreviewedCount by getUnreviewedCountUseCase().collectAsStateWithLifecycle(0)
 
-        val topLevelRoutes = listOf("Home", "Transactions", "Stats", "Settings")
+    val isTopLevelDestination = currentDestination != null && (
+        currentDestination.hasRoute(ScreenRoute.Home::class) ||
+        currentDestination.hasRoute(ScreenRoute.Transactions::class) ||
+        currentDestination.hasRoute(ScreenRoute.Stats::class) ||
+        currentDestination.hasRoute(ScreenRoute.Settings::class)
+    )
 
-        // Only show bottom navigation on top-level screens
-        val isTopLevelDestination = currentDestination?.route?.let { routeStr ->
-            topLevelRoutes.any { routeStr.contains(it, ignoreCase = true) }
-        } ?: true
+    val currentRouteStr = when {
+        currentDestination?.hasRoute(ScreenRoute.Home::class) == true -> "Home"
+        currentDestination?.hasRoute(ScreenRoute.Transactions::class) == true -> "Transactions"
+        currentDestination?.hasRoute(ScreenRoute.Stats::class) == true -> "Stats"
+        currentDestination?.hasRoute(ScreenRoute.Settings::class) == true -> "Settings"
+        else -> ""
+    }
 
-        val startDestination = when {
-            initialRoute?.contains("add", ignoreCase = true) == true -> ScreenRoute.AddTransaction()
-            initialRoute?.contains("review", ignoreCase = true) == true -> ScreenRoute.ReviewInbox
-            initialRoute?.contains("transact", ignoreCase = true) == true -> ScreenRoute.Transactions
-            initialRoute?.contains("screenshot", ignoreCase = true) == true -> ScreenRoute.Transactions
-            initialRoute?.contains("stat", ignoreCase = true) == true -> ScreenRoute.Stats
-            initialRoute?.contains("setting", ignoreCase = true) == true -> ScreenRoute.Settings
-            initialRoute?.contains("budget", ignoreCase = true) == true -> ScreenRoute.Budgets
-            else -> ScreenRoute.Home
-        }
-
-        androidx.compose.runtime.LaunchedEffect(initialRoute) {
-            if (!initialRoute.isNullOrBlank()) {
-                when {
-                    initialRoute.contains("add", ignoreCase = true) -> navController.navigate(ScreenRoute.AddTransaction()) { launchSingleTop = true }
-                    initialRoute.contains("review", ignoreCase = true) -> navController.navigate(ScreenRoute.ReviewInbox) { launchSingleTop = true }
-                    initialRoute.contains("transact", ignoreCase = true) || initialRoute.contains("screenshot", ignoreCase = true) -> navController.navigate(ScreenRoute.Transactions) { launchSingleTop = true }
-                    initialRoute.contains("stat", ignoreCase = true) -> navController.navigate(ScreenRoute.Stats) { launchSingleTop = true }
-                    initialRoute.contains("setting", ignoreCase = true) -> navController.navigate(ScreenRoute.Settings) { launchSingleTop = true }
-                    initialRoute.contains("budget", ignoreCase = true) -> navController.navigate(ScreenRoute.Budgets) { launchSingleTop = true }
+    LaunchedEffect(initialRoute) {
+        if (!initialRoute.isNullOrBlank()) {
+            val target = when (initialRoute.trim().lowercase()) {
+                "add", "add_transaction" -> ScreenRoute.AddTransaction()
+                "review", "review_inbox" -> ScreenRoute.ReviewInbox
+                "transact", "transactions", "screenshot", "processing_screenshot" -> ScreenRoute.Transactions
+                "stat", "stats" -> ScreenRoute.Stats
+                "setting", "settings" -> ScreenRoute.Settings
+                "budget", "budgets" -> ScreenRoute.Budgets
+                else -> null
+            }
+            onRouteConsumed()
+            if (target != null) {
+                navController.navigate(target) {
+                    launchSingleTop = true
                 }
             }
         }
+    }
 
-        androidx.compose.runtime.LaunchedEffect(clipboardUtr) {
-            if (!clipboardUtr.isNullOrBlank()) {
-                val utr = clipboardUtr
-                onConsumeClipboardUtr()
-                val result = snackbarHostState.showSnackbar(
-                    message = "UPI Ref $utr detected.",
-                    actionLabel = "Log it",
-                    duration = SnackbarDuration.Short
+    LaunchedEffect(clipboardUtr) {
+        if (!clipboardUtr.isNullOrBlank()) {
+            val utr = clipboardUtr
+            onConsumeClipboardUtr()
+            val result = snackbarHostState.showSnackbar(
+                message = "UPI Ref $utr detected.",
+                actionLabel = "Log it",
+                duration = SnackbarDuration.Short
+            )
+            if (result == SnackbarResult.ActionPerformed) {
+                navController.navigate(ScreenRoute.AddTransaction(prefilledUtr = utr)) {
+                    launchSingleTop = true
+                }
+            }
+        }
+    }
+
+    Scaffold(
+        modifier = modifier.fillMaxSize(),
+        snackbarHost = { SnackbarHost(snackbarHostState) },
+        bottomBar = {
+            if (isTopLevelDestination) {
+                CashBuddyBottomBar(
+                    currentRoute = currentRouteStr,
+                    onNavigateToHome = {
+                        navController.navigate(ScreenRoute.Home) {
+                            popUpTo(ScreenRoute.Home) { saveState = true }
+                            launchSingleTop = true
+                            restoreState = true
+                        }
+                    },
+                    onNavigateToTransactions = {
+                        navController.navigate(ScreenRoute.Transactions) {
+                            popUpTo(ScreenRoute.Home) { saveState = true }
+                            launchSingleTop = true
+                            restoreState = true
+                        }
+                    },
+                    onNavigateToStats = {
+                        navController.navigate(ScreenRoute.Stats) {
+                            popUpTo(ScreenRoute.Home) { saveState = true }
+                            launchSingleTop = true
+                            restoreState = true
+                        }
+                    },
+                    onNavigateToSettings = {
+                        navController.navigate(ScreenRoute.Settings) {
+                            popUpTo(ScreenRoute.Home) { saveState = true }
+                            launchSingleTop = true
+                            restoreState = true
+                        }
+                    },
+                    onAddClick = {
+                        navController.navigate(ScreenRoute.AddTransaction()) {
+                            launchSingleTop = true
+                        }
+                    },
+                    unreviewedCount = unreviewedCount,
+                    onNavigateToReview = {
+                        navController.navigate(ScreenRoute.ReviewInbox) {
+                            launchSingleTop = true
+                        }
+                    }
                 )
-                if (result == SnackbarResult.ActionPerformed) {
-                    navController.navigate(ScreenRoute.AddTransaction(prefilledUtr = utr))
-                }
             }
         }
-
-        Scaffold(
-            modifier = modifier.fillMaxSize(),
-            snackbarHost = { SnackbarHost(snackbarHostState) },
-            bottomBar = {
-                if (isTopLevelDestination) {
-                    val currentRouteStr = currentDestination?.route ?: ""
-                    CashBuddyBottomBar(
-                        currentRoute = currentRouteStr,
-                        onNavigateToHome = {
-                            navController.navigate(ScreenRoute.Home) {
-                                popUpTo(ScreenRoute.Home) { saveState = true }
-                                launchSingleTop = true
-                                restoreState = true
-                            }
-                        },
-                        onNavigateToTransactions = {
-                            navController.navigate(ScreenRoute.Transactions) {
-                                popUpTo(ScreenRoute.Home) { saveState = true }
-                                launchSingleTop = true
-                                restoreState = true
-                            }
-                        },
-                        onNavigateToStats = {
-                            navController.navigate(ScreenRoute.Stats) {
-                                popUpTo(ScreenRoute.Home) { saveState = true }
-                                launchSingleTop = true
-                                restoreState = true
-                            }
-                        },
-                        onNavigateToSettings = {
-                            navController.navigate(ScreenRoute.Settings) {
-                                popUpTo(ScreenRoute.Home) { saveState = true }
-                                launchSingleTop = true
-                                restoreState = true
-                            }
-                        },
-                        onAddClick = {
-                            navController.navigate(ScreenRoute.AddTransaction())
-                        },
-                        unreviewedCount = unreviewedCount,
-                        onNavigateToReview = {
-                            navController.navigate(ScreenRoute.ReviewInbox)
+    ) { innerPadding ->
+        NavHost(
+            navController = navController,
+            startDestination = ScreenRoute.Home,
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(bottom = innerPadding.calculateBottomPadding())
+        ) {
+            composable<ScreenRoute.Home> {
+                val homeViewModel: HomeViewModel = koinViewModel()
+                HomeScreen(
+                    viewModel = homeViewModel,
+                    onNavigateToReview = {
+                        navController.navigate(ScreenRoute.ReviewInbox) { launchSingleTop = true }
+                    },
+                    onNavigateToDetail = { id ->
+                        navController.navigate(ScreenRoute.TransactionDetail(id)) { launchSingleTop = true }
+                    },
+                    onNavigateToAddTransaction = {
+                        navController.navigate(ScreenRoute.AddTransaction()) { launchSingleTop = true }
+                    },
+                    onNavigateToAllTransactions = {
+                        navController.navigate(ScreenRoute.Transactions) {
+                            popUpTo(ScreenRoute.Home) { saveState = true }
+                            launchSingleTop = true
+                            restoreState = true
                         }
-                    )
-                }
+                    },
+                    onNavigateToBudgets = {
+                        navController.navigate(ScreenRoute.Budgets) { launchSingleTop = true }
+                    }
+                )
             }
-        ) { innerPadding ->
-            NavHost(
-                navController = navController,
-                startDestination = startDestination,
-                modifier = Modifier.padding(bottom = innerPadding.calculateBottomPadding())
-            ) {
-                composable<ScreenRoute.Home> {
-                    HomeScreen(
-                        viewModel = homeViewModel,
-                        onNavigateToReview = { navController.navigate(ScreenRoute.ReviewInbox) },
-                        onNavigateToDetail = { id -> navController.navigate(ScreenRoute.TransactionDetail(id)) },
-                        onNavigateToAddTransaction = { navController.navigate(ScreenRoute.AddTransaction()) },
-                        onNavigateToAllTransactions = { navController.navigate(ScreenRoute.Transactions) },
-                        onNavigateToBudgets = { navController.navigate(ScreenRoute.Budgets) }
-                    )
-                }
 
-                composable<ScreenRoute.ReviewInbox> {
-                    val reviewViewModel: ReviewViewModel = koinViewModel()
-                    ReviewScreen(
-                        viewModel = reviewViewModel,
-                        onNavigateBack = {
-                            val popped = navController.popBackStack()
-                            if (!popped) {
-                                navController.navigate(ScreenRoute.Home) {
-                                    popUpTo(0) { inclusive = true }
-                                }
-                            }
-                        }
-                    )
-                }
+            composable<ScreenRoute.ReviewInbox> {
+                val reviewViewModel: ReviewViewModel = koinViewModel()
+                ReviewScreen(
+                    viewModel = reviewViewModel,
+                    onNavigateBack = { navController.popBackStack() }
+                )
+            }
 
-                composable<ScreenRoute.Transactions> {
-                    val listViewModel: TransactionListViewModel = koinViewModel()
-                    TransactionListScreen(
-                        viewModel = listViewModel,
-                        onNavigateToDetail = { id -> navController.navigate(ScreenRoute.TransactionDetail(id)) }
-                    )
-                }
+            composable<ScreenRoute.Transactions> {
+                val listViewModel: TransactionListViewModel = koinViewModel()
+                TransactionListScreen(
+                    viewModel = listViewModel,
+                    onNavigateToDetail = { id ->
+                        navController.navigate(ScreenRoute.TransactionDetail(id)) { launchSingleTop = true }
+                    }
+                )
+            }
 
-                composable<ScreenRoute.TransactionDetail> { backStackEntry ->
-                    val detailRoute: ScreenRoute.TransactionDetail = backStackEntry.toRoute()
-                    val detailViewModel: TransactionDetailViewModel = koinViewModel(
-                        parameters = { parametersOf(detailRoute.transactionId) }
-                    )
-                    TransactionDetailScreen(
-                        viewModel = detailViewModel,
-                        onNavigateBack = { navController.popBackStack() }
-                    )
-                }
+            composable<ScreenRoute.TransactionDetail> { backStackEntry ->
+                val detailRoute: ScreenRoute.TransactionDetail = backStackEntry.toRoute()
+                val detailViewModel: TransactionDetailViewModel = koinViewModel(
+                    key = "tx_${detailRoute.transactionId}",
+                    parameters = { parametersOf(detailRoute.transactionId) }
+                )
+                TransactionDetailScreen(
+                    viewModel = detailViewModel,
+                    onNavigateBack = { navController.popBackStack() }
+                )
+            }
 
-                composable<ScreenRoute.Stats> {
-                    val statsViewModel: StatsViewModel = koinViewModel()
-                    StatsScreen(viewModel = statsViewModel)
-                }
+            composable<ScreenRoute.Stats> {
+                val statsViewModel: StatsViewModel = koinViewModel()
+                StatsScreen(viewModel = statsViewModel)
+            }
 
-                composable<ScreenRoute.Budgets> {
-                    val budgetViewModel: BudgetViewModel = koinViewModel()
-                    BudgetListScreen(
-                        viewModel = budgetViewModel,
-                        onBudgetClick = { status ->
-                            navController.navigate(
-                                ScreenRoute.BudgetDrilldown(
-                                    category = status.budget.category,
-                                    period = status.budget.period.name
-                                )
+            composable<ScreenRoute.Budgets> {
+                val budgetViewModel: BudgetViewModel = koinViewModel()
+                BudgetListScreen(
+                    viewModel = budgetViewModel,
+                    onBudgetClick = { status ->
+                        navController.navigate(
+                            ScreenRoute.BudgetDrilldown(
+                                category = status.budget.category,
+                                period = status.budget.period.name
                             )
+                        ) {
+                            launchSingleTop = true
                         }
-                    )
-                }
+                    }
+                )
+            }
 
-                composable<ScreenRoute.BudgetDrilldown> { backStackEntry ->
-                    val route: ScreenRoute.BudgetDrilldown = backStackEntry.toRoute()
-                    val drilldownViewModel: BudgetDrilldownViewModel = koinViewModel(
-                        parameters = { parametersOf(route.category, route.period) }
-                    )
-                    BudgetDrilldownScreen(
-                        viewModel = drilldownViewModel,
-                        onNavigateBack = { navController.popBackStack() },
-                        onTransactionClick = { txId -> navController.navigate(ScreenRoute.TransactionDetail(txId)) }
-                    )
-                }
+            composable<ScreenRoute.BudgetDrilldown> { backStackEntry ->
+                val route: ScreenRoute.BudgetDrilldown = backStackEntry.toRoute()
+                val drilldownViewModel: BudgetDrilldownViewModel = koinViewModel(
+                    key = "budget_${route.category}_${route.period}",
+                    parameters = { parametersOf(route.category, route.period) }
+                )
+                BudgetDrilldownScreen(
+                    viewModel = drilldownViewModel,
+                    onNavigateBack = { navController.popBackStack() },
+                    onTransactionClick = { txId ->
+                        navController.navigate(ScreenRoute.TransactionDetail(txId)) { launchSingleTop = true }
+                    }
+                )
+            }
 
-                composable<ScreenRoute.Settings> {
-                    val settingsViewModel: SettingsViewModel = koinViewModel()
-                    SettingsScreen(
-                        viewModel = settingsViewModel,
-                        onNavigateToPersonalization = { navController.navigate(ScreenRoute.PersonalizationDashboard) },
-                        onNavigateToDebugLog = { navController.navigate(ScreenRoute.DebugLog) },
-                        onOpenNotificationSettings = onOpenNotificationSettings
-                    )
-                }
+            composable<ScreenRoute.Settings> {
+                val settingsViewModel: SettingsViewModel = koinViewModel()
+                SettingsScreen(
+                    viewModel = settingsViewModel,
+                    onNavigateToPersonalization = {
+                        navController.navigate(ScreenRoute.PersonalizationDashboard) { launchSingleTop = true }
+                    },
+                    onNavigateToDebugLog = {
+                        navController.navigate(ScreenRoute.DebugLog) { launchSingleTop = true }
+                    },
+                    onOpenNotificationSettings = onOpenNotificationSettings
+                )
+            }
 
-                composable<ScreenRoute.AddTransaction> { backStackEntry ->
-                    val route: ScreenRoute.AddTransaction = backStackEntry.toRoute()
-                    val addViewModel: AddTransactionViewModel = koinViewModel()
-                    AddTransactionScreen(
-                        viewModel = addViewModel,
-                        prefilledId = route.prefilledId,
-                        prefilledUtr = route.prefilledUtr,
-                        onNavigateBack = { navController.popBackStack() }
-                    )
-                }
+            composable<ScreenRoute.AddTransaction> { backStackEntry ->
+                val route: ScreenRoute.AddTransaction = backStackEntry.toRoute()
+                val addViewModel: AddTransactionViewModel = koinViewModel()
+                AddTransactionScreen(
+                    viewModel = addViewModel,
+                    prefilledId = route.prefilledId,
+                    prefilledUtr = route.prefilledUtr,
+                    onNavigateBack = { navController.popBackStack() }
+                )
+            }
 
-                composable<ScreenRoute.PersonalizationDashboard> {
-                    val personalizationViewModel: PersonalizationViewModel = koinViewModel()
-                    PersonalizationDashboardScreen(
-                        viewModel = personalizationViewModel,
-                        onNavigateBack = { navController.popBackStack() },
-                        onNavigateToDataView = { navController.navigate(ScreenRoute.DataView) }
-                    )
-                }
+            composable<ScreenRoute.PersonalizationDashboard> { backStackEntry ->
+                val personalizationViewModel: PersonalizationViewModel = koinViewModel(
+                    viewModelStoreOwner = backStackEntry
+                )
+                PersonalizationDashboardScreen(
+                    viewModel = personalizationViewModel,
+                    onNavigateBack = { navController.popBackStack() },
+                    onNavigateToDataView = {
+                        navController.navigate(ScreenRoute.DataView) { launchSingleTop = true }
+                    }
+                )
+            }
 
-                composable<ScreenRoute.DataView> {
-                    val personalizationViewModel: PersonalizationViewModel = koinViewModel()
-                    DataViewScreen(
-                        viewModel = personalizationViewModel,
-                        onNavigateBack = { navController.popBackStack() }
-                    )
+            composable<ScreenRoute.DataView> { backStackEntry ->
+                val parentEntry = remember(backStackEntry) {
+                    navController.getBackStackEntry<ScreenRoute.PersonalizationDashboard>()
                 }
+                val personalizationViewModel: PersonalizationViewModel = koinViewModel(
+                    viewModelStoreOwner = parentEntry
+                )
+                DataViewScreen(
+                    viewModel = personalizationViewModel,
+                    onNavigateBack = { navController.popBackStack() }
+                )
+            }
 
-                composable<ScreenRoute.DebugLog> {
-                    val debugLogViewModel: com.cashbuddy.presentation.debug.DebugLogViewModel = koinViewModel()
-                    com.cashbuddy.presentation.debug.DebugLogScreen(
-                        viewModel = debugLogViewModel,
-                        onNavigateBack = { navController.popBackStack() }
-                    )
-                }
+            composable<ScreenRoute.DebugLog> {
+                val debugLogViewModel: com.cashbuddy.presentation.debug.DebugLogViewModel = koinViewModel()
+                com.cashbuddy.presentation.debug.DebugLogScreen(
+                    viewModel = debugLogViewModel,
+                    onNavigateBack = { navController.popBackStack() }
+                )
             }
         }
     }

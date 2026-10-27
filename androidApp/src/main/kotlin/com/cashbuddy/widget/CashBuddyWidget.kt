@@ -45,44 +45,47 @@ class CashBuddyWidget : GlanceAppWidget(), KoinComponent {
     private val budgetEngine: BudgetEngine by inject()
 
     override suspend fun provideGlance(context: Context, id: GlanceId) {
-        val now = System.currentTimeMillis()
+        val (todaySpent, budgetStatus) = kotlinx.coroutines.withContext(com.cashbuddy.platform.ioDispatcher) {
+            val now = System.currentTimeMillis()
 
-        // 1. Total spent today
-        val cal = Calendar.getInstance().apply {
-            timeInMillis = now
-            set(Calendar.HOUR_OF_DAY, 0)
-            set(Calendar.MINUTE, 0)
-            set(Calendar.SECOND, 0)
-            set(Calendar.MILLISECOND, 0)
-        }
-        val startOfToday = cal.timeInMillis
-        val txList = transactionRepository.getByDateRange(startOfToday, now + 1000L).firstOrNull() ?: emptyList()
-        val todaySpent = txList.filter { it.type == TransactionType.DEBIT && it.amount > 0 }.sumOf { it.amount }
-
-        // 2. Global budget remaining
-        val activeBudgets = budgetRepository.getActive()
-        val globalBudget = activeBudgets.find { it.category == BudgetCategories.GLOBAL }
-        val budgetStatus = if (globalBudget != null) {
-            val status = budgetEngine.statusFor(globalBudget, now)
-            val remaining = globalBudget.amount - status.spent
-            if (remaining >= 0) {
-                "Budget: ₹${formatAmount(remaining)} left"
-            } else {
-                "Budget: ₹${formatAmount(-remaining)} over"
+            // 1. Total spent today
+            val cal = Calendar.getInstance().apply {
+                timeInMillis = now
+                set(Calendar.HOUR_OF_DAY, 0)
+                set(Calendar.MINUTE, 0)
+                set(Calendar.SECOND, 0)
+                set(Calendar.MILLISECOND, 0)
             }
-        } else {
-            val totalBudget = activeBudgets.sumOf { it.amount }
-            if (totalBudget > 0) {
-                val totalSpent = activeBudgets.sumOf { budgetEngine.statusFor(it, now).spent }
-                val remaining = totalBudget - totalSpent
+            val startOfToday = cal.timeInMillis
+            val txList = transactionRepository.getByDateRange(startOfToday, now + 1000L).firstOrNull() ?: emptyList()
+            val spent = txList.filter { it.type == TransactionType.DEBIT && it.amount > 0 }.sumOf { it.amount }
+
+            // 2. Global budget remaining
+            val activeBudgets = budgetRepository.getActive()
+            val globalBudget = activeBudgets.find { it.category == BudgetCategories.GLOBAL }
+            val statusStr = if (globalBudget != null) {
+                val status = budgetEngine.statusFor(globalBudget, now)
+                val remaining = globalBudget.amount - status.spent
                 if (remaining >= 0) {
                     "Budget: ₹${formatAmount(remaining)} left"
                 } else {
                     "Budget: ₹${formatAmount(-remaining)} over"
                 }
             } else {
-                "Budget: Not set"
+                val totalBudget = activeBudgets.sumOf { it.amount }
+                if (totalBudget > 0) {
+                    val totalSpent = activeBudgets.sumOf { budgetEngine.statusFor(it, now).spent }
+                    val remaining = totalBudget - totalSpent
+                    if (remaining >= 0) {
+                        "Budget: ₹${formatAmount(remaining)} left"
+                    } else {
+                        "Budget: ₹${formatAmount(-remaining)} over"
+                    }
+                } else {
+                    "Budget: Not set"
+                }
             }
+            Pair(spent, statusStr)
         }
 
         val navigateKey = androidx.glance.action.ActionParameters.Key<String>("EXTRA_NAVIGATE_TO")

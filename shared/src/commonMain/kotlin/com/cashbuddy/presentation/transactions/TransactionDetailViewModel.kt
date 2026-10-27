@@ -80,6 +80,7 @@ class TransactionDetailViewModel(
                 categoryColor = newCategory?.color
             )
             transactionRepository.update(updated)
+            com.cashbuddy.platform.notifyTransactionsUpdated()
             _uiState.value = _uiState.value.copy(transaction = updated)
             recordTokens(tx.rawText, isTransaction = true)
 
@@ -121,6 +122,7 @@ class TransactionDetailViewModel(
                 categoryColor = newCategory?.color
             )
             transactionRepository.update(updated)
+            com.cashbuddy.platform.notifyTransactionsUpdated()
             _uiState.value = _uiState.value.copy(transaction = updated)
             recordTokens(tx.rawText, isTransaction = true)
 
@@ -153,6 +155,7 @@ class TransactionDetailViewModel(
                 recordTokens(tx.rawText, isTransaction = false)
             }
             transactionRepository.deleteById(transactionId)
+            com.cashbuddy.platform.notifyTransactionsUpdated()
             _navBackEffect.emit(Unit)
         }
     }

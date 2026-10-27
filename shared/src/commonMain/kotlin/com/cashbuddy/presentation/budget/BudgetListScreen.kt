@@ -26,6 +26,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -52,18 +53,19 @@ fun BudgetListScreen(
     modifier: Modifier = Modifier
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
-    var showEditSheet by remember { mutableStateOf(false) }
-    var editingBudget by remember { mutableStateOf<Budget?>(null) }
+    var showEditSheet by rememberSaveable { mutableStateOf(false) }
+    var editingBudgetId by rememberSaveable { mutableStateOf<String?>(null) }
+    val editingBudget = state.budgets.find { it.budget.id == editingBudgetId }?.budget
 
     BudgetListContent(
         state = state,
         onBudgetClick = onBudgetClick,
         onBudgetLongClick = { budget ->
-            editingBudget = budget
+            editingBudgetId = budget.id
             showEditSheet = true
         },
         onAddBudgetClick = {
-            editingBudget = null
+            editingBudgetId = null
             showEditSheet = true
         },
         modifier = modifier
@@ -76,7 +78,7 @@ fun BudgetListScreen(
             existingBudgets = state.budgets,
             onDismiss = {
                 showEditSheet = false
-                editingBudget = null
+                editingBudgetId = null
             },
             onSave = { category, amount, period ->
                 val current = editingBudget
@@ -92,12 +94,12 @@ fun BudgetListScreen(
                     viewModel.createBudget(category, amount, period)
                 }
                 showEditSheet = false
-                editingBudget = null
+                editingBudgetId = null
             },
             onDelete = { id ->
                 viewModel.deleteBudget(id)
                 showEditSheet = false
-                editingBudget = null
+                editingBudgetId = null
             }
         )
     }
