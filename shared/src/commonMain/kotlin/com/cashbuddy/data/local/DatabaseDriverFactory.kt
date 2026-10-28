@@ -20,12 +20,18 @@ fun createDatabase(driver: SqlDriver): AppDatabase {
     return AppDatabase(driver)
 }
 
-private fun executeQuietly(driver: SqlDriver, sql: String) {
+private fun executeDdl(driver: SqlDriver, sql: String, logError: Boolean = true) {
     try {
         driver.execute(null, sql, 0)
-    } catch (_: Throwable) {
-        // Silently skip if table/index/trigger already exists or syntax unsupported
+    } catch (e: Throwable) {
+        if (logError) {
+            println("[DatabaseDriverFactory] DDL notice: ${e.message}")
+        }
     }
+}
+
+private fun executeQuietly(driver: SqlDriver, sql: String) {
+    executeDdl(driver, sql, logError = false)
 }
 
 fun ensureSchema(driver: SqlDriver) {
@@ -223,8 +229,8 @@ fun ensureSchema(driver: SqlDriver) {
             survivor_id INTEGER NOT NULL,
             merged_id INTEGER NOT NULL,
             merged_at INTEGER NOT NULL,
-            FOREIGN KEY (survivor_id) REFERENCES transactions(id),
-            FOREIGN KEY (merged_id) REFERENCES transactions(id)
+            FOREIGN KEY (survivor_id) REFERENCES transactions(id) ON DELETE CASCADE,
+            FOREIGN KEY (merged_id) REFERENCES transactions(id) ON DELETE CASCADE
         )
         """.trimIndent(),
         """
@@ -366,8 +372,8 @@ private fun runMigrations(driver: SqlDriver) {
             survivor_id INTEGER NOT NULL,
             merged_id INTEGER NOT NULL,
             merged_at INTEGER NOT NULL,
-            FOREIGN KEY (survivor_id) REFERENCES transactions(id),
-            FOREIGN KEY (merged_id) REFERENCES transactions(id)
+            FOREIGN KEY (survivor_id) REFERENCES transactions(id) ON DELETE CASCADE,
+            FOREIGN KEY (merged_id) REFERENCES transactions(id) ON DELETE CASCADE
         );
     """.trimIndent())
     executeQuietly(driver, "CREATE INDEX IF NOT EXISTS idx_transactions_is_merged ON transactions(is_merged);")
