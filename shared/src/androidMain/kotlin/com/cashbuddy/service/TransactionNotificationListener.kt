@@ -167,7 +167,7 @@ class TransactionNotificationListener : NotificationListenerService(), KoinCompo
 
                 // 1. Ingest into MessagePipeline (captures raw, classifies, applies policy, dedups, logs debug)
                 val rawMessage = com.cashbuddy.core.prob.RawMessage(
-                    id = "notif_${postTime}_${(1000..9999).random()}",
+                    id = "notif_${postTime}_${java.util.UUID.randomUUID().toString().substring(0, 8)}",
                     sourceType = com.cashbuddy.core.prob.SourceType.NOTIFICATION,
                     packageName = packageName,
                     senderId = senderId,
@@ -274,6 +274,6 @@ class TransactionNotificationListener : NotificationListenerService(), KoinCompo
             .setContentIntent(pendingIntent)
             .build()
 
-        notificationManager.notify((NOTIFICATION_ID_BASE + (transactionId % 1000)).toInt(), notification)
+        notificationManager.notify((NOTIFICATION_ID_BASE + ((transactionId.hashCode() and 0x7FFFFFFF) % 100000)).toInt(), notification)
     }
 }

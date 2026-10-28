@@ -45,7 +45,8 @@ class AddTransactionViewModel(
     private val categoryRepository: CategoryRepository,
     private val accountRepository: AccountRepository,
     private val transactionRepository: TransactionRepository,
-    private val merchantRuleRepository: MerchantRuleRepository
+    private val merchantRuleRepository: MerchantRuleRepository,
+    private val categoryEngine: com.cashbuddy.core.CategoryEngine? = null
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(AddTransactionUiState())
@@ -184,8 +185,8 @@ class AddTransactionViewModel(
         }
 
         // 2. Delegate to CategoryEngine (handles user rules, VPA grammar, learned tokens)
-        val categoryEngine = com.cashbuddy.core.CategoryEngine()
-        val engineMatch = categoryEngine.getCategory(rawMerchant = cleanMerchant)
+        val engine = categoryEngine ?: com.cashbuddy.core.CategoryEngine()
+        val engineMatch = engine.getCategory(rawMerchant = cleanMerchant)
         if (engineMatch.category != "Unknown" && engineMatch.confidence >= 0.80f) {
             val matchedCat = categories.find { cat ->
                 val catLower = cat.name.lowercase()
