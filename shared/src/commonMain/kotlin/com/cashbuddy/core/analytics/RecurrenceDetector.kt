@@ -173,13 +173,27 @@ object RecurrenceDetector {
             if (analysis.isRecurring) {
                 val sorted = groupPoints.sortedBy { it.timestamp }
                 val periodHours = if (analysis.patternDescription == "daily") 24 else 168
+                
+                // Calculate actual median interval between consecutive occurrences if available
+                val intervals = sorted.zipWithNext { a, b -> (b.timestamp - a.timestamp) / 3600000.0 }
+                val actualMedian = if (intervals.isNotEmpty()) {
+                    val sortedIntervals = intervals.sorted()
+                    if (sortedIntervals.size % 2 == 1) {
+                        sortedIntervals[sortedIntervals.size / 2]
+                    } else {
+                        (sortedIntervals[sortedIntervals.size / 2 - 1] + sortedIntervals[sortedIntervals.size / 2]) / 2.0
+                    }
+                } else {
+                    periodHours.toDouble()
+                }
+
                 patterns.add(
                     RecurringPattern(
                         id = 0L,
                         merchantNormalized = normMerchant,
                         amountPaise = amountPaise,
                         occurrenceCount = analysis.count,
-                        medianIntervalHours = periodHours.toDouble(),
+                        medianIntervalHours = actualMedian,
                         cv = analysis.cvActive,
                         periodHours = periodHours,
                         autocorrelationPeak = 1.0,
