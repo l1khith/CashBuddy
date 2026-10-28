@@ -38,7 +38,6 @@ data class AddTransactionUiState(
     val isLoading: Boolean = true
 )
 
-typealias ManualEntryViewModel = AddTransactionViewModel
 
 class AddTransactionViewModel(
     private val manualAddTransactionUseCase: ManualAddTransactionUseCase,
