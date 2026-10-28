@@ -46,7 +46,8 @@ class ExportDataUseCase(
 
 class ImportDataUseCase(
     private val transactionRepository: TransactionRepository,
-    private val accountRepository: AccountRepository
+    private val accountRepository: AccountRepository,
+    private val categoryRepository: com.cashbuddy.domain.repository.CategoryRepository? = null
 ) {
     data class ImportResult(
         val totalProcessed: Int,
@@ -64,6 +65,10 @@ class ImportDataUseCase(
 
         val accounts = accountRepository.getAll().first()
         val defaultAccountId = accounts.firstOrNull()?.id ?: 1L
+        val categories = categoryRepository?.getAll()?.first() ?: emptyList()
+        val defaultCategoryId = categories.find { it.name.equals("Uncategorized", ignoreCase = true) }?.id
+            ?: categories.firstOrNull()?.id
+            ?: 15L
 
         for (line in lines) {
             val trimmed = line.trim()
@@ -117,7 +122,7 @@ class ImportDataUseCase(
                     type = type,
                     currency = currency,
                     merchant = merchant,
-                    categoryId = 1L, // Default General
+                    categoryId = defaultCategoryId,
                     accountId = defaultAccountId,
                     sourceApp = "csv_import",
                     rawText = "CSV Import: $merchant",
