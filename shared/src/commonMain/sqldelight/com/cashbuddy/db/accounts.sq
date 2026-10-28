@@ -33,6 +33,9 @@ VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
 updateBalance:
 UPDATE accounts SET balance = ?, updated_at = ? WHERE id = ?;
 
+applyBalanceDelta:
+UPDATE accounts SET balance = balance + :delta, updated_at = :updatedAt WHERE id = :id;
+
 update:
 UPDATE accounts SET name = ?, type = ?, number = ?, bank = ?, balance = ?, is_active = ?, sort_order = ?, updated_at = ? WHERE id = ?;
 

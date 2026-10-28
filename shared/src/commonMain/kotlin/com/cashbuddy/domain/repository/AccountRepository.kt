@@ -10,6 +10,7 @@ interface AccountRepository {
     fun getByType(type: AccountType): Flow<List<Account>>
     suspend fun insert(account: Account): Long
     suspend fun updateBalance(id: Long, balance: Double)
+    suspend fun applyBalanceDelta(id: Long, delta: Double) {}
     suspend fun update(account: Account)
     suspend fun deleteById(id: Long)
     suspend fun seedDefaults(currentTimestamp: Long)

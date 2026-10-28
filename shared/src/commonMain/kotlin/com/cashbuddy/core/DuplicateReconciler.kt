@@ -205,11 +205,8 @@ class DuplicateReconciler(
                 if (dup.accountId != null &&
                     (dup.status == TransactionStatus.CONFIRMED || dup.status == TransactionStatus.MODIFIED)
                 ) {
-                    val acc = accountRepository.getById(dup.accountId).firstOrNull()
-                    if (acc != null) {
-                        val delta = if (dup.type == TransactionType.DEBIT) dup.amount else -dup.amount
-                        accountRepository.updateBalance(acc.id, acc.balance + delta)
-                    }
+                    val delta = if (dup.type == TransactionType.DEBIT) dup.amount else -dup.amount
+                    accountRepository.applyBalanceDelta(dup.accountId, delta)
                 }
                 mergedCount++
             }
@@ -238,11 +235,8 @@ class DuplicateReconciler(
             if (dup.accountId != null &&
                 (dup.status == TransactionStatus.CONFIRMED || dup.status == TransactionStatus.MODIFIED)
             ) {
-                val acc = accountRepository.getById(dup.accountId).firstOrNull()
-                if (acc != null) {
-                    val delta = if (dup.type == TransactionType.DEBIT) -dup.amount else dup.amount
-                    accountRepository.updateBalance(acc.id, acc.balance + delta)
-                }
+                val delta = if (dup.type == TransactionType.DEBIT) -dup.amount else dup.amount
+                accountRepository.applyBalanceDelta(dup.accountId, delta)
             }
         }
 
