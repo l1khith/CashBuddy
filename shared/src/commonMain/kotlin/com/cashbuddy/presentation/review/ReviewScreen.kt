@@ -111,8 +111,10 @@ fun ReviewScreen(
                 CircularProgressIndicator(color = TrustBluePrimary)
             }
         } else {
-            val filteredTransactions = state.transactions.filter {
-                it.confidence >= state.selectedConfidenceFilter
+            val filteredTransactions = androidx.compose.runtime.remember(state.transactions, state.selectedConfidenceFilter) {
+                state.transactions.filter {
+                    it.confidence >= state.selectedConfidenceFilter
+                }
             }
 
             LazyColumn(

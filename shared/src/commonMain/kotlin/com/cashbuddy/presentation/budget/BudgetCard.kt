@@ -98,7 +98,7 @@ fun BudgetCard(
     }
 
     val daysRemaining = if (isGlobal) {
-        val now = com.cashbuddy.platform.currentTimeMillis()
+        val now = androidx.compose.runtime.remember { com.cashbuddy.platform.currentTimeMillis() }
         val instant = Instant.fromEpochMilliseconds(now)
         val timeZone = TimeZone.currentSystemDefault()
         val localDate = instant.toLocalDateTime(timeZone).date
