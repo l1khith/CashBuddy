@@ -38,7 +38,7 @@ class TokenEvidenceExtractor(
             return TokenEvidence(tokenLogOdds = 0.0, tokenCount = 0, strongestToken = null, strongestLR = 1.0)
         }
         val significant = learnedTokenRepository.getTokenStats(messageTokens)
-        return evaluate(rawText, significant)
+        return evaluateWithTokens(messageTokens, significant)
     }
 
     /**
@@ -53,11 +53,11 @@ class TokenEvidenceExtractor(
             return TokenEvidence(tokenLogOdds = 0.0, tokenCount = 0, strongestToken = null, strongestLR = 1.0)
         }
         val significant = learnedTokenRepository.getTokenStatsSync(messageTokens)
-        return evaluate(rawText, significant)
+        return evaluateWithTokens(messageTokens, significant)
     }
 
-    private fun evaluate(rawText: String, significant: Map<String, TokenStats>): TokenEvidence {
-        if (rawText.isBlank() || significant.isEmpty()) {
+    private fun evaluateWithTokens(tokens: Set<String>, significant: Map<String, TokenStats>): TokenEvidence {
+        if (tokens.isEmpty() || significant.isEmpty()) {
             return TokenEvidence(
                 tokenLogOdds = 0.0,
                 tokenCount = 0,
@@ -66,7 +66,6 @@ class TokenEvidenceExtractor(
             )
         }
 
-        val tokens = Tokenizer.tokenize(rawText)
         var sumLogOdds = 0.0
         var count = 0
         var strongestToken: String? = null

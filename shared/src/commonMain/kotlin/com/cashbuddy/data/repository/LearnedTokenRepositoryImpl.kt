@@ -23,13 +23,14 @@ class LearnedTokenRepositoryImpl(
     private val cache = ConcurrentHashMap<String, TokenStats>()
     private var isCachePreloaded = false
 
-    init {
-        preloadCache()
+    companion object {
+        private const val MAX_CACHE_SIZE = 2048
     }
 
-    private fun preloadCache() {
+    private fun ensurePreload() {
+        if (isCachePreloaded) return
         try {
-            val topTokens = queries.getTopSignificant(limit = 2000L).executeAsList()
+            val topTokens = queries.getTopSignificant(limit = MAX_CACHE_SIZE.toLong()).executeAsList()
             for (row in topTokens) {
                 cache[row.token] = TokenStats(
                     token = row.token,
@@ -39,15 +40,26 @@ class LearnedTokenRepositoryImpl(
             }
             isCachePreloaded = true
         } catch (_: Throwable) {
-            // Ignore during initial migrations or testing before table creation
+            // Can retry on next access if table was not ready
         }
+    }
+
+    private fun putIntoCacheWithCap(token: String, stats: TokenStats) {
+        if (cache.size >= MAX_CACHE_SIZE && !cache.containsKey(token)) {
+            // Simple eviction: remove any entry to maintain memory cap
+            val firstKey = cache.keys.firstOrNull()
+            if (firstKey != null) {
+                cache.remove(firstKey)
+            }
+        }
+        cache[token] = stats
     }
 
     override suspend fun record(isTransaction: Boolean, tokens: Set<String>): Unit = withContext(dispatcher) {
         if (tokens.isEmpty()) return@withContext
         val now = currentTimeMillis()
 
-        // 1. Update in-memory cache synchronously
+        // 1. Update in-memory cache
         for (token in tokens) {
             val existing = cache[token]
             val newStats = if (existing != null) {
@@ -63,7 +75,7 @@ class LearnedTokenRepositoryImpl(
                     nonTransactionCount = if (isTransaction) 0 else 1
                 )
             }
-            cache[token] = newStats
+            putIntoCacheWithCap(token, newStats)
         }
 
         // 2. Persist to database
@@ -92,6 +104,7 @@ class LearnedTokenRepositoryImpl(
 
     override fun getTokenStatsSync(tokens: Set<String>): Map<String, TokenStats> {
         if (tokens.isEmpty()) return emptyMap()
+        ensurePreload()
 
         val result = mutableMapOf<String, TokenStats>()
         val missingFromCache = mutableListOf<String>()
@@ -116,7 +129,7 @@ class LearnedTokenRepositoryImpl(
                         transactionCount = row.transaction_count.toInt(),
                         nonTransactionCount = row.non_transaction_count.toInt()
                     )
-                    cache[row.token] = stats
+                    putIntoCacheWithCap(row.token, stats)
                     if (stats.transactionCount + stats.nonTransactionCount >= 5) {
                         result[row.token] = stats
                     }
@@ -134,6 +147,7 @@ class LearnedTokenRepositoryImpl(
     }
 
     override fun getAllSignificantSync(): Map<String, TokenStats> {
+        ensurePreload()
         return try {
             queries.getSignificant().executeAsList().associate { row ->
                 val stats = TokenStats(
@@ -141,7 +155,7 @@ class LearnedTokenRepositoryImpl(
                     transactionCount = row.transaction_count.toInt(),
                     nonTransactionCount = row.non_transaction_count.toInt()
                 )
-                cache[row.token] = stats
+                putIntoCacheWithCap(row.token, stats)
                 row.token to stats
             }
         } catch (_: Throwable) {
@@ -150,18 +164,15 @@ class LearnedTokenRepositoryImpl(
     }
 
     override suspend fun purgeExcessTokens(maxCount: Long): Int = withContext(dispatcher) {
-        try {
-            val totalCount = queries.getCount().executeAsOne()
-            if (totalCount > maxCount) {
-                val excess = totalCount - maxCount
-                queries.purgeOldestLeastUsed(excess)
-                cache.clear()
-                preloadCache()
-                excess.toInt()
-            } else {
-                0
-            }
-        } catch (_: Throwable) {
+        val totalCount = queries.getCount().executeAsOne()
+        if (totalCount > maxCount) {
+            val excess = totalCount - maxCount
+            queries.purgeOldestLeastUsed(excess)
+            cache.clear()
+            isCachePreloaded = false
+            ensurePreload()
+            excess.toInt()
+        } else {
             0
         }
     }
