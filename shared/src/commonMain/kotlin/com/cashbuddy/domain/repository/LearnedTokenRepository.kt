@@ -24,6 +24,22 @@ interface LearnedTokenRepository {
     fun getAllSignificantSync(): Map<String, TokenStats> = emptyMap()
 
     /**
+     * Returns token stats for the specified [tokens], leveraging the in-memory L1 cache
+     * with fallback to indexed SQLite lookup. Ignores tokens with < 5 observations.
+     */
+    suspend fun getTokenStats(tokens: Set<String>): Map<String, TokenStats> = getAllSignificant()
+
+    /**
+     * Synchronous variant of [getTokenStats] for non-suspending callers.
+     */
+    fun getTokenStatsSync(tokens: Set<String>): Map<String, TokenStats> = getAllSignificantSync()
+
+    /**
+     * Purges oldest/least used tokens if total count exceeds [maxCount].
+     */
+    suspend fun purgeExcessTokens(maxCount: Long = 20_000L): Int = 0
+
+    /**
      * Clears all learned token records.
      */
     suspend fun clear()

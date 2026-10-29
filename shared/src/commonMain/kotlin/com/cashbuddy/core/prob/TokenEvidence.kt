@@ -26,9 +26,18 @@ class TokenEvidenceExtractor(
 ) {
     /**
      * Asynchronously computes [TokenEvidence] for [rawText].
+     * Extracts tokens from the incoming message and requests only those specific tokens
+     * via the L1 in-memory cache and indexed lookup.
      */
     suspend fun extract(rawText: String): TokenEvidence {
-        val significant = learnedTokenRepository.getAllSignificant()
+        if (rawText.isBlank()) {
+            return TokenEvidence(tokenLogOdds = 0.0, tokenCount = 0, strongestToken = null, strongestLR = 1.0)
+        }
+        val messageTokens = Tokenizer.tokenize(rawText)
+        if (messageTokens.isEmpty()) {
+            return TokenEvidence(tokenLogOdds = 0.0, tokenCount = 0, strongestToken = null, strongestLR = 1.0)
+        }
+        val significant = learnedTokenRepository.getTokenStats(messageTokens)
         return evaluate(rawText, significant)
     }
 
@@ -36,7 +45,14 @@ class TokenEvidenceExtractor(
      * Synchronously computes [TokenEvidence] for [rawText].
      */
     fun extractSync(rawText: String): TokenEvidence {
-        val significant = learnedTokenRepository.getAllSignificantSync()
+        if (rawText.isBlank()) {
+            return TokenEvidence(tokenLogOdds = 0.0, tokenCount = 0, strongestToken = null, strongestLR = 1.0)
+        }
+        val messageTokens = Tokenizer.tokenize(rawText)
+        if (messageTokens.isEmpty()) {
+            return TokenEvidence(tokenLogOdds = 0.0, tokenCount = 0, strongestToken = null, strongestLR = 1.0)
+        }
+        val significant = learnedTokenRepository.getTokenStatsSync(messageTokens)
         return evaluate(rawText, significant)
     }
 
