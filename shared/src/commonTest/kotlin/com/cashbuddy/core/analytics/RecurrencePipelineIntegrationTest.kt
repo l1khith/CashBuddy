@@ -154,6 +154,14 @@ class RecurrencePipelineIntegrationTest {
         val accountRegistry = AccountRegistry(accountRepo)
         val categoryEngine = CategoryEngine()
 
+        // Seed a learned merchant rule exactly as production does: MainActivity loads learned
+        // merchant rules from the DB into the pipeline's CategoryEngine at startup. Without it,
+        // the strict human-in-the-loop gate (confidence >= 0.85, category != "Unknown") keeps
+        // every recurring ride PENDING forever — auto-log is reserved for KNOWN merchants.
+        categoryEngine.loadUserRules(
+            listOf(com.cashbuddy.core.MerchantRuleEntry(merchant = "BMTC", category = "Transport"))
+        )
+
         // 1. Insert 20 synthetic Mon-Fri BMTC transactions
         val historyTxs = mutableListOf<Transaction>()
         for (week in 0 until 4) {
