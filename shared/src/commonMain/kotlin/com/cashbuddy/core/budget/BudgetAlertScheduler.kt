@@ -104,14 +104,22 @@ class BudgetAlertScheduler(
 
                 if (shouldAlert) {
                     budgetRepository.markAlerted(budget.id, alertState, now)
-                    val event = AlertEvent(
-                        budgetId = budget.id,
-                        category = budget.category,
-                        state = alertState,
-                        message = alertMessage
-                    )
-                    notifier?.sendAlert(event)
-                    firedEvents.add(event)
+                    // Anti-spam contract (BudgetAlertSchedulerTest::testCategoryAt90AndGlobalAt85):
+                    // category budgets are evaluated first (orderedBudgets); if any category alert
+                    // already fired this cycle, the GLOBAL budget's state is marked silently and
+                    // its notification is suppressed. When no category alert fired, global fires.
+                    // This preserves the C4 no-loss fix above: markAlerted runs for every budget.
+                    val suppressGlobalNotification = isGlobal && firedEvents.isNotEmpty()
+                    if (!suppressGlobalNotification) {
+                        val event = AlertEvent(
+                            budgetId = budget.id,
+                            category = budget.category,
+                            state = alertState,
+                            message = alertMessage
+                        )
+                        notifier?.sendAlert(event)
+                        firedEvents.add(event)
+                    }
                 }
             }
         }

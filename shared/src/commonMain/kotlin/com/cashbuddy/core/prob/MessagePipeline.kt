@@ -69,7 +69,10 @@ class MessagePipeline(
     private val budgetAlertScheduler: com.cashbuddy.core.budget.BudgetAlertScheduler? = null,
     private val fraudDetector: com.cashbuddy.core.FraudDetector = com.cashbuddy.core.FraudDetector(transactionRepo),
     private val recurringPatternRepo: com.cashbuddy.domain.repository.RecurringPatternRepository? = null,
-    private val anomalyNotifier: com.cashbuddy.core.anomaly.AnomalyNotifier? = null
+    private val anomalyNotifier: com.cashbuddy.core.anomaly.AnomalyNotifier? = null,
+    // C1: when provided, tx insert + raw_message audit-link commit in one driver-level transaction.
+    // Tests construct the pipeline without it → fallback below replicates the exact old two-step write.
+    private val ingestStore: com.cashbuddy.data.repository.TransactionIngestStore? = null
 ) {
     private val mutex = Mutex()
 
@@ -203,7 +206,16 @@ class MessagePipeline(
                                 val isCategoryKnownOrConfirmed = categoryMatch.confidence >= 0.85f && categoryMatch.category != "Unknown"
                                 val isPolicyAutoLog = action == PolicyEngine.Action.AUTO_LOG
 
-                                val status = if (isPolicyAutoLog && isCategoryKnownOrConfirmed) {
+                                val candidateMerchant = classification.merchant ?: "Unknown Merchant"
+                                val anomaly = fraudDetector.checkAnomaly(
+                                    merchant = candidateMerchant,
+                                    amount = amount,
+                                    timestamp = raw.timestamp
+                                )
+                                val isAnomalous = anomaly.isAnomalous
+                                val note = if (isAnomalous) formatAnomalyNote(anomaly.score, anomaly.median, anomaly.mad) else null
+
+                                val finalStatus = if (isPolicyAutoLog && isCategoryKnownOrConfirmed && !isAnomalous) {
                                     TransactionStatus.CONFIRMED
                                 } else {
                                     TransactionStatus.PENDING
@@ -215,17 +227,29 @@ class MessagePipeline(
                                     categoryId = categoryId,
                                     amount = amount,
                                     type = classification.type ?: TransactionType.DEBIT,
-                                    status = status,
+                                    status = finalStatus,
                                     rawText = fullText,
                                     sourceApp = raw.packageName ?: raw.senderId ?: "unknown",
-                                    merchant = classification.merchant ?: "Unknown Merchant",
+                                    merchant = candidateMerchant,
                                     confidence = classification.pTransaction.toFloat(),
+                                    notes = note,
                                     timestamp = raw.timestamp,
                                     createdAt = raw.timestamp,
                                     updatedAt = raw.timestamp
                                 )
 
-                                val insertedId = transactionRepo.insert(tx)
+                                val insertedId = if (ingestStore != null) {
+                                    // C1: tx insert + raw_message audit-link commit atomically
+                                    // (single driver-level transaction). recentState below stays
+                                    // outside — it is in-memory cache state, not DB source of truth.
+                                    ingestStore.insertAndLink(raw.id, tx)
+                                } else {
+                                    // Legacy fallback (pre-C1 behavior, used by unit tests that
+                                    // construct the pipeline without the store).
+                                    val insertedId = transactionRepo.insert(tx)
+                                    rawMessageRepo.updateResultingTx(raw.id, insertedId.toString())
+                                    insertedId
+                                }
                                 recentStateRepository?.record(
                                     RecentTx(
                                         amount = amount,
@@ -234,21 +258,8 @@ class MessagePipeline(
                                         timestamp = raw.timestamp
                                     )
                                 )
-                                rawMessageRepo.updateResultingTx(raw.id, insertedId.toString())
 
-                                val anomaly = fraudDetector.checkAnomaly(
-                                    merchant = tx.merchant,
-                                    amount = tx.amount,
-                                    timestamp = tx.timestamp
-                                )
-                                var finalStatus = status
-                                if (anomaly.isAnomalous) {
-                                    val note = formatAnomalyNote(anomaly.score, anomaly.median, anomaly.mad)
-                                    transactionRepo.updateNotes(insertedId, note)
-                                    if (finalStatus == TransactionStatus.CONFIRMED) {
-                                        transactionRepo.updateStatus(insertedId, TransactionStatus.PENDING)
-                                        finalStatus = TransactionStatus.PENDING
-                                    }
+                                if (isAnomalous) {
                                     try {
                                         anomalyNotifier?.sendAnomalyAlert(insertedId, tx.amount, tx.merchant)
                                     } catch (_: Throwable) {

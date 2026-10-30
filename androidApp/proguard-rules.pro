@@ -8,10 +8,36 @@
 # SQLDelight
 -keep class app.cash.sqldelight.** { *; }
 -keep class com.cashbuddy.db.** { *; }
+-keep class com.cashbuddy.data.** { *; }
 
 # Serialization & Annotations
--keepattributes *Annotation*,InnerClasses,Signature
+-keepattributes *Annotation*,InnerClasses,Signature,EnclosingMethod
+-keepclassmembers class * {
+    @kotlinx.serialization.SerialName <fields>;
+}
+-keepclassmembers class * {
+    *** Companion;
+}
+-keepclasseswithmembers class * {
+    kotlinx.serialization.KSerializer serializer(...);
+}
+-keepclassmembers class * extends kotlinx.serialization.internal.GeneratedSerializer {
+    <init>(...);
+}
+-keepclassmembers class * implements kotlinx.serialization.KSerializer {
+    <init>(...);
+}
 -dontnote kotlinx.serialization.**
+
+# Koin Dependency Injection
+-keepclassmembers class * {
+    public <init>(...);
+}
+-keep class org.koin.** { *; }
+-dontwarn org.koin.**
+
+# Navigation 3 & Compose Destinations
+-keep class com.cashbuddy.presentation.navigation.** { *; }
 
 # AndroidX Security Crypto / Google Tink (reflective KeyManager & protobuf instantiation)
 -keep class com.google.crypto.tink.** { *; }
