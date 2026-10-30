@@ -174,6 +174,9 @@ class MainActivity : FragmentActivity() {
                                 }
                             }
                         )
+                        // Debug-only E2E harness (docs/E2E_NOTIFICATION_TEST_PLAN.md).
+                        // Variant source sets provide: debug = full harness, release = no-op stub.
+                        com.cashbuddy.debug.E2eDebugHarness()
                     }
                     AuthState.LOCKED -> {
                         Box(
@@ -325,7 +328,7 @@ class MainActivity : FragmentActivity() {
         }
 
         val screenshotHandler = com.cashbuddy.screenshot.ScreenshotHandler(this)
-        val cachedScreenshotFiles = mutableListOf<java.io.File>()
+        val urisToProcess = mutableListOf<android.net.Uri>()
 
         if (intent.action == Intent.ACTION_SEND) {
             val imageUri = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
@@ -335,7 +338,7 @@ class MainActivity : FragmentActivity() {
                 intent.getParcelableExtra(Intent.EXTRA_STREAM)
             }
             if (imageUri != null) {
-                screenshotHandler.copyUriToCache(imageUri)?.let { cachedScreenshotFiles.add(it) }
+                urisToProcess.add(imageUri)
             }
         } else if (intent.action == Intent.ACTION_SEND_MULTIPLE) {
             val uris = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
@@ -344,14 +347,17 @@ class MainActivity : FragmentActivity() {
                 @Suppress("DEPRECATION")
                 intent.getParcelableArrayListExtra(Intent.EXTRA_STREAM)
             }
-            uris?.forEach { uri ->
-                screenshotHandler.copyUriToCache(uri)?.let { cachedScreenshotFiles.add(it) }
-            }
+            uris?.let { urisToProcess.addAll(it) }
         }
 
-        if (cachedScreenshotFiles.isNotEmpty()) {
+        if (urisToProcess.isNotEmpty()) {
             currentNavigationRoute = "processing_screenshot"
             lifecycleScope.launch(Dispatchers.IO) {
+                val cachedScreenshotFiles = mutableListOf<java.io.File>()
+                for (uri in urisToProcess) {
+                    screenshotHandler.copyUriToCache(uri)?.let { cachedScreenshotFiles.add(it) }
+                }
+                if (cachedScreenshotFiles.isEmpty()) return@launch
                 try {
                     val createdIds = screenshotHandler.processScreenshots(cachedScreenshotFiles)
                     withContext(Dispatchers.Main) {

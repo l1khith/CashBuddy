@@ -55,7 +55,10 @@ class SettingsViewModel(
     private val debugConfig: com.cashbuddy.debug.DebugConfig? = null,
     private val duplicateReconciler: com.cashbuddy.core.DuplicateReconciler? = null,
     private val ocrEngine: com.cashbuddy.ocr.OcrEngine? = null,
-    private val importDataUseCase: com.cashbuddy.domain.usecase.ImportDataUseCase? = null
+    private val importDataUseCase: com.cashbuddy.domain.usecase.ImportDataUseCase? = null,
+    // C10: learned tokens are derived from training data — clearing one clears the other,
+    // otherwise clearAllData leaves the classifier's learned vocabulary inconsistent.
+    private val learnedTokenRepository: com.cashbuddy.domain.repository.LearnedTokenRepository? = null
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(SettingsUiState(isOcrAvailable = ocrEngine?.isAvailable ?: false))
@@ -220,6 +223,12 @@ class SettingsViewModel(
         viewModelScope.launch {
             val allTxs = _uiState.value.totalTransactionsCount
             transactionRepository.deleteAll()
+            trainingDataRepository.clearTrainingData()
+            learnedTokenRepository?.clear()
+            val accounts = accountRepository.getAll().first()
+            for (acc in accounts) {
+                accountRepository.updateBalance(acc.id, 0.0)
+            }
             _messageEffect.emit("All data deleted ($allTxs transactions)")
         }
     }
