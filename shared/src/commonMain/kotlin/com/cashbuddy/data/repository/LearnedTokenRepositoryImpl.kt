@@ -32,10 +32,13 @@ class LearnedTokenRepositoryImpl(
         try {
             val topTokens = queries.getTopSignificant(limit = MAX_CACHE_SIZE.toLong()).executeAsList()
             for (row in topTokens) {
-                cache[row.token] = TokenStats(
+                putIntoCacheWithCap(
                     token = row.token,
-                    transactionCount = row.transaction_count.toInt(),
-                    nonTransactionCount = row.non_transaction_count.toInt()
+                    stats = TokenStats(
+                        token = row.token,
+                        transactionCount = row.transaction_count.toInt(),
+                        nonTransactionCount = row.non_transaction_count.toInt()
+                    )
                 )
             }
             isCachePreloaded = true
@@ -45,11 +48,27 @@ class LearnedTokenRepositoryImpl(
     }
 
     private fun putIntoCacheWithCap(token: String, stats: TokenStats) {
+        // N3: Only cache statistically significant tokens (>=5 observations) to prevent noise from filling slots
+        if (stats.transactionCount + stats.nonTransactionCount < 5) return
+
         if (cache.size >= MAX_CACHE_SIZE && !cache.containsKey(token)) {
-            // Simple eviction: remove any entry to maintain memory cap
-            val firstKey = cache.keys.firstOrNull()
-            if (firstKey != null) {
-                cache.remove(firstKey)
+            // N2: Evict the least observed token instead of an arbitrary hot token
+            var leastUsedKey: String? = null
+            var minObs = Int.MAX_VALUE
+            for ((key, value) in cache) {
+                val totalObs = value.transactionCount + value.nonTransactionCount
+                if (totalObs < minObs) {
+                    minObs = totalObs
+                    leastUsedKey = key
+                    // If we find an item at the minimum threshold (5), evict it immediately
+                    if (minObs <= 5) break
+                }
+            }
+            if (leastUsedKey != null) {
+                cache.remove(leastUsedKey)
+            } else {
+                val fallbackKey = cache.keys.firstOrNull()
+                if (fallbackKey != null) cache.remove(fallbackKey)
             }
         }
         cache[token] = stats
@@ -59,26 +78,7 @@ class LearnedTokenRepositoryImpl(
         if (tokens.isEmpty()) return@withContext
         val now = currentTimeMillis()
 
-        // 1. Update in-memory cache
-        for (token in tokens) {
-            val existing = cache[token]
-            val newStats = if (existing != null) {
-                if (isTransaction) {
-                    existing.copy(transactionCount = existing.transactionCount + 1)
-                } else {
-                    existing.copy(nonTransactionCount = existing.nonTransactionCount + 1)
-                }
-            } else {
-                TokenStats(
-                    token = token,
-                    transactionCount = if (isTransaction) 1 else 0,
-                    nonTransactionCount = if (isTransaction) 0 else 1
-                )
-            }
-            putIntoCacheWithCap(token, newStats)
-        }
-
-        // 2. Persist to database
+        // 1. Persist to database atomically first (single source of truth)
         queries.transaction {
             for (token in tokens) {
                 if (isTransaction) {
@@ -95,6 +95,21 @@ class LearnedTokenRepositoryImpl(
                     )
                 }
             }
+        }
+
+        // 2. Fetch fresh updated stats for recorded tokens from DB and update cache (prevents R5 lost increments)
+        try {
+            val updatedRows = queries.getByTokens(tokens.toList()).executeAsList()
+            for (row in updatedRows) {
+                val stats = TokenStats(
+                    token = row.token,
+                    transactionCount = row.transaction_count.toInt(),
+                    nonTransactionCount = row.non_transaction_count.toInt()
+                )
+                putIntoCacheWithCap(row.token, stats)
+            }
+        } catch (_: Throwable) {
+            // If cache refresh fails, next read will fall back to DB
         }
     }
 
@@ -179,6 +194,7 @@ class LearnedTokenRepositoryImpl(
 
     override suspend fun clear(): Unit = withContext(dispatcher) {
         cache.clear()
+        isCachePreloaded = false
         queries.deleteAll()
     }
 }
