@@ -50,9 +50,10 @@ object DedupEngine {
             }
         }
 
-        // Tier 2: Soft Match via Temporal Window & Amount
+        // Tier 2: Soft Match via Temporal Window & Exact Paise Equality
+        val newPaise = com.cashbuddy.domain.model.Paise.fromRupees(newTx.amount)
         val candidates = existing.filter {
-            abs(it.amount - newTx.amount) < AMOUNT_EPS &&
+            com.cashbuddy.domain.model.Paise.fromRupees(it.amount) == newPaise &&
             abs(it.timestamp - newTx.timestamp) < WINDOW_MS
         }
         if (candidates.isEmpty()) return Decision.Insert

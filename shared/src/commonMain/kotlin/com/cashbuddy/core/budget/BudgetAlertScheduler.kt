@@ -104,16 +104,14 @@ class BudgetAlertScheduler(
 
                 if (shouldAlert) {
                     budgetRepository.markAlerted(budget.id, alertState, now)
-                    if (firedEvents.isEmpty()) {
-                        val event = AlertEvent(
-                            budgetId = budget.id,
-                            category = budget.category,
-                            state = alertState,
-                            message = alertMessage
-                        )
-                        notifier?.sendAlert(event)
-                        firedEvents.add(event)
-                    }
+                    val event = AlertEvent(
+                        budgetId = budget.id,
+                        category = budget.category,
+                        state = alertState,
+                        message = alertMessage
+                    )
+                    notifier?.sendAlert(event)
+                    firedEvents.add(event)
                 }
             }
         }

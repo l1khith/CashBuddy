@@ -32,7 +32,7 @@ class BatchCategorizeUseCase(
             val matchedRule = merchantRuleRepository.findMatch(tx.merchant) ?: continue
             val category = allCategories.find { it.id == matchedRule.categoryId } ?: continue
 
-            val shouldAutoConfirm = tx.amount < autoConfirmThreshold && 1.0f >= minConfidence
+            val shouldAutoConfirm = tx.amount < autoConfirmThreshold
             val newStatus = if (shouldAutoConfirm) TransactionStatus.CONFIRMED else TransactionStatus.PENDING
 
             val updatedTx = tx.copy(
@@ -45,7 +45,6 @@ class BatchCategorizeUseCase(
 
             transactionRepository.update(updatedTx)
             if (shouldAutoConfirm) {
-                transactionRepository.updateStatus(tx.id, TransactionStatus.CONFIRMED)
                 autoConfirmed++
             }
             newlyCategorized++

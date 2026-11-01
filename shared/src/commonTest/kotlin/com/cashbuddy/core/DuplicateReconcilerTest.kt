@@ -98,6 +98,10 @@ class DuplicateReconcilerTest {
             val idx = accounts.indexOfFirst { it.id == id }
             if (idx != -1) accounts[idx] = accounts[idx].copy(balance = balance)
         }
+        override suspend fun applyBalanceDelta(id: Long, delta: Double) {
+            val idx = accounts.indexOfFirst { it.id == id }
+            if (idx != -1) accounts[idx] = accounts[idx].copy(balance = accounts[idx].balance + delta)
+        }
         override suspend fun seedDefaults(currentTimestamp: Long) {}
         override suspend fun deleteById(id: Long) {}
         override fun getCount(): Flow<Long> = flowOf(accounts.size.toLong())

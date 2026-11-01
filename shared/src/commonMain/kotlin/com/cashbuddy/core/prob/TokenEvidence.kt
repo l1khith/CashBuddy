@@ -26,22 +26,38 @@ class TokenEvidenceExtractor(
 ) {
     /**
      * Asynchronously computes [TokenEvidence] for [rawText].
+     * Extracts tokens from the incoming message and requests only those specific tokens
+     * via the L1 in-memory cache and indexed lookup.
      */
     suspend fun extract(rawText: String): TokenEvidence {
-        val significant = learnedTokenRepository.getAllSignificant()
-        return evaluate(rawText, significant)
+        if (rawText.isBlank()) {
+            return TokenEvidence(tokenLogOdds = 0.0, tokenCount = 0, strongestToken = null, strongestLR = 1.0)
+        }
+        val messageTokens = Tokenizer.tokenize(rawText)
+        if (messageTokens.isEmpty()) {
+            return TokenEvidence(tokenLogOdds = 0.0, tokenCount = 0, strongestToken = null, strongestLR = 1.0)
+        }
+        val significant = learnedTokenRepository.getTokenStats(messageTokens)
+        return evaluateWithTokens(messageTokens, significant)
     }
 
     /**
      * Synchronously computes [TokenEvidence] for [rawText].
      */
     fun extractSync(rawText: String): TokenEvidence {
-        val significant = learnedTokenRepository.getAllSignificantSync()
-        return evaluate(rawText, significant)
+        if (rawText.isBlank()) {
+            return TokenEvidence(tokenLogOdds = 0.0, tokenCount = 0, strongestToken = null, strongestLR = 1.0)
+        }
+        val messageTokens = Tokenizer.tokenize(rawText)
+        if (messageTokens.isEmpty()) {
+            return TokenEvidence(tokenLogOdds = 0.0, tokenCount = 0, strongestToken = null, strongestLR = 1.0)
+        }
+        val significant = learnedTokenRepository.getTokenStatsSync(messageTokens)
+        return evaluateWithTokens(messageTokens, significant)
     }
 
-    private fun evaluate(rawText: String, significant: Map<String, TokenStats>): TokenEvidence {
-        if (rawText.isBlank() || significant.isEmpty()) {
+    private fun evaluateWithTokens(tokens: Set<String>, significant: Map<String, TokenStats>): TokenEvidence {
+        if (tokens.isEmpty() || significant.isEmpty()) {
             return TokenEvidence(
                 tokenLogOdds = 0.0,
                 tokenCount = 0,
@@ -50,7 +66,6 @@ class TokenEvidenceExtractor(
             )
         }
 
-        val tokens = Tokenizer.tokenize(rawText)
         var sumLogOdds = 0.0
         var count = 0
         var strongestToken: String? = null

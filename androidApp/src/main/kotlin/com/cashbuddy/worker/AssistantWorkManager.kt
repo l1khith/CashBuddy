@@ -42,12 +42,28 @@ object AssistantWorkManager {
             ExistingPeriodicWorkPolicy.UPDATE,
             weeklyRequest
         )
+
+        // 3. TokenPurgeWorker — Runs weekly on Sunday at 2:00 AM for dictionary garbage collection
+        val purgeDelay = calculateWeeklySundayDelay(
+            targetHour = 2,
+            targetMinute = 0
+        )
+        val purgeRequest = PeriodicWorkRequestBuilder<TokenPurgeWorker>(7, TimeUnit.DAYS)
+            .setInitialDelay(purgeDelay, TimeUnit.MILLISECONDS)
+            .build()
+
+        workManager.enqueueUniquePeriodicWork(
+            TokenPurgeWorker.WORK_NAME,
+            ExistingPeriodicWorkPolicy.UPDATE,
+            purgeRequest
+        )
     }
 
     fun cancelAll(context: Context) {
         val workManager = WorkManager.getInstance(context)
         workManager.cancelUniqueWork(BudgetAlertWorker.WORK_NAME)
         workManager.cancelUniqueWork(WeeklyDigestWorker.WORK_NAME)
+        workManager.cancelUniqueWork(TokenPurgeWorker.WORK_NAME)
     }
 
     private fun calculateInitialDelay(targetHour: Int, targetMinute: Int, daysInterval: Int): Long {

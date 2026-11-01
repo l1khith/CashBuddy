@@ -51,6 +51,10 @@ class AccountRepositoryImpl(
         queries.updateBalance(balance = balance, updated_at = com.cashbuddy.platform.currentTimeMillis(), id = id)
     }
 
+    override suspend fun applyBalanceDelta(id: Long, delta: Double): Unit = withContext(dispatcher) {
+        queries.applyBalanceDelta(delta = delta, updatedAt = com.cashbuddy.platform.currentTimeMillis(), id = id)
+    }
+
     override suspend fun update(account: Account): Unit = withContext(dispatcher) {
         queries.update(
             name = account.name,

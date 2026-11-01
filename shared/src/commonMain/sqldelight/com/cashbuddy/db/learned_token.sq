@@ -19,6 +19,27 @@ getSignificant:
 SELECT * FROM learned_token
 WHERE transaction_count + non_transaction_count >= 5;
 
+getTopSignificant:
+SELECT * FROM learned_token
+WHERE transaction_count + non_transaction_count >= 5
+ORDER BY (transaction_count + non_transaction_count) DESC
+LIMIT :limit;
+
+getByTokens:
+SELECT * FROM learned_token
+WHERE token IN :tokens;
+
+getCount:
+SELECT COUNT(*) FROM learned_token;
+
+purgeOldestLeastUsed:
+DELETE FROM learned_token
+WHERE token IN (
+    SELECT token FROM learned_token
+    ORDER BY (transaction_count + non_transaction_count) ASC, last_updated ASC
+    LIMIT :excess
+);
+
 incrementTransaction:
 INSERT OR REPLACE INTO learned_token (token, transaction_count, non_transaction_count,
                                       first_seen, last_updated)
