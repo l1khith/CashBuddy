@@ -65,7 +65,12 @@ class CoreEnginesTest {
 
     @Test
     fun testScreenshotGooglePay() {
-        val engine = ScreenshotParserEngine()
+        // Zero-Map seeding (post-4a94d73): categories come from learned user rules,
+        // exactly as production loads them into the engine at startup (mirrors
+        // MainActivity's startup learned-rule seeding path).
+        val categoryEngine = CategoryEngine()
+        categoryEngine.loadUserRules(listOf(MerchantRuleEntry(merchant = "Chai Point", category = "Food & Dining")))
+        val engine = ScreenshotParserEngine(categoryEngine)
         val text = """
             Google Pay
             ₹450
@@ -91,7 +96,10 @@ class CoreEnginesTest {
 
     @Test
     fun testScreenshotBmtcBusTicket() {
-        val engine = ScreenshotParserEngine()
+        // Zero-Map seeding (post-4a94d73): learned user rule, as production seeds at startup.
+        val categoryEngine = CategoryEngine()
+        categoryEngine.loadUserRules(listOf(MerchantRuleEntry(merchant = "BMTC", category = "Transportation")))
+        val engine = ScreenshotParserEngine(categoryEngine)
         // Exact OCR text from user's live device logcat!
         val text = """
             S
@@ -186,8 +194,11 @@ class CoreEnginesTest {
         assertEquals(1149.0, tx.amount)
         assertEquals(TransactionType.DEBIT, tx.transactionType)
         assertEquals("Mr Madhu Sudhan Chandra Reddy", tx.merchant)
-        // Generic content-first detection: "UPI transaction ID" header -> extracts "UPI"
-        assertEquals("UPI", tx.appName)
+        // Committed guard (ScreenshotParserEngine.detectAppName :100): a generic
+        // "UPI transaction ID" header is deliberately NOT treated as an app name.
+        // Null is correct — app identity only skips a +0.05 confidence bump; labeling
+        // "UPI" as an app would mislabel identity and pollute grouping.
+        assertNull(tx.appName)
         assertEquals("666039066385", tx.utrOrRef)
     }
 

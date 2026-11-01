@@ -151,8 +151,20 @@ class EvidenceExtractor(
         )
     }
 
+    // OS-framework namespaces are platform hygiene, not merchant taxonomy: brand
+    // extraction from e.g. "com.android.systemui" would yield the phantom brand
+    // "Systemui" and wrongly set the merchant-package feature. The denylist in
+    // isMerchantPackageHint covers OS namespaces ONLY — merchant gating itself
+    // stays zero-allowlist (non-negotiable #8).
+
     private fun isMerchantPackageHint(pkg: String): Boolean {
         if (pkg.isBlank()) return false
+        val p = pkg.lowercase()
+        // OS-framework namespaces are never merchants. NOTE: no "$it." string
+        // templates here — "com.android." as a member already carries its dot,
+        // and template concatenation would yield "com.android..".
+        if (p == "android" || p.startsWith("android.")) return false
+        if (p.startsWith("com.android.")) return false
         val brand = DynamicMerchantResolver.extractBrandFromPackage(pkg)
         return !brand.isNullOrBlank() && brand.length >= 3
     }

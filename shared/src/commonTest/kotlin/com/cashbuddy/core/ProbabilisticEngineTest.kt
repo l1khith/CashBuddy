@@ -239,10 +239,16 @@ class ProbabilisticEngineTest {
 
     @Test
     fun testHeuristicCategorizer_VpaFoodReturnsHighConfidence() {
-        val match = com.cashbuddy.core.prob.HeuristicCategorizer.matchVpa("swiggy.food@icici")
-        assertNotNull(match)
-        assertEquals("Food & Dining", match.category)
-        assertTrue(match.confidence >= 0.85f)
+        // Zero-Map contract (HeuristicCategorizer.kt, post-4a94d73): both tiers are
+        // deliberately void of hardcoded mappings — VPA handles must not mint categories
+        // and clock hours must not hallucinate them. Unconfirmed merchants enter Review
+        // as Unknown for user confirmation (non-negotiable #6, human-in-the-loop).
+        val vpaMatch = com.cashbuddy.core.prob.HeuristicCategorizer.matchVpa("swiggy.food@icici")
+        assertNull(vpaMatch, "matchVpa must never hardcode a VPA->category map in Zero-Map mode")
+        val contextMatch = com.cashbuddy.core.prob.HeuristicCategorizer.matchContext(
+            timestamp = 1727500000000L, amount = 450.0
+        )
+        assertNull(contextMatch, "matchContext must never hallucinate a category from clock time")
     }
 
     @Test
@@ -296,6 +302,11 @@ class ProbabilisticEngineTest {
 
     @Test
     fun testScreenshotParserEngine_ParsesImage3MinimalUpiReceipt() {
+        // Zero-Map seeding (post-4a94d73): learned user rule, as production seeds at startup.
+        val categoryEngine = com.cashbuddy.core.CategoryEngine()
+        categoryEngine.loadUserRules(
+            listOf(com.cashbuddy.core.MerchantRuleEntry(merchant = "BMTC", category = "Transportation"))
+        )
         val ocrText = """
             ₹18
             Paid to
@@ -305,14 +316,16 @@ class ProbabilisticEngineTest {
             POWERED BY UPI
         """.trimIndent()
 
-        val engine = ScreenshotParserEngine()
+        val engine = com.cashbuddy.core.ScreenshotParserEngine(categoryEngine)
         val result = engine.parse(ocrText)
 
         assertNotNull(result, "Expected Image 3 receipt to be parsable")
         assertEquals(18.0, result.amount)
         assertEquals("BMTC", result.merchant)
         assertEquals("Transportation", result.category)
-        assertEquals("UPI", result.appName)
+        // detectAppName :112 guard deliberately refuses the generic "POWERED BY UPI"
+        // footer as an app name — null is the committed Zero-Map behavior.
+        assertNull(result.appName)
         assertEquals(com.cashbuddy.core.TransactionType.DEBIT, result.transactionType)
         assertTrue(result.confidence >= 0.85f)
     }
@@ -320,6 +333,12 @@ class ProbabilisticEngineTest {
     @Test
     fun testScreenshotParserEngine_ParsesImage3WhenRupeeSymbolDroppedByOcr() {
         // ML Kit Latin sometimes misses the ₹ glyph and outputs only digits '18'
+        // Zero-Map seeding (post-4a94d73): learned user rule, as production seeds at startup.
+        val categoryEngine = com.cashbuddy.core.CategoryEngine()
+        categoryEngine.loadUserRules(
+            listOf(com.cashbuddy.core.MerchantRuleEntry(merchant = "BMTC", category = "Transportation"))
+        )
+        val engine = com.cashbuddy.core.ScreenshotParserEngine(categoryEngine)
         val ocrText = """
             18
             Paid to
@@ -329,7 +348,6 @@ class ProbabilisticEngineTest {
             POWERED BY UPI
         """.trimIndent()
 
-        val engine = ScreenshotParserEngine()
         val result = engine.parse(ocrText)
 
         assertNotNull(result, "Expected Image 3 receipt with dropped ₹ to be parsable")

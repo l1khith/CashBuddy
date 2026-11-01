@@ -102,7 +102,8 @@ val appModule = module {
             settingsRepo = get(),
             budgetAlertScheduler = getOrNull(),
             recurringPatternRepo = getOrNull(),
-            anomalyNotifier = getOrNull()
+            anomalyNotifier = getOrNull(),
+            ingestStore = com.cashbuddy.data.repository.TransactionIngestStore(database = get(), dispatcher = get())
         )
     }
 
@@ -180,7 +181,7 @@ val appModule = module {
             budgetEngine = get()
         )
     }
-    viewModel { SettingsViewModel(get(), get(), get(), get(), get(), getOrNull(), getOrNull(), getOrNull(), getOrNull(), getOrNull()) }
+    viewModel { SettingsViewModel(get(), get(), get(), get(), get(), getOrNull(), getOrNull(), getOrNull(), getOrNull(), getOrNull(), getOrNull()) }
     viewModel { PersonalizationViewModel(get(), get(), get(), get(), getOrNull(), getOrNull()) }
     viewModelOf(::AddTransactionViewModel)
     viewModel { DebugLogViewModel(get(), get(), getOrNull()) }
