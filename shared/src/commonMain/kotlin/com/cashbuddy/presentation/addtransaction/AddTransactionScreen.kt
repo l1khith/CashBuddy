@@ -22,6 +22,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Checkbox
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -84,6 +86,8 @@ fun AddTransactionScreen(
     var selectedCategoryId by rememberSaveable { mutableStateOf<Long?>(null) }
     var selectedAccountId by rememberSaveable { mutableStateOf<Long?>(null) }
     var notes by rememberSaveable { mutableStateOf("") }
+    var paymentMethod by rememberSaveable { mutableStateOf("UPI") }
+    var isLoanGiven by rememberSaveable { mutableStateOf(false) }
     var hasInitializedPrefill by rememberSaveable { mutableStateOf(false) }
     var showDiscardDialog by rememberSaveable { mutableStateOf(false) }
 
@@ -364,37 +368,89 @@ fun AddTransactionScreen(
                     }
                 }
 
-                // Category Selection
-                Text(
-                    text = "Category",
-                    style = CashBuddyTypography.titleMedium,
-                    fontWeight = FontWeight.SemiBold
-                )
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .horizontalScroll(rememberScrollState()),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    state.categories.forEach { cat ->
-                        val isSelected = cat.id == selectedCategoryId
-                        val catColor = getCategoryColor(cat.name)
-                        Box(
-                            modifier = Modifier
-                                .clip(RadiusMedium)
-                                .background(
-                                    if (isSelected) catColor.copy(alpha = 0.25f) else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                // Conditional Expense Fields: Category, Payment Method, Loan Checkbox
+                if (selectedType == TransactionType.DEBIT) {
+                    // Category Selection
+                    Text(
+                        text = "Category",
+                        style = CashBuddyTypography.titleMedium,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .horizontalScroll(rememberScrollState()),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        state.categories.forEach { cat ->
+                            val isSelected = cat.id == selectedCategoryId
+                            val catColor = getCategoryColor(cat.name)
+                            Box(
+                                modifier = Modifier
+                                    .clip(RadiusMedium)
+                                    .background(
+                                        if (isSelected) catColor.copy(alpha = 0.25f) else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                                    )
+                                    .clickable { selectedCategoryId = cat.id }
+                                    .padding(horizontal = 14.dp, vertical = 8.dp)
+                            ) {
+                                Text(
+                                    text = cat.name,
+                                    color = if (isSelected) catColor else MaterialTheme.colorScheme.onSurface,
+                                    style = CashBuddyTypography.labelMedium,
+                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
                                 )
-                                .clickable { selectedCategoryId = cat.id }
-                                .padding(horizontal = 14.dp, vertical = 8.dp)
-                        ) {
-                            Text(
-                                text = cat.name,
-                                color = if (isSelected) catColor else MaterialTheme.colorScheme.onSurface,
-                                style = CashBuddyTypography.labelMedium,
-                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
+                            }
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(4.dp))
+
+                    // Payment Method FilterChips
+                    Text(
+                        text = "Payment Method",
+                        style = CashBuddyTypography.titleMedium,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        listOf("UPI", "Card", "Cash").forEach { method ->
+                            val isSelected = paymentMethod.equals(method, ignoreCase = true)
+                            FilterChip(
+                                selected = isSelected,
+                                onClick = { paymentMethod = method },
+                                label = {
+                                    Text(
+                                        text = method,
+                                        style = CashBuddyTypography.labelMedium,
+                                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
+                                    )
+                                }
                             )
                         }
+                    }
+
+                    Spacer(modifier = Modifier.height(4.dp))
+
+                    // Loan Checkbox
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { isLoanGiven = !isLoanGiven }
+                    ) {
+                        Checkbox(
+                            checked = isLoanGiven,
+                            onCheckedChange = { isLoanGiven = it }
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text(
+                            text = "This is a loan I expect back",
+                            style = CashBuddyTypography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
                     }
                 }
 
@@ -448,20 +504,37 @@ fun AddTransactionScreen(
 
                 // Save Button
                 val parsedAmount = amountString.toDoubleOrNull() ?: 0.0
-                val isSaveEnabled = parsedAmount > 0.0
+                // accounts.id is FK-enforced (PRAGMA foreign_keys = ON); never save with a
+                // nonexistent id. When nothing is selected, auto-resolve the first account;
+                // save stays disabled until a real account can be resolved.
+                val effectiveAccountId = selectedAccountId ?: state.accounts.firstOrNull()?.id
+                val isSaveEnabled = parsedAmount > 0.0 && effectiveAccountId != null
 
                 Button(
                     onClick = {
-                        val catId = selectedCategoryId ?: 1L
-                        val accId = selectedAccountId ?: 1L
-                        if (parsedAmount > 0.0) {
+                        // Income must never inherit a stale EXPENSE selection: selectedCategoryId
+                        // is only set from the Expense-mode category chips, so for CREDIT it is
+                        // dead weight that can miscategorize income. The '?: 1L' tail only exists
+                        // to satisfy the NOT NULL column when the category list is empty (seed
+                        // guarantees an INCOME category, so the first two lookups normally win).
+                        val effectiveCatId = if (selectedType == TransactionType.CREDIT) {
+                            state.categories.find { it.type == com.cashbuddy.domain.model.CategoryType.INCOME }?.id
+                                ?: state.categories.find { it.name.contains("Income", ignoreCase = true) }?.id
+                                ?: 1L
+                        } else {
+                            selectedCategoryId ?: 1L
+                        }
+                        val accId = effectiveAccountId
+                        if (parsedAmount > 0.0 && accId != null) {
                             viewModel.saveTransaction(
                                 amount = parsedAmount,
                                 type = selectedType,
-                                merchant = merchant.ifBlank { "Manual Entry" },
-                                categoryId = catId,
+                                merchant = merchant.ifBlank { if (selectedType == TransactionType.CREDIT) "Income" else "Manual Entry" },
+                                categoryId = effectiveCatId,
                                 accountId = accId,
-                                notes = notes.ifBlank { null }
+                                notes = notes.ifBlank { null },
+                                paymentMethod = if (selectedType == TransactionType.DEBIT) paymentMethod else "UPI",
+                                isLoanGiven = if (selectedType == TransactionType.DEBIT) isLoanGiven else false
                             )
                         }
                     },

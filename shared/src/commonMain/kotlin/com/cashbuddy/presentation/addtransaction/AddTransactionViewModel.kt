@@ -232,7 +232,9 @@ class AddTransactionViewModel(
         merchant: String,
         categoryId: Long,
         accountId: Long,
-        notes: String?
+        notes: String?,
+        paymentMethod: String = "UPI",
+        isLoanGiven: Boolean = false
     ) {
         if (isSaving) return
         isSaving = true
@@ -269,7 +271,9 @@ class AddTransactionViewModel(
                     timestamp = now,
                     createdAt = now,
                     updatedAt = now,
-                    utr = utr
+                    utr = utr,
+                    paymentMethod = paymentMethod,
+                    isLoanGiven = isLoanGiven
                 )
 
                 // Learn rule for future auto-categorization

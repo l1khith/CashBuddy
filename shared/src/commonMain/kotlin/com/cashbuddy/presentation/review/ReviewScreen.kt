@@ -32,6 +32,7 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FilterChip
@@ -249,6 +250,12 @@ fun ReviewScreen(
                             onEdit = { editingTransactionId = tx.id },
                             onCategoryChange = { newCatId ->
                                 viewModel.processIntent(ReviewIntent.ModifyCategory(tx.id, newCatId))
+                            },
+                            onPaymentMethodChange = { method ->
+                                viewModel.updatePaymentMethod(tx.id, method)
+                            },
+                            onLoanStatusChange = { isLoan ->
+                                viewModel.toggleLoanStatus(tx.id, isLoan)
                             }
                         )
                     }
@@ -334,7 +341,9 @@ private fun PendingReviewCard(
     onConfirm: () -> Unit,
     onReject: () -> Unit,
     onEdit: () -> Unit,
-    onCategoryChange: (Long) -> Unit
+    onCategoryChange: (Long) -> Unit,
+    onPaymentMethodChange: (String) -> Unit,
+    onLoanStatusChange: (Boolean) -> Unit
 ) {
     val isDebit = transaction.type == TransactionType.DEBIT
     val prefix = if (isDebit) "-₹" else "+₹"
@@ -436,6 +445,62 @@ private fun PendingReviewCard(
                             fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
                         )
                     }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(10.dp))
+
+            // Payment Method Quick-Chip Selector (DEBIT only — income has no payment
+            // method/loan semantics: the pipeline defaults UPI for CREDIT and the
+            // loan math only applies to type = 'DEBIT').
+            if (isDebit) {
+                Spacer(modifier = Modifier.height(10.dp))
+
+                Text(
+                    text = "Payment Method:",
+                    style = CashBuddyTypography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Spacer(modifier = Modifier.height(6.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    listOf("UPI", "Card", "Cash").forEach { method ->
+                        val isSelected = transaction.paymentMethod.equals(method, ignoreCase = true)
+                        FilterChip(
+                            selected = isSelected,
+                            onClick = { onPaymentMethodChange(method) },
+                            label = {
+                                Text(
+                                    text = method,
+                                    style = CashBuddyTypography.labelMedium,
+                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
+                                )
+                            }
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                // Loan Checkbox
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { onLoanStatusChange(!transaction.isLoanGiven) }
+                ) {
+                    Checkbox(
+                        checked = transaction.isLoanGiven,
+                        onCheckedChange = { onLoanStatusChange(it) }
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text(
+                        text = "This is a loan I expect back",
+                        style = CashBuddyTypography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
                 }
             }
 
