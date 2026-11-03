@@ -78,7 +78,10 @@ kotlin {
             implementation(libs.sqlcipher)
 
             implementation(libs.compose.uiToolingPreview)
-            implementation(libs.compose.uiTooling)
+            // NOTE: ui-tooling must NOT be an androidMain implementation dep — the AAR
+            // carries an exported androidx.compose.ui.tooling.PreviewActivity that leaks
+            // into the RELEASE manifest (MobSec HIGH/CWE-1188-style finding). It lives in
+            // androidApp's debugImplementation only.
         }
         iosMain.dependencies {
             implementation(libs.sqldelight.native)
