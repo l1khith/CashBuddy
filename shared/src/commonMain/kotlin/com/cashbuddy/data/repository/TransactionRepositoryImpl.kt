@@ -67,7 +67,7 @@ class TransactionRepositoryImpl(
         }.asFlow().mapToList(dispatcher)
 
     override fun getCategoryBreakdown(start: Long, end: Long): Flow<List<CategoryBreakdown>> =
-        queries.getCategoryBreakdown(start, end) { categoryName, categoryColor, categoryIcon, totalAmount, transactionCount, averageAmount ->
+        queries.getCategoryBreakdown(startTime = start, endTime = end) { categoryName, categoryColor, categoryIcon, totalAmount, transactionCount, averageAmount ->
             CategoryBreakdown(
                 categoryName = categoryName,
                 categoryColor = categoryColor,
@@ -95,7 +95,9 @@ class TransactionRepositoryImpl(
             created_at = transaction.createdAt,
             updated_at = transaction.updatedAt,
             is_merged = if (transaction.isMerged) 1L else 0L,
-            merged_into_id = transaction.mergedIntoId
+            merged_into_id = transaction.mergedIntoId,
+            payment_method = transaction.paymentMethod,
+            is_loan_given = if (transaction.isLoanGiven) 1L else 0L
         )
         queries.lastInsertRowId().executeAsOne()
     }
@@ -117,6 +119,8 @@ class TransactionRepositoryImpl(
                 raw_text = transaction.rawText,
                 confidence = transaction.confidence.toDouble(),
                 status = transaction.status.name,
+                payment_method = transaction.paymentMethod,
+                is_loan_given = if (transaction.isLoanGiven) 1L else 0L,
                 updated_at = com.cashbuddy.platform.currentTimeMillis(),
                 id = transaction.id
             )
@@ -214,6 +218,28 @@ class TransactionRepositoryImpl(
             startTime = startTime,
             endTime = endTime
         ).executeAsOne()
+    }
+
+    override suspend fun sumActualSpent(startTime: Long, endTime: Long): Double = withContext(dispatcher) {
+        queries.sumActualSpent(startTime = startTime, endTime = endTime).executeAsOne()
+    }
+
+    override suspend fun sumCardOutstanding(startTime: Long, endTime: Long): Double = withContext(dispatcher) {
+        queries.sumCardOutstanding(startTime = startTime, endTime = endTime).executeAsOne()
+    }
+
+    override suspend fun sumLentOut(startTime: Long, endTime: Long): Double = withContext(dispatcher) {
+        queries.sumLentOut(startTime = startTime, endTime = endTime).executeAsOne()
+    }
+
+    override suspend fun updatePaymentMethod(id: Long, paymentMethod: String): Unit = withContext(dispatcher) {
+        val now = com.cashbuddy.platform.currentTimeMillis()
+        queries.updatePaymentMethod(payment_method = paymentMethod, updated_at = now, id = id)
+    }
+
+    override suspend fun updateLoanStatus(id: Long, isLoanGiven: Boolean): Unit = withContext(dispatcher) {
+        val now = com.cashbuddy.platform.currentTimeMillis()
+        queries.updateLoanStatus(is_loan_given = if (isLoanGiven) 1L else 0L, updated_at = now, id = id)
     }
 
     override fun getByCategoryAndPeriod(category: String, startTime: Long, endTime: Long): Flow<List<Transaction>> =
@@ -325,6 +351,8 @@ class TransactionRepositoryImpl(
         updatedAt: Long,
         isMerged: Long,
         mergedIntoId: Long?,
+        paymentMethod: String,
+        isLoanGiven: Long,
         categoryName: String?,
         categoryColor: String?,
         categoryIcon: String?,
@@ -349,6 +377,8 @@ class TransactionRepositoryImpl(
             updatedAt = updatedAt,
             isMerged = isMerged == 1L,
             mergedIntoId = mergedIntoId,
+            paymentMethod = paymentMethod,
+            isLoanGiven = isLoanGiven == 1L,
             categoryName = categoryName,
             categoryColor = categoryColor,
             categoryIcon = categoryIcon,

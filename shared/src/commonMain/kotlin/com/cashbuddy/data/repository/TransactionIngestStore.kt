@@ -47,7 +47,9 @@ class TransactionIngestStore(
                 created_at = transaction.createdAt,
                 updated_at = transaction.updatedAt,
                 is_merged = if (transaction.isMerged) 1L else 0L,
-                merged_into_id = transaction.mergedIntoId
+                merged_into_id = transaction.mergedIntoId,
+                payment_method = transaction.paymentMethod,
+                is_loan_given = if (transaction.isLoanGiven) 1L else 0L
             )
             val insertedId = database.transactionsQueries.lastInsertRowId().executeAsOne()
             // Arg order per raw_messages.sq `updateResultingTx`: (resulting_tx_id, id)
