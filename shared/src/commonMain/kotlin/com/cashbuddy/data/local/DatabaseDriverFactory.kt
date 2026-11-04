@@ -219,6 +219,8 @@ fun ensureSchema(driver: SqlDriver) {
             updated_at INTEGER NOT NULL,
             is_merged INTEGER NOT NULL DEFAULT 0,
             merged_into_id INTEGER,
+            payment_method TEXT NOT NULL DEFAULT 'UPI',
+            is_loan_given INTEGER NOT NULL DEFAULT 0,
             FOREIGN KEY (category_id) REFERENCES categories(id),
             FOREIGN KEY (account_id) REFERENCES accounts(id)
         )
@@ -366,6 +368,8 @@ fun ensureSchema(driver: SqlDriver) {
 private fun runMigrations(driver: SqlDriver) {
     executeQuietly(driver, "ALTER TABLE transactions ADD COLUMN is_merged INTEGER NOT NULL DEFAULT 0;")
     executeQuietly(driver, "ALTER TABLE transactions ADD COLUMN merged_into_id INTEGER;")
+    executeQuietly(driver, "ALTER TABLE transactions ADD COLUMN payment_method TEXT NOT NULL DEFAULT 'UPI';")
+    executeQuietly(driver, "ALTER TABLE transactions ADD COLUMN is_loan_given INTEGER NOT NULL DEFAULT 0;")
     executeQuietly(driver, """
         CREATE TABLE IF NOT EXISTS merge_log (
             id INTEGER PRIMARY KEY AUTOINCREMENT,

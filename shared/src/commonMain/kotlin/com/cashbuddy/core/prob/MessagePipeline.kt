@@ -235,7 +235,9 @@ class MessagePipeline(
                                     notes = note,
                                     timestamp = raw.timestamp,
                                     createdAt = raw.timestamp,
-                                    updatedAt = raw.timestamp
+                                    updatedAt = raw.timestamp,
+                                    paymentMethod = "UPI",
+                                    isLoanGiven = false
                                 )
 
                                 val insertedId = if (ingestStore != null) {

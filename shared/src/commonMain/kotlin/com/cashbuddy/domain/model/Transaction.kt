@@ -33,6 +33,8 @@ data class Transaction(
     val updatedAt: Long = timestamp,
     val isMerged: Boolean = false,
     val mergedIntoId: Long? = null,
+    val paymentMethod: String = "UPI",
+    val isLoanGiven: Boolean = false,
     val categoryName: String? = null,
     val categoryColor: String? = null,
     val categoryIcon: String? = null,
