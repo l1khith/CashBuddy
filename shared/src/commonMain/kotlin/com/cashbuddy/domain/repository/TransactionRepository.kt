@@ -52,6 +52,11 @@ interface TransactionRepository {
     suspend fun sumByCategory(category: String, startTime: Long, endTime: Long): Double
     fun getByCategoryAndPeriod(category: String, startTime: Long, endTime: Long): Flow<List<Transaction>>
     suspend fun sumAll(startTime: Long, endTime: Long, type: TransactionType = TransactionType.DEBIT): Double = 0.0
+    suspend fun sumActualSpent(startTime: Long, endTime: Long): Double = 0.0
+    suspend fun sumCardOutstanding(startTime: Long, endTime: Long): Double = 0.0
+    suspend fun sumLentOut(startTime: Long, endTime: Long): Double = 0.0
+    suspend fun updatePaymentMethod(id: Long, paymentMethod: String) {}
+    suspend fun updateLoanStatus(id: Long, isLoanGiven: Boolean) {}
     suspend fun getAmountsAtMerchant(merchant: String, fromTimestamp: Long, toTimestamp: Long): List<Double> = emptyList()
     suspend fun updateNotes(id: Long, notes: String) {}
     suspend fun findByUtr(utr: String): Transaction? = null

@@ -60,6 +60,24 @@ class ReviewViewModel(
         return count >= 3
     }
 
+    fun updatePaymentMethod(txId: Long, method: String) {
+        viewModelScope.launch {
+            val tx = _uiState.value.transactions.find { it.id == txId } ?: return@launch
+            val updatedTx = tx.copy(paymentMethod = method)
+            transactionRepository.updatePaymentMethod(txId, method)
+            notifyAndSync(ReviewResult.TransactionUpdated(updatedTx))
+        }
+    }
+
+    fun toggleLoanStatus(txId: Long, isLoan: Boolean) {
+        viewModelScope.launch {
+            val tx = _uiState.value.transactions.find { it.id == txId } ?: return@launch
+            val updatedTx = tx.copy(isLoanGiven = isLoan)
+            transactionRepository.updateLoanStatus(txId, isLoan)
+            notifyAndSync(ReviewResult.TransactionUpdated(updatedTx))
+        }
+    }
+
     init {
         processIntent(ReviewIntent.LoadPending)
     }
@@ -82,6 +100,19 @@ class ReviewViewModel(
         }
     }
 
+    /**
+     * Single mutation-exit path: broadcasts the data change (platform listeners -> widgets
+     * and stats refresh) and folds the domain result into UI state. Every DB mutation in
+     * this ViewModel must end here so no path can forget the notify (the bug that bit
+     * updateAndConfirmTransaction). filterConfidence is UI-only -> notify = false.
+     */
+    private fun notifyAndSync(result: ReviewResult, notify: Boolean = true) {
+        if (notify) {
+            com.cashbuddy.platform.notifyTransactionsUpdated()
+        }
+        _uiState.value = reducer.reduce(_uiState.value, result)
+    }
+
     private fun loadPending() {
         viewModelScope.launch {
             combine(
@@ -90,7 +121,7 @@ class ReviewViewModel(
             ) { pendingTxs, categories ->
                 ReviewResult.Loaded(pendingTxs, categories)
             }.collect { result ->
-                _uiState.value = reducer.reduce(_uiState.value, result)
+                notifyAndSync(result, notify = false)
             }
         }
     }
@@ -98,8 +129,7 @@ class ReviewViewModel(
     private fun confirmTransaction(transactionId: Long) {
         viewModelScope.launch {
             confirmTransactionUseCase(transactionId)
-            com.cashbuddy.platform.notifyTransactionsUpdated()
-            _uiState.value = reducer.reduce(_uiState.value, ReviewResult.TransactionConfirmed(transactionId))
+            notifyAndSync(ReviewResult.TransactionConfirmed(transactionId))
             _effects.emit(ReviewEffect.ShowSnackbar("Transaction confirmed"))
         }
     }
@@ -107,8 +137,7 @@ class ReviewViewModel(
     private fun rejectTransaction(transactionId: Long) {
         viewModelScope.launch {
             rejectTransactionUseCase(transactionId)
-            com.cashbuddy.platform.notifyTransactionsUpdated()
-            _uiState.value = reducer.reduce(_uiState.value, ReviewResult.TransactionRejected(transactionId))
+            notifyAndSync(ReviewResult.TransactionRejected(transactionId))
             _effects.emit(ReviewEffect.ShowSnackbar("Transaction discarded"))
         }
     }
@@ -128,8 +157,7 @@ class ReviewViewModel(
                 oldCategoryName = oldCategoryName,
                 newCategoryName = newCategory?.name
             )
-            com.cashbuddy.platform.notifyTransactionsUpdated()
-            _uiState.value = reducer.reduce(_uiState.value, ReviewResult.CategoryModified(transactionId, newCategoryId))
+            notifyAndSync(ReviewResult.CategoryModified(transactionId, newCategoryId))
         }
     }
 
@@ -143,8 +171,7 @@ class ReviewViewModel(
             highConfidence.forEach { tx ->
                 confirmTransactionUseCase(tx.id)
             }
-            com.cashbuddy.platform.notifyTransactionsUpdated()
-            _uiState.value = reducer.reduce(_uiState.value, ReviewResult.AllHighConfidenceConfirmed)
+            notifyAndSync(ReviewResult.AllHighConfidenceConfirmed)
             _effects.emit(ReviewEffect.ShowSnackbar("Confirmed ${highConfidence.size} high-confidence transactions"))
         }
     }
@@ -155,30 +182,7 @@ class ReviewViewModel(
         type: TransactionType,
         merchant: String,
         categoryId: Long
-    ) {
-        viewModelScope.launch {
-            val tx = _uiState.value.transactions.find { it.id == transactionId } ?: return@launch
-            val oldCategoryName = tx.categoryName
-            val newCategory = _uiState.value.allCategories.find { it.id == categoryId }
-            val updatedTx = tx.copy(
-                amount = amount,
-                type = type,
-                merchant = merchant.trim().ifBlank { "Unknown Merchant" },
-                categoryId = categoryId,
-                categoryName = newCategory?.name,
-                categoryColor = newCategory?.color,
-                status = TransactionStatus.PENDING
-            )
-            modifyTransactionUseCase(
-                transaction = updatedTx,
-                oldCategoryName = oldCategoryName,
-                newCategoryName = newCategory?.name
-            )
-            com.cashbuddy.platform.notifyTransactionsUpdated()
-            _uiState.value = reducer.reduce(_uiState.value, ReviewResult.TransactionUpdated(updatedTx))
-            _effects.emit(ReviewEffect.ShowSnackbar("Pending transaction updated"))
-        }
-    }
+    ) = applyModification(transactionId, amount, type, merchant, categoryId, TransactionStatus.PENDING)
 
     private fun updateAndConfirmTransaction(
         transactionId: Long,
@@ -186,6 +190,16 @@ class ReviewViewModel(
         type: TransactionType,
         merchant: String,
         categoryId: Long
+    ) = applyModification(transactionId, amount, type, merchant, categoryId, TransactionStatus.CONFIRMED)
+
+    /** Shared body of the Review edit dialog's two flows: edit fields, keep pending, or auto-confirm. */
+    private fun applyModification(
+        transactionId: Long,
+        amount: Double,
+        type: TransactionType,
+        merchant: String,
+        categoryId: Long,
+        newStatus: TransactionStatus
     ) {
         viewModelScope.launch {
             val tx = _uiState.value.transactions.find { it.id == transactionId } ?: return@launch
@@ -198,15 +212,22 @@ class ReviewViewModel(
                 categoryId = categoryId,
                 categoryName = newCategory?.name,
                 categoryColor = newCategory?.color,
-                status = TransactionStatus.CONFIRMED
+                status = newStatus
             )
             modifyTransactionUseCase(
                 transaction = updatedTx,
                 oldCategoryName = oldCategoryName,
                 newCategoryName = newCategory?.name
             )
-            _uiState.value = reducer.reduce(_uiState.value, ReviewResult.TransactionConfirmed(transactionId))
-            _effects.emit(ReviewEffect.ShowSnackbar("Transaction updated and confirmed"))
+            val confirmed = newStatus == TransactionStatus.CONFIRMED
+            notifyAndSync(
+                if (confirmed) ReviewResult.TransactionConfirmed(transactionId)
+                else ReviewResult.TransactionUpdated(updatedTx)
+            )
+            _effects.emit(
+                if (confirmed) ReviewEffect.ShowSnackbar("Transaction updated and confirmed")
+                else ReviewEffect.ShowSnackbar("Pending transaction updated")
+            )
         }
     }
 }

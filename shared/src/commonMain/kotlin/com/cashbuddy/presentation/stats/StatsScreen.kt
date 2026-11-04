@@ -150,7 +150,7 @@ fun StatsContent(
                                     )
                                     Spacer(modifier = Modifier.height(2.dp))
                                     Text(
-                                        text = "₹${formatCurrency(state.totalExpense)}",
+                                        text = "₹${formatCurrency(state.actualSpent)}",
                                         style = CashBuddyTypography.titleLarge,
                                         fontWeight = FontWeight.Bold,
                                         color = ExpenseCrimson
@@ -169,6 +169,51 @@ fun StatsContent(
                                         fontWeight = FontWeight.Bold,
                                         color = IncomeEmerald
                                     )
+                                }
+                            }
+
+                            if (state.cardOutstanding > 0.0 || state.lentOut > 0.0) {
+                                Spacer(modifier = Modifier.height(12.dp))
+                                if (state.cardOutstanding > 0.0) {
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Text(
+                                            text = "Outstanding on Cards",
+                                            style = CashBuddyTypography.bodySmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                        Text(
+                                            text = "₹${formatCurrency(state.cardOutstanding)}",
+                                            style = CashBuddyTypography.bodyMedium,
+                                            fontWeight = FontWeight.SemiBold,
+                                            color = MaterialTheme.colorScheme.onSurface
+                                        )
+                                    }
+                                }
+                                if (state.lentOut > 0.0) {
+                                    if (state.cardOutstanding > 0.0) {
+                                        Spacer(modifier = Modifier.height(6.dp))
+                                    }
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Text(
+                                            text = "Lent Out (To Receive)",
+                                            style = CashBuddyTypography.bodySmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                        Text(
+                                            text = "₹${formatCurrency(state.lentOut)}",
+                                            style = CashBuddyTypography.bodyMedium,
+                                            fontWeight = FontWeight.SemiBold,
+                                            color = MaterialTheme.colorScheme.onSurface
+                                        )
+                                    }
                                 }
                             }
                         }

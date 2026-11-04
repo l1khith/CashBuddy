@@ -145,9 +145,17 @@ fun TransactionCard(
                     overflow = TextOverflow.Ellipsis
                 )
                 Spacer(modifier = Modifier.height(2.dp))
+                val extraTag = buildString {
+                    if (transaction.paymentMethod.isNotBlank() && !transaction.paymentMethod.equals("UPI", ignoreCase = true)) {
+                        append(" • ${transaction.paymentMethod}")
+                    }
+                    if (transaction.isLoanGiven) {
+                        append(" • Loan")
+                    }
+                }
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
-                        text = "$categoryName • ${formatTimestamp(transaction.timestamp)}",
+                        text = "$categoryName • ${formatTimestamp(transaction.timestamp)}$extraTag",
                         style = CashBuddyTypography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         maxLines = 1,

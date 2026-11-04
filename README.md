@@ -1,116 +1,172 @@
-# CashBuddy
+<div align="center">
 
-**CashBuddy** is a 100% offline, privacy-first personal finance tracker built with **Kotlin Multiplatform (KMP)** and **Compose Multiplatform**.
+<img src="play_store_assets/app_icon_512x512.png" width="128" height="128" alt="CashBuddy App Icon" />
 
-It captures, categorizes, and tracks expenses and income across all Indian banks and UPI applications through a reliable three-layer intake system—with **zero SMS permissions**, **zero network permissions**, and **hardware-backed AES-256 database encryption**.
+# CashBuddy 💸
 
----
+> **The 100% Offline, Privacy-First Finance Tracker for India.**
 
-## Key Features
+[![Kotlin Multiplatform](https://img.shields.io/badge/Kotlin_Multiplatform-2.2.1-7F52FF?logo=kotlin&logoColor=white)](https://kotlinlang.org/docs/multiplatform.html)
+[![Compose Multiplatform](https://img.shields.io/badge/Compose_Multiplatform-1.7.3-4285F4?logo=jetpackcompose&logoColor=white)](https://www.jetbrains.com/lp/compose-multiplatform/)
+[![Zero Network](https://img.shields.io/badge/Network_Permission-ZERO-success?logo=adguard&logoColor=white)](#-the-pitch-why-cashbuddy)
+[![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
+[![Platform](https://img.shields.io/badge/Platform-Android-green?logo=android&logoColor=white)](#-building-the-app)
+[![Encryption](https://img.shields.io/badge/Database-SQLCipher_AES--256-orange?logo=sqlite&logoColor=white)](#️-tech-stack)
 
-- **100% Offline & Private**: Zero `INTERNET` permission in production. Your financial data never leaves your device.
-- **Zero SMS Permissions**: Fully compliant with Google Play Store policies. Uses `BIND_NOTIFICATION_LISTENER_SERVICE` exclusively.
-- **Pure Kotlin Multiplatform Core**: Built with 100% pure Kotlin (`shared/commonMain`). Zero JNI/NDK dependencies, zero native crashes, instant builds, and a tiny APK size (<15 MB).
-- **3-Layer Transaction Capture**:
-  1. **Notification Listener**: Passively parses transactional alerts from 50+ curated Indian banks and UPI apps (Google Pay, PhonePe, Paytm, CRED, HDFC, SBI, ICICI, Axis, etc.).
-  2. **Screenshot Sharing**: Share UPI payment screenshots directly to CashBuddy from any app (e.g. BMTC tickets, GPay, PhonePe receipts). Offline ML Kit OCR extracts text and parses entities automatically.
-  3. **Smart Manual Entry**: Instant manual entry with frequency-based merchant chips, auto-prefill, and fast category assignment.
-- **On-Device Hybrid Personalization**:
-  - **Tier 1 (User Rules)**: Custom merchant-to-category rules learned immediately from user corrections (Confidence: 1.0).
-  - **Tier 2 (Keyword Dictionary)**: Curated dictionary of 300+ Indian merchant keywords (Swiggy, Zomato, Uber, Blinkit, D-Mart, etc.) (Confidence: 0.90).
-  - **Tier 3 (Fallback)**: Graceful fallback to Uncategorized for manual review.
-- **Human-in-the-Loop Review**: Transactions with confidence $< 0.85$ or amount $\ge ₹10,000$ are flagged as `PENDING` for explicit user review.
-- **Hardware-Backed Encryption**: Encrypted with **SQLCipher (AES-256 GCM)** using hardware-backed keys from the **Android Keystore (TEE / StrongBox)**.
-- **Biometric Security**: Protected by `BIOMETRIC_STRONG` authentication on app launch and automatically locks after 5 minutes of background inactivity.
-- **Visual Analytics**: Interactive monthly summaries, spending category breakdowns, and financial goals.
-- **Global & Category Budgets & Real-Time Alerts**: Set an overall global spending limit as well as per-category budgets for monthly, weekly, or yearly periods. Features computed Unbudgeted spending visibility, dynamic progress tracking (<80% green, 80–99% amber, ≥100% red), prioritized at-most-once notifications (category before global) at 80% and 100% threshold crossings, automated period rollover, and transaction drill-down. (See [Budgets Spec](specs/budgets/spec.md) and [Global Budget Spec](specs/budgets/spec-global.md)).
+</div>
 
 ---
 
-## Architecture Overview
+## 💡 The Pitch (Why CashBuddy?)
 
-CashBuddy follows **Clean Architecture** and **Unidirectional Data Flow (UDF)**:
+### The Problem
+Most personal finance management (PFM) apps in India ask for intrusive permissions: full read access to your entire SMS inbox, mandatory cloud signups, and constant internet connectivity. Behind the scenes, detailed transaction trails, merchant visits, and sensitive bank account details are uploaded to centralized servers for targeted advertising, credit profiling, or data brokerage.
 
-```
-┌────────────────────────────────────────────────────────┐
-│                   PRESENTATION LAYER                   │
-│      (Compose Multiplatform 1.11+ • Material 3)        │
-│       HomeScreen • ReviewScreen • TransactionsScreen   │
-│         StatsScreen • SettingsScreen • AddScreen       │
-└───────────────────────────┬────────────────────────────┘
-                            │ StateFlow / Events
-                            ▼
-┌────────────────────────────────────────────────────────┐
-│                      DOMAIN LAYER                      │
-│            (Pure Kotlin Multiplatform)                 │
-│    Use Cases: CalculateBalance, ConfirmTransaction,    │
-│     GetRecentTransactions, GenerateBreakdown, etc.     │
-└───────────────────────────┬────────────────────────────┘
-                            │
-              ┌─────────────┴─────────────┐
-              ▼                           ▼
-┌───────────────────────────┐ ┌──────────────────────────┐
-│        DATA LAYER         │ │       CORE ENGINES       │
-│    SQLDelight Database    │ │ 5-Layer Notification     │
-│   SQLCipher AES-256 GCM   │ │   Parser Engine          │
-│    Android Keystore TEE   │ │ 3-Tier Category Engine   │
-│   Unified Ledger Tables   │ │ Screenshot OCR Parser    │
-│  Correction & Rule Repos  │ │ Dedup & Fraud Guards     │
-└───────────────────────────┘ └──────────────────────────┘
-```
+### The CashBuddy Solution
+**CashBuddy solves this by proving that smart financial tracking does not require a single byte of cloud telemetry.**
+
+- **Zero Network Permission (`android.permission.INTERNET` is completely absent):** CashBuddy strips the internet permission entirely from its Android manifest. It cannot send packets even if it tried.
+- **Zero SMS Permission:** Rather than demanding broad SMS inbox access, it exclusively leverages `BIND_NOTIFICATION_LISTENER_SERVICE` and Android share sheets to ingest transaction updates as they happen.
+- **Local-Only Intelligence:** Bank transactional alerts, UPI notifications (GPay, PhonePe, Paytm, CRED, BHIM), and shared payment receipts (via on-device OCR) are parsed, classified, and deduplicated directly on your smartphone.
+- **100% Private, 100% Yours:** Your data never leaves your device. Period.
 
 ---
 
-## Tech Stack
+## 📱 Screenshots
 
-| Layer | Technology |
+<div align="center">
+
+| 🏠 Home Screen | 📊 Analytics & Insights | 📥 Review Inbox |
+|:---:|:---:|:---:|
+| <img src="play_store_assets/a.jpeg" width="260" alt="Home Screen (Balance & Recent Transactions)" /> | <img src="play_store_assets/b.jpeg" width="260" alt="Analytics (Category Pie Chart)" /> | <img src="play_store_assets/c.jpeg" width="260" alt="Review Inbox (Human-in-the-Loop)" /> |
+| *Live Balance, Quick Stats, Keyset Paging* | *Interactive Category Pie Chart & Trends* | *Human-in-the-Loop Confidence Review* |
+
+</div>
+
+> *Note: Feature graphic and raw visual assets are cataloged in [`play_store_assets/`](play_store_assets/).*
+
+---
+
+## ✨ Killer Features
+
+### 🔒 Zero-Network Architecture
+Every file across the engine and shared multiplatform codebase enforces a strict `// NO-NETWORK` posture. No analytics SDKs, no crash uploaders, no third-party telemetry, and zero HTTP/WebSocket clients. All processing and storage occur entirely within on-device sandboxes.
+
+### ⚡ Smart Ingest, OCR & Keyset Deduplication
+- **Multi-Source Intake:** Seamlessly captures expenses from:
+  1. Passive notification listeners (50+ Indian banking and UPI apps).
+  2. Direct screenshot shares (using Google ML Kit on-device text recognition).
+  3. Rapid manual logging with smart merchant and amount suggestions.
+- **UTR-Based Keyset Deduplication:** When both an SMS and a UPI notification fire for the same transaction (or when a user shares a screenshot of an already logged notification), CashBuddy's reconciliation engine uses 12-digit UTR (UPI Reference Numbers) and temporal fuzzy matching to merge duplicate records into one clean entry.
+
+### 🧠 On-Device Machine Learning: "Learned Tokens"
+Forget bulky 100MB+ LLM downloads. CashBuddy features a lightweight, high-speed on-device **Naive Bayes classifier** with dynamic **Learned Token persistence**:
+- Learns local Indian vendor names and regional vernacular (e.g., *"Shanti Sagar"*, *"Bottle Lab"*, *"Amma Mess"*, *"Namma Chai"*) directly from your spending patterns.
+- Applies Bayesian probabilistic scoring combined with Laplace smoothing to classify incoming transactions in sub-millisecond execution times.
+- Self-optimizes continuously: as you accept or modify transaction categories, the token dictionary refines category probabilities right inside your local database.
+
+### 🛡️ Human-in-the-Loop Review
+To guarantee absolute accounting accuracy:
+- Any transaction with confidence below **85%** or exceeding **₹10,000** is routed to the **Review Inbox** in `PENDING` status.
+- Single-tap category reassignment, payment method switching (`UPI`, `Card`, `Cash`), and loan tracking (`"This is a loan I expect back"`).
+- User edits immediately update category models and prevent false auto-confirmations.
+
+### 💳 Real-World Math Engine
+- Distinguishes between actual out-of-pocket cash/UPI expenses, credit card liabilities, and loans given to friends.
+- Keeps analytics accurate: a ₹50,000 laptop on card EMI or a ₹2,000 dinner split lent to a colleague won't deceptively inflate your monthly food or shopping burn.
+
+---
+
+## 🛠️ Tech Stack
+
+| Layer | Technologies |
 |---|---|
-| **Framework** | Kotlin Multiplatform (KMP 2.4.10) |
-| **UI Toolkit** | Compose Multiplatform 1.11.1 (Material 3) |
-| **Database** | SQLDelight 2.0.2 with SQLCipher (AES-256 GCM) |
-| **Key Storage** | Android Keystore (TEE / StrongBox) |
-| **Dependency Injection** | Koin 4.0 |
-| **Text Recognition (OCR)** | Play flavor: Google ML Kit • F-Droid flavor: Tesseract4Android (100% Offline) |
-| **Concurrency** | Kotlin Coroutines & Flow |
-| **Target Platforms** | Android (API 24+ / targetSdk 36) & iOS |
+| **Core & Logic** | Kotlin Multiplatform (KMP 2.2.1), Pure Kotlin (`commonMain`) |
+| **User Interface** | Compose Multiplatform (1.7.3), Material Design 3, Adaptive Edge-to-Edge |
+| **Local Database** | SQLDelight 2.0.2 + SQLCipher (AES-256 GCM) |
+| **Key Storage** | Android Keystore System (Hardware TEE / StrongBox backed keys) |
+| **Security** | BiometricPrompt (`BIOMETRIC_STRONG`), `FLAG_SECURE` window shielding |
+| **On-Device Vision** | Google ML Kit Text Recognition (On-device OCR) |
+| **Architecture** | Clean Architecture, MVVM + Unidirectional Data Flow (UDF), Koin 4.0 DI |
+| **Math & Algorithms** | Naive Bayes Classifier, Median Absolute Deviation (MAD) Z-Score anomaly detection, Jaro-Winkler string distance |
 
 ---
 
-## Building & Running
+## 🏗️ Architecture Overview
+
+```text
+┌─────────────────────────────────────────────────────────────────┐
+│                    COMPOSE MULTIPLATFORM UI                     │
+│    HomeScreen  •  ReviewScreen  •  StatsScreen  •  AddScreen    │
+└───────────────────────────────┬─────────────────────────────────┘
+                                │ StateFlow / Intents (UDF)
+                                ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                    VIEWMODELS & REDUCERS                        │
+│    ReviewViewModel  •  StatsViewModel  •  AddTransactionVM      │
+└───────────────────────────────┬─────────────────────────────────┘
+                                │ Domain Contracts
+                                ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                      CORE DOMAIN ENGINES                        │
+│   • Probabilistic Message Pipeline (Naive Bayes & Regex)        │
+│   • Deduplication & Merge Engine (UTR Matching)                 │
+│   • Budget Engine & Threshold Pacer                             │
+│   • Fraud & Anomaly Detector (MAD Outlier Rejection)            │
+└───────────────────────────────┬─────────────────────────────────┘
+                                │
+                                ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                 ENCRYPTED DATA ACCESS LAYER                     │
+│        SQLDelight 2.0.2  +  SQLCipher (AES-256 GCM)             │
+│        Android Keystore TEE  •  100% Offline Storage            │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## 🚀 Building the App
 
 ### Prerequisites
-- Android Studio Ladybug / Meerkat (or newer)
-- JDK 21
-- Android SDK 36
+- **JDK 17** or higher
+- **Android Studio Ladybug** (or later) / Android SDK Platform 35
+- Android device or emulator running **Android 8.0 (API level 26)** or higher
 
-### Build Flavors (`play` & `fdroid`)
+### Build Debug APK
+1. Clone the repository:
+   ```bash
+   git clone https://github.com/your-username/CashBuddy.git
+   cd CashBuddy
+   ```
 
-CashBuddy provides two distribution flavors:
-- **`play`**: Uses Google ML Kit (`com.google.mlkit:text-recognition`) for offline screenshot OCR.
-- **`fdroid`**: 100% free and open-source build with zero proprietary dependencies. Uses **Tesseract4Android** (`cz.adaptech.tesseract4android:tesseract4android:4.9.0`, Apache-2.0 License) and bundles `eng.traineddata` and `hin.traineddata` from [`tesseract-ocr/tessdata_fast`](https://github.com/tesseract-ocr/tessdata_fast) under the **Apache-2.0 License** in `androidApp/src/fdroid/assets/tessdata/` (adds ~5.2 MB of uncompressed traineddata to the F-Droid APK).
+2. Assemble the debug APK:
+   ```bash
+   # On macOS / Linux
+   ./gradlew :androidApp:assemblePlayDebug
 
-### Build Commands
+   # On Windows (PowerShell)
+   .\gradlew :androidApp:assemblePlayDebug
+   ```
 
+3. The generated APK will be available at:
+   ```text
+   androidApp/build/outputs/apk/play/debug/androidApp-play-debug.apk
+   ```
+
+### Run Unit Tests
+To execute the complete unit test suite across engines, repositories, and math validators:
 ```bash
-# Build Google Play Release APK & AAB
-./gradlew :androidApp:assemblePlayRelease :androidApp:bundlePlayRelease
-
-# Build F-Droid Unsigned Release APK (FOSS / Tesseract OCR)
-./gradlew :androidApp:assembleFdroidRelease
-
-# Run all unit tests
 ./gradlew :shared:testAndroidHostTest
 ```
 
 ---
 
-## License & Privacy
+## ⚖️ License & Privacy
 
-CashBuddy is open source software licensed under the **[Apache License, Version 2.0](LICENSE)**.
+### Open Source
+CashBuddy is licensed under the [Apache License, Version 2.0](LICENSE). You are free to inspect, study, fork, and build upon this project.
 
-CashBuddy is built with a zero-compromise approach to privacy:
-- Zero data collection
-- Zero analytics or tracking SDKs
-- Zero network communication (`INTERNET` permission stripped)
-- 100% local on-device operation
-- F-Droid flavor bundles `eng.traineddata` and `hin.traineddata` from `tesseract-ocr/tessdata_fast` under the Apache License 2.0.
+### Privacy Pledge
+> **Your data belongs to you. It never leaves your device.**
+> 
+> CashBuddy has no backend servers, no analytics beacons, and no marketing integrations. All transactions, tokens, and financial models remain cryptographically secured in SQLCipher on your physical hardware.
