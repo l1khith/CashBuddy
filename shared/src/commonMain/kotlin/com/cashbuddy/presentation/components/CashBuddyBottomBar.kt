@@ -1,13 +1,16 @@
 package com.cashbuddy.presentation.components
 
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBars
@@ -20,13 +23,17 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.FloatingActionButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import cashbuddy.shared.generated.resources.Res
 import cashbuddy.shared.generated.resources.action_add_transaction
@@ -65,41 +72,48 @@ fun CashBuddyBottomBar(
         modifier = modifier
             .fillMaxWidth()
             .windowInsetsPadding(WindowInsets.navigationBars)
-            .padding(horizontal = 16.dp, vertical = 16.dp),
+            .padding(horizontal = 16.dp, vertical = 14.dp),
         horizontalArrangement = Arrangement.Center,
         verticalAlignment = Alignment.CenterVertically
     ) {
         // Left Side: Floating Nav Pill rendered dynamically from navOrder
-        Row(
+        Surface(
             modifier = Modifier
                 .weight(1f, fill = false)
-                .height(64.dp)
-                .clip(RoundedCornerShape(50))
-                .background(MaterialTheme.colorScheme.surfaceContainerHigh)
-                .padding(horizontal = 10.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalAlignment = Alignment.CenterVertically
+                .height(64.dp),
+            shape = RoundedCornerShape(50),
+            color = MaterialTheme.colorScheme.surfaceContainerHigh,
+            shadowElevation = 8.dp,
+            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.25f))
         ) {
-            orderedKeys.forEach { key ->
-                when (key) {
-                    "home" -> FloatingNavPillItem(
-                        icon = Res.drawable.ic_home,
-                        contentDescription = stringResource(Res.string.nav_home),
-                        selected = currentRoute.equals("Home", ignoreCase = true),
-                        onClick = onNavigateToHome
-                    )
-                    "stats" -> FloatingNavPillItem(
-                        icon = Res.drawable.ic_monitoring,
-                        contentDescription = stringResource(Res.string.nav_stats),
-                        selected = currentRoute.equals("Stats", ignoreCase = true),
-                        onClick = onNavigateToStats
-                    )
-                    "history" -> FloatingNavPillItem(
-                        icon = Res.drawable.ic_receipt_long,
-                        contentDescription = stringResource(Res.string.nav_history),
-                        selected = currentRoute.equals("Transactions", ignoreCase = true),
-                        onClick = onNavigateToTransactions
-                    )
+            Row(
+                modifier = Modifier
+                    .fillMaxHeight()
+                    .padding(horizontal = 10.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                orderedKeys.forEach { key ->
+                    when (key) {
+                        "home" -> FloatingNavPillItem(
+                            icon = Res.drawable.ic_home,
+                            contentDescription = stringResource(Res.string.nav_home),
+                            selected = currentRoute.equals("Home", ignoreCase = true),
+                            onClick = onNavigateToHome
+                        )
+                        "stats" -> FloatingNavPillItem(
+                            icon = Res.drawable.ic_monitoring,
+                            contentDescription = stringResource(Res.string.nav_stats),
+                            selected = currentRoute.equals("Stats", ignoreCase = true),
+                            onClick = onNavigateToStats
+                        )
+                        "history" -> FloatingNavPillItem(
+                            icon = Res.drawable.ic_receipt_long,
+                            contentDescription = stringResource(Res.string.nav_history),
+                            selected = currentRoute.equals("Transactions", ignoreCase = true),
+                            onClick = onNavigateToTransactions
+                        )
+                    }
                 }
             }
         }
@@ -112,7 +126,11 @@ fun CashBuddyBottomBar(
             modifier = Modifier.size(64.dp),
             shape = CircleShape,
             containerColor = MaterialTheme.colorScheme.primary,
-            contentColor = MaterialTheme.colorScheme.onPrimary
+            contentColor = MaterialTheme.colorScheme.onPrimary,
+            elevation = FloatingActionButtonDefaults.elevation(
+                defaultElevation = 6.dp,
+                pressedElevation = 10.dp
+            )
         ) {
             Icon(
                 imageVector = Icons.Default.Add,
@@ -129,27 +147,31 @@ private fun FloatingNavPillItem(
     selected: Boolean,
     onClick: () -> Unit
 ) {
-    val activeModifier = if (selected) {
-        Modifier.background(MaterialTheme.colorScheme.primaryContainer)
-    } else {
-        Modifier
-    }
-    val tint = if (selected) {
-        MaterialTheme.colorScheme.onPrimaryContainer
-    } else {
-        MaterialTheme.colorScheme.onSurfaceVariant
-    }
+    val backgroundColor by animateColorAsState(
+        targetValue = if (selected) {
+            MaterialTheme.colorScheme.primary.copy(alpha = 0.18f)
+        } else {
+            Color.Transparent
+        },
+        animationSpec = tween(durationMillis = 200),
+        label = "navItemBg"
+    )
+    val tint by animateColorAsState(
+        targetValue = if (selected) {
+            MaterialTheme.colorScheme.primary
+        } else {
+            MaterialTheme.colorScheme.onSurfaceVariant
+        },
+        animationSpec = tween(durationMillis = 200),
+        label = "navItemTint"
+    )
 
     Box(
         modifier = Modifier
             .size(48.dp)
             .clip(CircleShape)
-            .then(activeModifier)
-            .clickable(
-                interactionSource = remember { MutableInteractionSource() },
-                indication = null,
-                onClick = onClick
-            ),
+            .background(backgroundColor)
+            .clickable(onClick = onClick),
         contentAlignment = Alignment.Center
     ) {
         Icon(

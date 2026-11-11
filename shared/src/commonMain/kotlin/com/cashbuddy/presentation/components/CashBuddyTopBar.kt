@@ -1,5 +1,10 @@
 package com.cashbuddy.presentation.components
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.expandHorizontally
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkHorizontally
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -49,15 +54,21 @@ fun CashBuddyTopBar(
         modifier = modifier,
         title = {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                if (showLogo) {
-                    Image(
-                        painter = painterResource(Res.drawable.ic_cashbuddy_logo),
-                        contentDescription = stringResource(Res.string.cd_app_icon),
-                        modifier = Modifier
-                            .size(40.dp)
-                            .clip(RoundedCornerShape(10.dp))
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
+                AnimatedVisibility(
+                    visible = showLogo,
+                    enter = fadeIn() + expandHorizontally(),
+                    exit = fadeOut() + shrinkHorizontally()
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Image(
+                            painter = painterResource(Res.drawable.ic_cashbuddy_logo),
+                            contentDescription = stringResource(Res.string.cd_app_icon),
+                            modifier = Modifier
+                                .size(38.dp)
+                                .clip(RoundedCornerShape(10.dp))
+                        )
+                        Spacer(modifier = Modifier.width(10.dp))
+                    }
                 }
                 Column {
                     Text(

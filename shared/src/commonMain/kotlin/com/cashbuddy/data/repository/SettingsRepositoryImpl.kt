@@ -29,8 +29,8 @@ class SettingsRepositoryImpl(
                 biometricEnabled = map["biometricEnabled"]?.toBooleanStrictOrNull() ?: false,
                 preferredCurrency = map["preferredCurrency"] ?: "INR",
                 smartNotificationsEnabled = map["smartNotificationsEnabled"]?.toBooleanStrictOrNull() ?: true,
-                customAppName = map["custom_app_name"] ?: UserSettings.DEFAULT_APP_NAME,
-                customAppSubtitle = map["custom_app_subtitle"] ?: UserSettings.DEFAULT_APP_SUBTITLE,
+                customAppName = (map["custom_app_name"] ?: UserSettings.DEFAULT_APP_NAME).take(UserSettings.MAX_APP_NAME_LENGTH),
+                customAppSubtitle = (map["custom_app_subtitle"] ?: UserSettings.DEFAULT_APP_SUBTITLE).take(UserSettings.MAX_APP_SUBTITLE_LENGTH),
                 showAppLogo = map["show_app_logo"]?.toBooleanStrictOrNull() ?: true,
                 navOrder = map["nav_order"]?.takeIf { it.isNotBlank() } ?: UserSettings.DEFAULT_NAV_ORDER
             )
@@ -143,20 +143,20 @@ class SettingsRepositoryImpl(
 
     override fun getCustomAppName(): Flow<String> =
         queries.get("custom_app_name").asFlow().mapToOneOrNull(dispatcher).map { record ->
-            record?.value_ ?: UserSettings.DEFAULT_APP_NAME
+            (record?.value_ ?: UserSettings.DEFAULT_APP_NAME).take(UserSettings.MAX_APP_NAME_LENGTH)
         }
 
     override suspend fun setCustomAppName(name: String): Unit = withContext(dispatcher) {
-        queries.set("custom_app_name", name, com.cashbuddy.platform.currentTimeMillis())
+        queries.set("custom_app_name", name.take(UserSettings.MAX_APP_NAME_LENGTH), com.cashbuddy.platform.currentTimeMillis())
     }
 
     override fun getCustomAppSubtitle(): Flow<String> =
         queries.get("custom_app_subtitle").asFlow().mapToOneOrNull(dispatcher).map { record ->
-            record?.value_ ?: UserSettings.DEFAULT_APP_SUBTITLE
+            (record?.value_ ?: UserSettings.DEFAULT_APP_SUBTITLE).take(UserSettings.MAX_APP_SUBTITLE_LENGTH)
         }
 
     override suspend fun setCustomAppSubtitle(subtitle: String): Unit = withContext(dispatcher) {
-        queries.set("custom_app_subtitle", subtitle, com.cashbuddy.platform.currentTimeMillis())
+        queries.set("custom_app_subtitle", subtitle.take(UserSettings.MAX_APP_SUBTITLE_LENGTH), com.cashbuddy.platform.currentTimeMillis())
     }
 
     override fun getShowAppLogo(): Flow<Boolean> =

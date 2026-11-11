@@ -16,6 +16,7 @@ data class UserSettings(
         const val DEFAULT_APP_NAME = "CashBuddy"
         const val DEFAULT_APP_SUBTITLE = "Personal Finance"
         const val DEFAULT_NAV_ORDER = "home,stats,history"
-        const val ALT_NAV_ORDER = "home,history,stats"
+        const val MAX_APP_NAME_LENGTH = 15
+        const val MAX_APP_SUBTITLE_LENGTH = 20
     }
 }

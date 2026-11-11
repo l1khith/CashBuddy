@@ -1,5 +1,10 @@
 package com.cashbuddy.presentation
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
@@ -123,7 +128,11 @@ fun CashBuddyApp(
         modifier = modifier.fillMaxSize(),
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
-            if (isTopLevelDestination) {
+            AnimatedVisibility(
+                visible = isTopLevelDestination,
+                enter = fadeIn() + slideInVertically { -it },
+                exit = fadeOut() + slideOutVertically { -it }
+            ) {
                 CashBuddyTopBar(
                     appName = userSettings.customAppName,
                     appSubtitle = userSettings.customAppSubtitle,
@@ -137,7 +146,11 @@ fun CashBuddyApp(
             }
         },
         bottomBar = {
-            if (isTopLevelDestination) {
+            AnimatedVisibility(
+                visible = isTopLevelDestination,
+                enter = fadeIn() + slideInVertically { it },
+                exit = fadeOut() + slideOutVertically { it }
+            ) {
                 val navigateTopLevel: (ScreenRoute) -> Unit = { route ->
                     navController.navigate(route) {
                         popUpTo(navController.graph.findStartDestination().id) { saveState = true }

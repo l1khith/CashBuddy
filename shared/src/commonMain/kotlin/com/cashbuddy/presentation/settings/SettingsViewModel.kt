@@ -8,6 +8,7 @@ import com.cashbuddy.domain.repository.TransactionRepository
 import com.cashbuddy.domain.usecase.ExportDataUseCase
 import com.cashbuddy.platform.FileExporter
 import com.cashbuddy.platform.currentTimeMillis
+import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -17,7 +18,10 @@ import com.cashbuddy.domain.model.TrainingStats
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import androidx.compose.runtime.Immutable
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.debounce
+import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
@@ -46,7 +50,8 @@ data class SettingsUiState(
     val customAppName: String = com.cashbuddy.domain.model.UserSettings.DEFAULT_APP_NAME,
     val customAppSubtitle: String = com.cashbuddy.domain.model.UserSettings.DEFAULT_APP_SUBTITLE,
     val showAppLogo: Boolean = true,
-    val navOrder: String = com.cashbuddy.domain.model.UserSettings.DEFAULT_NAV_ORDER
+    val navOrder: String = com.cashbuddy.domain.model.UserSettings.DEFAULT_NAV_ORDER,
+    val navOrderList: List<String> = listOf("home", "stats", "history")
 )
 
 class SettingsViewModel(
@@ -73,7 +78,34 @@ class SettingsViewModel(
 
     private var versionTapCount = 0
 
+    // Instant UI draft overrides so typing and dragging never stutter waiting for SQLite writes
+    private val _pendingAppName = MutableStateFlow<String?>(null)
+    private val _pendingAppSubtitle = MutableStateFlow<String?>(null)
+    private val _pendingNavOrder = MutableStateFlow<List<String>?>(null)
+
+    @OptIn(FlowPreview::class)
+    private fun startCustomizationPersistence() {
+        viewModelScope.launch {
+            _pendingAppName.filterNotNull().debounce(300).collectLatest { name ->
+                settingsRepository.setCustomAppName(name)
+                if (_pendingAppName.value == name) {
+                    _pendingAppName.value = null
+                }
+            }
+        }
+        viewModelScope.launch {
+            _pendingAppSubtitle.filterNotNull().debounce(300).collectLatest { subtitle ->
+                settingsRepository.setCustomAppSubtitle(subtitle)
+                if (_pendingAppSubtitle.value == subtitle) {
+                    _pendingAppSubtitle.value = null
+                }
+            }
+        }
+    }
+
     init {
+        startCustomizationPersistence()
+
         viewModelScope.launch {
             combine(
                 settingsRepository.getSettings(),
@@ -81,7 +113,10 @@ class SettingsViewModel(
                 accountRepository.getCount(),
                 trainingDataRepository.getStats(),
                 settingsRepository.getDebugLogEnabled(),
-                settingsRepository.getIgnoredPackages()
+                settingsRepository.getIgnoredPackages(),
+                _pendingAppName,
+                _pendingAppSubtitle,
+                _pendingNavOrder
             ) { args: Array<Any?> ->
                 val settings = args[0] as com.cashbuddy.domain.model.UserSettings
                 val txCount = args[1] as Long
@@ -90,10 +125,15 @@ class SettingsViewModel(
                 val debugLogEnabled = args[4] as Boolean
                 @Suppress("UNCHECKED_CAST")
                 val ignoredPkgs = args[5] as List<String>
+                val pendingName = args[6] as String?
+                val pendingSubtitle = args[7] as String?
+                @Suppress("UNCHECKED_CAST")
+                val pendingOrder = args[8] as List<String>?
 
                 if (debugConfig != null) {
                     debugConfig.cachedDeveloperMode = debugLogEnabled
                 }
+                val activeOrder = pendingOrder ?: parseNavOrder(settings.navOrder)
                 SettingsUiState(
                     notificationEnabled = settings.notificationsEnabled,
                     autoConfirmThreshold = settings.autoConfirmThreshold,
@@ -110,10 +150,11 @@ class SettingsViewModel(
                     isOcrAvailable = ocrEngine?.isAvailable ?: false,
                     ignoredPackages = ignoredPkgs,
                     smartNotificationsEnabled = settings.smartNotificationsEnabled,
-                    customAppName = settings.customAppName,
-                    customAppSubtitle = settings.customAppSubtitle,
+                    customAppName = pendingName ?: settings.customAppName,
+                    customAppSubtitle = pendingSubtitle ?: settings.customAppSubtitle,
                     showAppLogo = settings.showAppLogo,
-                    navOrder = settings.navOrder
+                    navOrder = activeOrder.joinToString(","),
+                    navOrderList = activeOrder
                 )
             }.collect {
                 _uiState.value = it
@@ -175,15 +216,11 @@ class SettingsViewModel(
     }
 
     fun setCustomAppName(name: String) {
-        viewModelScope.launch {
-            settingsRepository.setCustomAppName(name)
-        }
+        _pendingAppName.value = name.take(com.cashbuddy.domain.model.UserSettings.MAX_APP_NAME_LENGTH)
     }
 
     fun setCustomAppSubtitle(subtitle: String) {
-        viewModelScope.launch {
-            settingsRepository.setCustomAppSubtitle(subtitle)
-        }
+        _pendingAppSubtitle.value = subtitle.take(com.cashbuddy.domain.model.UserSettings.MAX_APP_SUBTITLE_LENGTH)
     }
 
     fun setShowAppLogo(show: Boolean) {
@@ -196,6 +233,51 @@ class SettingsViewModel(
         viewModelScope.launch {
             settingsRepository.setNavOrder(order)
         }
+    }
+
+    fun moveNavItem(fromIndex: Int, toIndex: Int) {
+        val current = (_pendingNavOrder.value ?: _uiState.value.navOrderList).toMutableList()
+        if (fromIndex !in current.indices || toIndex !in current.indices || fromIndex == toIndex) return
+        val moved = current.removeAt(fromIndex)
+        current.add(toIndex, moved)
+        _pendingNavOrder.value = current
+    }
+
+    fun commitNavOrder() {
+        val orderList = _pendingNavOrder.value ?: return
+        val serialized = orderList.joinToString(",")
+        viewModelScope.launch {
+            settingsRepository.setNavOrder(serialized)
+            if (_pendingNavOrder.value == orderList) {
+                _pendingNavOrder.value = null
+            }
+        }
+    }
+
+    fun resetAppCustomization() {
+        val defaultOrder = parseNavOrder(com.cashbuddy.domain.model.UserSettings.DEFAULT_NAV_ORDER)
+        _pendingAppName.value = com.cashbuddy.domain.model.UserSettings.DEFAULT_APP_NAME
+        _pendingAppSubtitle.value = com.cashbuddy.domain.model.UserSettings.DEFAULT_APP_SUBTITLE
+        _pendingNavOrder.value = defaultOrder
+        viewModelScope.launch {
+            settingsRepository.setCustomAppName(com.cashbuddy.domain.model.UserSettings.DEFAULT_APP_NAME)
+            settingsRepository.setCustomAppSubtitle(com.cashbuddy.domain.model.UserSettings.DEFAULT_APP_SUBTITLE)
+            settingsRepository.setShowAppLogo(true)
+            settingsRepository.setNavOrder(com.cashbuddy.domain.model.UserSettings.DEFAULT_NAV_ORDER)
+            _pendingAppName.value = null
+            _pendingAppSubtitle.value = null
+            _pendingNavOrder.value = null
+            _messageEffect.emit("App customization reset to defaults")
+        }
+    }
+
+    private fun parseNavOrder(raw: String): List<String> {
+        val defaults = listOf("home", "stats", "history")
+        val parsed = raw.split(",")
+            .map { it.trim().lowercase() }
+            .filter { it in defaults }
+            .distinct()
+        return (parsed + defaults).distinct()
     }
 
     fun exportCsvData(onCsvReady: (String) -> Unit = {}) {

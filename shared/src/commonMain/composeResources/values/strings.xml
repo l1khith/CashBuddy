@@ -9,11 +9,12 @@
     <string name="cd_settings">Settings</string>
     <string name="cd_back">Back</string>
     <string name="settings_section_app_customization">App Customization</string>
-    <string name="settings_app_name_label">App Name</string>
-    <string name="settings_app_subtitle_label">Subtitle</string>
+    <string name="settings_app_name_label">Top Bar Title</string>
+    <string name="settings_app_subtitle_label">Top Bar Subtitle</string>
+    <string name="settings_char_count">%1$d / %2$d</string>
     <string name="settings_show_app_logo">Show Logo in Top Bar</string>
     <string name="settings_show_app_logo_desc">Display the CashBuddy icon next to the title</string>
     <string name="settings_nav_order_label">Navigation Order</string>
-    <string name="settings_nav_order_option_a">Home, Stats, History</string>
-    <string name="settings_nav_order_option_b">Home, History, Stats</string>
+    <string name="settings_nav_order_hint">Long-press and drag to reorder bottom tabs</string>
+    <string name="settings_reset_customization">Reset to Defaults</string>
 </resources>
