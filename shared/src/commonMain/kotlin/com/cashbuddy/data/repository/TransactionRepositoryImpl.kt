@@ -16,7 +16,11 @@ import com.cashbuddy.domain.repository.TransactionRepository
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.drop
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.merge
 import kotlinx.coroutines.withContext
 
 class TransactionRepositoryImpl(
@@ -25,6 +29,18 @@ class TransactionRepositoryImpl(
 ) : TransactionRepository {
 
     private val queries = db.transactionsQueries
+    private val _mutationEvents = MutableSharedFlow<Unit>(extraBufferCapacity = 64)
+
+    /**
+     * Combines explicit repository mutation events with SQLDelight's reactive table-level
+     * query notification (which also catches out-of-band writes such as TransactionIngestStore).
+     * Drops the initial synchronous getCount emission per collector so subscribers only wake
+     * on real DB changes.
+     */
+    override val transactionUpdates: Flow<Unit> = merge(
+        _mutationEvents,
+        queries.getCount().asFlow().drop(1).map { }
+    )
 
     override fun getAll(): Flow<List<Transaction>> =
         queries.getAll(::mapTransaction).asFlow().mapToList(dispatcher).distinctUntilChanged()
@@ -99,11 +115,14 @@ class TransactionRepositoryImpl(
             payment_method = transaction.paymentMethod,
             is_loan_given = if (transaction.isLoanGiven) 1L else 0L
         )
-        queries.lastInsertRowId().executeAsOne()
+        val id = queries.lastInsertRowId().executeAsOne()
+        _mutationEvents.tryEmit(Unit)
+        id
     }
 
     override suspend fun updateStatus(id: Long, status: TransactionStatus): Unit = withContext(dispatcher) {
         queries.updateStatus(status = status.name, updated_at = com.cashbuddy.platform.currentTimeMillis(), id = id)
+        _mutationEvents.tryEmit(Unit)
     }
 
     override suspend fun update(transaction: Transaction): Unit = withContext(dispatcher) {
@@ -144,16 +163,19 @@ class TransactionRepositoryImpl(
                 }
             }
         }
+        _mutationEvents.tryEmit(Unit)
     }
 
     override suspend fun deleteById(id: Long): Unit = withContext(dispatcher) {
         queries.deleteById(id)
+        _mutationEvents.tryEmit(Unit)
     }
 
     override suspend fun deleteAll(): Unit = withContext(dispatcher) {
         db.transaction {
             queries.deleteAll()
         }
+        _mutationEvents.tryEmit(Unit)
     }
 
     override fun getBalance(): Flow<Double> =
@@ -171,10 +193,12 @@ class TransactionRepositoryImpl(
 
     override suspend fun markMerged(id: Long, survivorId: Long): Unit = withContext(dispatcher) {
         queries.markMerged(merged_into_id = survivorId, updated_at = com.cashbuddy.platform.currentTimeMillis(), id = id)
+        _mutationEvents.tryEmit(Unit)
     }
 
     override suspend fun unmarkMerged(id: Long): Unit = withContext(dispatcher) {
         queries.unmarkMerged(updated_at = com.cashbuddy.platform.currentTimeMillis(), id = id)
+        _mutationEvents.tryEmit(Unit)
     }
 
     override suspend fun insertMergeLog(survivorId: Long, mergedId: Long, timestamp: Long): Unit = withContext(dispatcher) {
@@ -235,11 +259,13 @@ class TransactionRepositoryImpl(
     override suspend fun updatePaymentMethod(id: Long, paymentMethod: String): Unit = withContext(dispatcher) {
         val now = com.cashbuddy.platform.currentTimeMillis()
         queries.updatePaymentMethod(payment_method = paymentMethod, updated_at = now, id = id)
+        _mutationEvents.tryEmit(Unit)
     }
 
     override suspend fun updateLoanStatus(id: Long, isLoanGiven: Boolean): Unit = withContext(dispatcher) {
         val now = com.cashbuddy.platform.currentTimeMillis()
         queries.updateLoanStatus(is_loan_given = if (isLoanGiven) 1L else 0L, updated_at = now, id = id)
+        _mutationEvents.tryEmit(Unit)
     }
 
     override fun getByCategoryAndPeriod(category: String, startTime: Long, endTime: Long): Flow<List<Transaction>> =
@@ -265,6 +291,7 @@ class TransactionRepositoryImpl(
     override suspend fun updateNotes(id: Long, notes: String): Unit = withContext(dispatcher) {
         val now = com.cashbuddy.platform.currentTimeMillis()
         queries.updateNotes(notes = notes, updatedAt = now, id = id)
+        _mutationEvents.tryEmit(Unit)
     }
 
     override suspend fun getHistoryPage(
@@ -318,6 +345,57 @@ class TransactionRepositoryImpl(
             totalCount = row.total_count
         )
     }
+
+    override fun getHistorySummaryFlow(
+        searchQuery: String?,
+        type: String?,
+        categoryId: Long?,
+        startTime: Long?,
+        endTime: Long?,
+        minAmount: Double?,
+        maxAmount: Double?
+    ): Flow<com.cashbuddy.domain.repository.HistorySummary> =
+        queries.getHistorySummary(
+            searchQuery = searchQuery,
+            type = type,
+            categoryId = categoryId,
+            startTime = startTime,
+            endTime = endTime,
+            minAmount = minAmount,
+            maxAmount = maxAmount
+        ) { totalDebit, totalCredit, totalCount ->
+            com.cashbuddy.domain.repository.HistorySummary(
+                totalDebit = totalDebit,
+                totalCredit = totalCredit,
+                totalCount = totalCount
+            )
+        }.asFlow().mapToOne(dispatcher).distinctUntilChanged()
+
+    override fun getHistoryPageFlow(
+        searchQuery: String?,
+        type: String?,
+        categoryId: Long?,
+        startTime: Long?,
+        endTime: Long?,
+        minAmount: Double?,
+        maxAmount: Double?,
+        cursorTimestamp: Long?,
+        cursorId: Long?,
+        limit: Long
+    ): Flow<List<Transaction>> =
+        queries.getHistoryPage(
+            searchQuery = searchQuery,
+            type = type,
+            categoryId = categoryId,
+            startTime = startTime,
+            endTime = endTime,
+            minAmount = minAmount,
+            maxAmount = maxAmount,
+            cursorTimestamp = cursorTimestamp,
+            cursorId = cursorId,
+            limit = limit,
+            mapper = ::mapTransaction
+        ).asFlow().mapToList(dispatcher).distinctUntilChanged()
 
     override suspend fun findByUtr(utr: String): Transaction? = withContext(dispatcher) {
         val cleanUtr = utr.trim()

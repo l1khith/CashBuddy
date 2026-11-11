@@ -5,6 +5,8 @@ import com.cashbuddy.domain.model.Transaction
 import com.cashbuddy.domain.model.TransactionStatus
 import com.cashbuddy.domain.model.TransactionType
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.emptyFlow
+import kotlinx.coroutines.flow.flow
 
 data class MonthlySummary(
     val month: String,
@@ -23,6 +25,9 @@ data class CategoryBreakdown(
 )
 
 interface TransactionRepository {
+    /** Emits whenever the underlying transactions table is mutated (insert/update/delete/merge). */
+    val transactionUpdates: Flow<Unit> get() = emptyFlow()
+
     fun getAll(): Flow<List<Transaction>>
     fun getById(id: Long): Flow<Transaction?>
     fun getPending(): Flow<List<Transaction>>
@@ -81,6 +86,56 @@ interface TransactionRepository {
         minAmount: Double? = null,
         maxAmount: Double? = null
     ): HistorySummary = HistorySummary(0.0, 0.0, 0L)
+
+    fun getHistorySummaryFlow(
+        searchQuery: String? = null,
+        type: String? = null,
+        categoryId: Long? = null,
+        startTime: Long? = null,
+        endTime: Long? = null,
+        minAmount: Double? = null,
+        maxAmount: Double? = null
+    ): Flow<HistorySummary> = flow {
+        emit(
+            getHistorySummary(
+                searchQuery = searchQuery,
+                type = type,
+                categoryId = categoryId,
+                startTime = startTime,
+                endTime = endTime,
+                minAmount = minAmount,
+                maxAmount = maxAmount
+            )
+        )
+    }
+
+    fun getHistoryPageFlow(
+        searchQuery: String? = null,
+        type: String? = null,
+        categoryId: Long? = null,
+        startTime: Long? = null,
+        endTime: Long? = null,
+        minAmount: Double? = null,
+        maxAmount: Double? = null,
+        cursorTimestamp: Long? = null,
+        cursorId: Long? = null,
+        limit: Long = 50
+    ): Flow<List<Transaction>> = flow {
+        emit(
+            getHistoryPage(
+                searchQuery = searchQuery,
+                type = type,
+                categoryId = categoryId,
+                startTime = startTime,
+                endTime = endTime,
+                minAmount = minAmount,
+                maxAmount = maxAmount,
+                cursorTimestamp = cursorTimestamp,
+                cursorId = cursorId,
+                limit = limit
+            )
+        )
+    }
 }
 
 data class HistorySummary(
