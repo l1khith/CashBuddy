@@ -42,7 +42,11 @@ data class SettingsUiState(
     val isOcrAvailable: Boolean = false,
     val ignoredPackages: List<String> = emptyList(),
     val isImportingCsv: Boolean = false,
-    val smartNotificationsEnabled: Boolean = true
+    val smartNotificationsEnabled: Boolean = true,
+    val customAppName: String = com.cashbuddy.domain.model.UserSettings.DEFAULT_APP_NAME,
+    val customAppSubtitle: String = com.cashbuddy.domain.model.UserSettings.DEFAULT_APP_SUBTITLE,
+    val showAppLogo: Boolean = true,
+    val navOrder: String = com.cashbuddy.domain.model.UserSettings.DEFAULT_NAV_ORDER
 )
 
 class SettingsViewModel(
@@ -105,7 +109,11 @@ class SettingsViewModel(
                     isLoading = false,
                     isOcrAvailable = ocrEngine?.isAvailable ?: false,
                     ignoredPackages = ignoredPkgs,
-                    smartNotificationsEnabled = settings.smartNotificationsEnabled
+                    smartNotificationsEnabled = settings.smartNotificationsEnabled,
+                    customAppName = settings.customAppName,
+                    customAppSubtitle = settings.customAppSubtitle,
+                    showAppLogo = settings.showAppLogo,
+                    navOrder = settings.navOrder
                 )
             }.collect {
                 _uiState.value = it
@@ -163,6 +171,30 @@ class SettingsViewModel(
     fun setBiometricLockEnabled(enabled: Boolean) {
         viewModelScope.launch {
             settingsRepository.setBiometricEnabled(enabled)
+        }
+    }
+
+    fun setCustomAppName(name: String) {
+        viewModelScope.launch {
+            settingsRepository.setCustomAppName(name)
+        }
+    }
+
+    fun setCustomAppSubtitle(subtitle: String) {
+        viewModelScope.launch {
+            settingsRepository.setCustomAppSubtitle(subtitle)
+        }
+    }
+
+    fun setShowAppLogo(show: Boolean) {
+        viewModelScope.launch {
+            settingsRepository.setShowAppLogo(show)
+        }
+    }
+
+    fun setNavOrder(order: String) {
+        viewModelScope.launch {
+            settingsRepository.setNavOrder(order)
         }
     }
 

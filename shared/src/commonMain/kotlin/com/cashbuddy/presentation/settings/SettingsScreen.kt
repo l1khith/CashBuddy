@@ -20,9 +20,11 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.MergeType
 import androidx.compose.material.icons.automirrored.filled.Undo
 import cashbuddy.shared.generated.resources.Res
+import cashbuddy.shared.generated.resources.cd_back
 import cashbuddy.shared.generated.resources.ic_bug_report
 import cashbuddy.shared.generated.resources.ic_cashbuddy_logo
 import cashbuddy.shared.generated.resources.ic_delete_forever
@@ -31,7 +33,17 @@ import cashbuddy.shared.generated.resources.ic_file_download
 import cashbuddy.shared.generated.resources.ic_tune
 import cashbuddy.shared.generated.resources.ic_visibility
 import cashbuddy.shared.generated.resources.ic_warning
+import cashbuddy.shared.generated.resources.settings_app_name_label
+import cashbuddy.shared.generated.resources.settings_app_subtitle_label
+import cashbuddy.shared.generated.resources.settings_nav_order_label
+import cashbuddy.shared.generated.resources.settings_nav_order_option_a
+import cashbuddy.shared.generated.resources.settings_nav_order_option_b
+import cashbuddy.shared.generated.resources.settings_section_app_customization
+import cashbuddy.shared.generated.resources.settings_show_app_logo
+import cashbuddy.shared.generated.resources.settings_show_app_logo_desc
+import com.cashbuddy.domain.model.UserSettings
 import org.jetbrains.compose.resources.painterResource
+import org.jetbrains.compose.resources.stringResource
 import com.cashbuddy.presentation.settings.components.DuplicateReconciliationDialog
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -40,10 +52,14 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SegmentedButton
+import androidx.compose.material3.SegmentedButtonDefaults
+import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Switch
@@ -83,6 +99,7 @@ import com.cashbuddy.presentation.theme.RadiusSmall
 @Composable
 fun SettingsScreen(
     viewModel: SettingsViewModel,
+    onNavigateBack: (() -> Unit)? = null,
     onNavigateToPersonalization: () -> Unit = {},
     onNavigateToDebugLog: () -> Unit = {},
     onOpenNotificationSettings: () -> Unit = {},
@@ -125,15 +142,125 @@ fun SettingsScreen(
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
                 item {
-                    Text(
-                        text = "Settings",
-                        style = CashBuddyTypography.headlineMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onBackground
-                    )
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        if (onNavigateBack != null) {
+                            IconButton(onClick = onNavigateBack) {
+                                Icon(
+                                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                                    contentDescription = stringResource(Res.string.cd_back),
+                                    tint = MaterialTheme.colorScheme.onBackground
+                                )
+                            }
+                        }
+                        Text(
+                            text = "Settings",
+                            style = CashBuddyTypography.headlineMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onBackground
+                        )
+                    }
                 }
 
 
+
+                // App Customization
+                item {
+                    Text(
+                        text = stringResource(Res.string.settings_section_app_customization),
+                        style = CashBuddyTypography.titleLarge,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+
+                item {
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RadiusLarge,
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+                    ) {
+                        Column(
+                            modifier = Modifier.padding(18.dp),
+                            verticalArrangement = Arrangement.spacedBy(16.dp)
+                        ) {
+                            OutlinedTextField(
+                                value = state.customAppName,
+                                onValueChange = { viewModel.setCustomAppName(it) },
+                                label = { Text(stringResource(Res.string.settings_app_name_label)) },
+                                singleLine = true,
+                                modifier = Modifier.fillMaxWidth(),
+                                shape = RadiusMedium
+                            )
+
+                            OutlinedTextField(
+                                value = state.customAppSubtitle,
+                                onValueChange = { viewModel.setCustomAppSubtitle(it) },
+                                label = { Text(stringResource(Res.string.settings_app_subtitle_label)) },
+                                singleLine = true,
+                                modifier = Modifier.fillMaxWidth(),
+                                shape = RadiusMedium
+                            )
+
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(
+                                        text = stringResource(Res.string.settings_show_app_logo),
+                                        style = MaterialTheme.typography.titleMedium,
+                                        fontWeight = FontWeight.SemiBold
+                                    )
+                                    Text(
+                                        text = stringResource(Res.string.settings_show_app_logo_desc),
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                                Switch(
+                                    checked = state.showAppLogo,
+                                    onCheckedChange = { viewModel.setShowAppLogo(it) }
+                                )
+                            }
+
+                            Column(
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                Text(
+                                    text = stringResource(Res.string.settings_nav_order_label),
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.SemiBold
+                                )
+                                val navOptions = listOf(
+                                    UserSettings.DEFAULT_NAV_ORDER to stringResource(Res.string.settings_nav_order_option_a),
+                                    UserSettings.ALT_NAV_ORDER to stringResource(Res.string.settings_nav_order_option_b)
+                                )
+                                SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
+                                    navOptions.forEachIndexed { index, (orderValue, label) ->
+                                        SegmentedButton(
+                                            selected = state.navOrder == orderValue,
+                                            onClick = { viewModel.setNavOrder(orderValue) },
+                                            shape = SegmentedButtonDefaults.itemShape(
+                                                index = index,
+                                                count = navOptions.size
+                                            )
+                                        ) {
+                                            Text(
+                                                text = label,
+                                                style = MaterialTheme.typography.labelMedium,
+                                                maxLines = 1
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
 
                 // Automation & Threshold Rules
                 item {
