@@ -26,4 +26,12 @@ interface SettingsRepository {
     suspend fun removeIgnoredPackage(packageName: String)
     fun getSmartNotificationsEnabled(): Flow<Boolean>
     suspend fun setSmartNotificationsEnabled(enabled: Boolean)
+    fun getCustomAppName(): Flow<String>
+    suspend fun setCustomAppName(name: String)
+    fun getCustomAppSubtitle(): Flow<String>
+    suspend fun setCustomAppSubtitle(subtitle: String)
+    fun getShowAppLogo(): Flow<Boolean>
+    suspend fun setShowAppLogo(show: Boolean)
+    fun getNavOrder(): Flow<String>
+    suspend fun setNavOrder(order: String)
 }

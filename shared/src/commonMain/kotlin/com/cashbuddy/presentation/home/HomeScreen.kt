@@ -124,37 +124,6 @@ fun HomeContent(
                 contentPadding = PaddingValues(horizontal = spacing.lg, vertical = spacing.md),
                 verticalArrangement = Arrangement.spacedBy(spacing.lg)
             ) {
-                // Top App Bar Header
-                item {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.Start,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Image(
-                            painter = painterResource(Res.drawable.ic_cashbuddy_logo),
-                            contentDescription = "CashBuddy Logo",
-                            modifier = Modifier
-                                .size(40.dp)
-                                .clip(RoundedCornerShape(10.dp))
-                        )
-                        Spacer(modifier = Modifier.width(12.dp))
-                        Column {
-                            Text(
-                                text = "CashBuddy",
-                                style = MaterialTheme.typography.headlineMedium,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.onBackground
-                            )
-                            Text(
-                                text = "Personal Finance",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                    }
-                }
-
                 // Balance Header Card
                 item {
                     BalanceHeaderCard(

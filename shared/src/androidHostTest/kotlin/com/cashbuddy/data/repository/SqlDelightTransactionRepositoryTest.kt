@@ -6,10 +6,15 @@ import com.cashbuddy.db.AppDatabase
 import com.cashbuddy.domain.model.Transaction
 import com.cashbuddy.domain.model.TransactionStatus
 import com.cashbuddy.domain.model.TransactionType
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withTimeout
 import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertTrue
 
 /**
  * Unit tests verifying [TransactionRepositoryImpl] queries against an in-memory SQLDelight database.
@@ -302,5 +307,88 @@ class SqlDelightTransactionRepositoryTest {
         repository.updatePaymentMethod(titleCaseCardId, "UPI")
         assertEquals(1_800.0, repository.sumActualSpent(start, end))
         assertEquals(5_250.0, repository.sumCardOutstanding(start, end))
+    }
+
+    @Test
+    fun testReactiveHistoryFlowsAndUpdatesEmitOnDeleteAndUpdate() = runBlocking {
+        val tx1Id = repository.insert(
+            Transaction(
+                amount = 400.0,
+                type = TransactionType.DEBIT,
+                merchant = "Cafe",
+                categoryId = 1L,
+                sourceApp = "UPI",
+                rawText = "Paid 400",
+                confidence = 0.95f,
+                status = TransactionStatus.CONFIRMED,
+                timestamp = 1_000L
+            )
+        )
+        val tx2Id = repository.insert(
+            Transaction(
+                amount = 600.0,
+                type = TransactionType.DEBIT,
+                merchant = "Books",
+                categoryId = 2L,
+                sourceApp = "UPI",
+                rawText = "Paid 600",
+                confidence = 0.95f,
+                status = TransactionStatus.CONFIRMED,
+                timestamp = 2_000L
+            )
+        )
+
+        val pageSnapshots = mutableListOf<List<Long>>()
+        val summarySnapshots = mutableListOf<Double>()
+        var updateSignals = 0
+
+        val initialLoaded = CompletableDeferred<Unit>()
+        val afterUpdate = CompletableDeferred<Unit>()
+        val afterDelete = CompletableDeferred<Unit>()
+
+        val pageJob = launch(Dispatchers.Default) {
+            repository.getHistoryPageFlow(limit = 50L).collect { page ->
+                pageSnapshots.add(page.map { it.id })
+                if (page.size == 2 && !initialLoaded.isCompleted) {
+                    initialLoaded.complete(Unit)
+                } else if (page.size == 1 && !afterDelete.isCompleted) {
+                    afterDelete.complete(Unit)
+                }
+            }
+        }
+        val summaryJob = launch(Dispatchers.Default) {
+            repository.getHistorySummaryFlow().collect { summary ->
+                summarySnapshots.add(summary.totalDebit)
+                if (summary.totalDebit == 1250.0 && !afterUpdate.isCompleted) {
+                    afterUpdate.complete(Unit)
+                }
+            }
+        }
+        val updatesJob = launch(Dispatchers.Default) {
+            repository.transactionUpdates.collect {
+                updateSignals++
+            }
+        }
+
+        try {
+            withTimeout(5_000L) { initialLoaded.await() }
+            assertEquals(listOf(tx2Id, tx1Id), pageSnapshots.last())
+
+            // Update tx1 amount from 400 to 650 -> totalDebit becomes 650 + 600 = 1250
+            val existingTx1 = repository.getHistoryPage().first { it.id == tx1Id }
+            repository.update(existingTx1.copy(amount = 650.0))
+            withTimeout(5_000L) { afterUpdate.await() }
+            assertEquals(1250.0, summarySnapshots.last())
+
+            // Delete tx2 -> page emits only [tx1Id], totalDebit drops to 650
+            repository.deleteById(tx2Id)
+            withTimeout(5_000L) { afterDelete.await() }
+            assertEquals(listOf(tx1Id), pageSnapshots.last())
+            assertTrue(updateSignals >= 2)
+        } finally {
+            pageJob.cancel()
+            summaryJob.cancel()
+            updatesJob.cancel()
+        }
     }
 }

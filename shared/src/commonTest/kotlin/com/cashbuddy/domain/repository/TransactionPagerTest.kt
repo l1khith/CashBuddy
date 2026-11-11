@@ -32,7 +32,8 @@ class TransactionPagerTest {
         )
     }
 
-    private class FakeTransactionRepo(private val allTxs: List<Transaction>) : TransactionRepository {
+    private class FakeTransactionRepo(initialTxs: List<Transaction>) : TransactionRepository {
+        val allTxs = initialTxs.toMutableList()
         override fun getAll(): Flow<List<Transaction>> = emptyFlow()
         override fun getById(id: Long): Flow<Transaction?> = emptyFlow()
         override fun getPending(): Flow<List<Transaction>> = emptyFlow()
@@ -46,7 +47,9 @@ class TransactionPagerTest {
         override suspend fun insert(transaction: Transaction): Long = 0L
         override suspend fun updateStatus(id: Long, status: TransactionStatus) {}
         override suspend fun update(transaction: Transaction) {}
-        override suspend fun deleteById(id: Long) {}
+        override suspend fun deleteById(id: Long) {
+            allTxs.removeAll { it.id == id }
+        }
         override fun getBalance(): Flow<Double> = emptyFlow()
         override fun getAverageAmount(): Flow<Double> = emptyFlow()
         override fun getCount(): Flow<Long> = emptyFlow()
@@ -127,5 +130,31 @@ class TransactionPagerTest {
         val page1AfterReset = pager.loadNextPage()
         assertEquals(5, page1AfterReset.size)
         assertEquals(12L, page1AfterReset.first().id)
+    }
+
+    @Test
+    fun testReloadReflectsDeletionsAndPreservesWindowSize() = runBlocking {
+        val items = (1..12).map { id -> createTx(id.toLong(), timestamp = id * 1000L) }
+        val repo = FakeTransactionRepo(items)
+        val pager = TransactionPager(repo, pageSize = 5L)
+
+        // Load two pages (10 items: ids 12 down to 3)
+        val page1 = pager.loadNextPage()
+        val page2 = pager.loadNextPage()
+        val loadedCount = page1.size + page2.size
+        assertEquals(10, loadedCount)
+
+        // Delete an item from the first page
+        repo.deleteById(11L)
+
+        // Reload preserving loaded window size (10)
+        val reloaded = pager.reload(currentCount = loadedCount)
+        assertEquals(10, reloaded.size)
+        assertTrue(reloaded.none { it.id == 11L })
+        assertEquals(12L, reloaded.first().id)
+        assertEquals(2L, reloaded.last().id)
+        assertFalse(pager.isEndReached)
+        assertEquals(2000L, pager.cursorTimestamp)
+        assertEquals(2L, pager.cursorId)
     }
 }

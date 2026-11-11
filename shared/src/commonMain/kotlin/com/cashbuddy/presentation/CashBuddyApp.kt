@@ -1,5 +1,12 @@
 package com.cashbuddy.presentation
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
@@ -20,7 +27,8 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.toRoute
-import com.cashbuddy.domain.usecase.GetUnreviewedCountUseCase
+import com.cashbuddy.domain.model.UserSettings
+import com.cashbuddy.domain.repository.SettingsRepository
 import com.cashbuddy.presentation.addtransaction.AddTransactionScreen
 import com.cashbuddy.presentation.addtransaction.AddTransactionViewModel
 import com.cashbuddy.presentation.budget.BudgetDrilldownScreen
@@ -28,6 +36,7 @@ import com.cashbuddy.presentation.budget.BudgetDrilldownViewModel
 import com.cashbuddy.presentation.budget.BudgetListScreen
 import com.cashbuddy.presentation.budget.BudgetViewModel
 import com.cashbuddy.presentation.components.CashBuddyBottomBar
+import com.cashbuddy.presentation.components.CashBuddyTopBar
 import com.cashbuddy.presentation.home.HomeScreen
 import com.cashbuddy.presentation.home.HomeViewModel
 import com.cashbuddy.presentation.navigation.ScreenRoute
@@ -48,6 +57,7 @@ import org.koin.compose.koinInject
 import org.koin.compose.viewmodel.koinViewModel
 import org.koin.core.parameter.parametersOf
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun CashBuddyApp(
     initialRoute: String? = null,
@@ -61,22 +71,19 @@ fun CashBuddyApp(
     val snackbarHostState = remember { SnackbarHostState() }
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentDestination = navBackStackEntry?.destination
-
-    val getUnreviewedCountUseCase: GetUnreviewedCountUseCase = koinInject()
-    val unreviewedCount by getUnreviewedCountUseCase().collectAsStateWithLifecycle(0)
+    val settingsRepository: SettingsRepository = koinInject()
+    val userSettings by settingsRepository.getSettings().collectAsStateWithLifecycle(initialValue = UserSettings())
 
     val isTopLevelDestination = currentDestination != null && (
         currentDestination.hasRoute(ScreenRoute.Home::class) ||
         currentDestination.hasRoute(ScreenRoute.Transactions::class) ||
-        currentDestination.hasRoute(ScreenRoute.Stats::class) ||
-        currentDestination.hasRoute(ScreenRoute.Settings::class)
+        currentDestination.hasRoute(ScreenRoute.Stats::class)
     )
 
     val currentRouteStr = when {
         currentDestination?.hasRoute(ScreenRoute.Home::class) == true -> "Home"
         currentDestination?.hasRoute(ScreenRoute.Transactions::class) == true -> "Transactions"
         currentDestination?.hasRoute(ScreenRoute.Stats::class) == true -> "Stats"
-        currentDestination?.hasRoute(ScreenRoute.Settings::class) == true -> "Settings"
         else -> ""
     }
 
@@ -120,46 +127,45 @@ fun CashBuddyApp(
     Scaffold(
         modifier = modifier.fillMaxSize(),
         snackbarHost = { SnackbarHost(snackbarHostState) },
+        topBar = {
+            AnimatedVisibility(
+                visible = isTopLevelDestination,
+                enter = fadeIn() + slideInVertically { -it },
+                exit = fadeOut() + slideOutVertically { -it }
+            ) {
+                CashBuddyTopBar(
+                    appName = userSettings.customAppName,
+                    appSubtitle = userSettings.customAppSubtitle,
+                    showLogo = userSettings.showAppLogo,
+                    onSettingsClick = {
+                        navController.navigate(ScreenRoute.Settings) {
+                            launchSingleTop = true
+                        }
+                    }
+                )
+            }
+        },
         bottomBar = {
-            if (isTopLevelDestination) {
+            AnimatedVisibility(
+                visible = isTopLevelDestination,
+                enter = fadeIn() + slideInVertically { it },
+                exit = fadeOut() + slideOutVertically { it }
+            ) {
+                val navigateTopLevel: (ScreenRoute) -> Unit = { route ->
+                    navController.navigate(route) {
+                        popUpTo(navController.graph.findStartDestination().id) { saveState = true }
+                        launchSingleTop = true
+                        restoreState = true
+                    }
+                }
                 CashBuddyBottomBar(
                     currentRoute = currentRouteStr,
-                    onNavigateToHome = {
-                        navController.navigate(ScreenRoute.Home) {
-                            popUpTo(ScreenRoute.Home) { saveState = true }
-                            launchSingleTop = true
-                            restoreState = true
-                        }
-                    },
-                    onNavigateToTransactions = {
-                        navController.navigate(ScreenRoute.Transactions) {
-                            popUpTo(ScreenRoute.Home) { saveState = true }
-                            launchSingleTop = true
-                            restoreState = true
-                        }
-                    },
-                    onNavigateToStats = {
-                        navController.navigate(ScreenRoute.Stats) {
-                            popUpTo(ScreenRoute.Home) { saveState = true }
-                            launchSingleTop = true
-                            restoreState = true
-                        }
-                    },
-                    onNavigateToSettings = {
-                        navController.navigate(ScreenRoute.Settings) {
-                            popUpTo(ScreenRoute.Home) { saveState = true }
-                            launchSingleTop = true
-                            restoreState = true
-                        }
-                    },
+                    navOrder = userSettings.navOrder,
+                    onNavigateToHome = { navigateTopLevel(ScreenRoute.Home) },
+                    onNavigateToStats = { navigateTopLevel(ScreenRoute.Stats) },
+                    onNavigateToTransactions = { navigateTopLevel(ScreenRoute.Transactions) },
                     onAddClick = {
                         navController.navigate(ScreenRoute.AddTransaction()) {
-                            launchSingleTop = true
-                        }
-                    },
-                    unreviewedCount = unreviewedCount,
-                    onNavigateToReview = {
-                        navController.navigate(ScreenRoute.ReviewInbox) {
                             launchSingleTop = true
                         }
                     }
@@ -172,7 +178,8 @@ fun CashBuddyApp(
             startDestination = ScreenRoute.Home,
             modifier = Modifier
                 .fillMaxSize()
-                .padding(bottom = innerPadding.calculateBottomPadding())
+                .padding(innerPadding)
+                .consumeWindowInsets(innerPadding)
         ) {
             composable<ScreenRoute.Home> {
                 val homeViewModel: HomeViewModel = koinViewModel()
@@ -271,6 +278,7 @@ fun CashBuddyApp(
                 val settingsViewModel: SettingsViewModel = koinViewModel()
                 SettingsScreen(
                     viewModel = settingsViewModel,
+                    onNavigateBack = { navController.popBackStack() },
                     onNavigateToPersonalization = {
                         navController.navigate(ScreenRoute.PersonalizationDashboard) { launchSingleTop = true }
                     },

@@ -1,8 +1,16 @@
 package com.cashbuddy.presentation.settings
 
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -20,18 +28,39 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.MergeType
 import androidx.compose.material.icons.automirrored.filled.Undo
+import androidx.compose.material.icons.filled.DragHandle
+import androidx.compose.material.icons.filled.RestartAlt
 import cashbuddy.shared.generated.resources.Res
+import cashbuddy.shared.generated.resources.cd_back
 import cashbuddy.shared.generated.resources.ic_bug_report
 import cashbuddy.shared.generated.resources.ic_cashbuddy_logo
 import cashbuddy.shared.generated.resources.ic_delete_forever
 import cashbuddy.shared.generated.resources.ic_download
 import cashbuddy.shared.generated.resources.ic_file_download
+import cashbuddy.shared.generated.resources.ic_home
+import cashbuddy.shared.generated.resources.ic_monitoring
+import cashbuddy.shared.generated.resources.ic_receipt_long
 import cashbuddy.shared.generated.resources.ic_tune
 import cashbuddy.shared.generated.resources.ic_visibility
 import cashbuddy.shared.generated.resources.ic_warning
+import cashbuddy.shared.generated.resources.nav_history
+import cashbuddy.shared.generated.resources.nav_home
+import cashbuddy.shared.generated.resources.nav_stats
+import cashbuddy.shared.generated.resources.settings_app_name_label
+import cashbuddy.shared.generated.resources.settings_app_subtitle_label
+import cashbuddy.shared.generated.resources.settings_char_count
+import cashbuddy.shared.generated.resources.settings_nav_order_hint
+import cashbuddy.shared.generated.resources.settings_nav_order_label
+import cashbuddy.shared.generated.resources.settings_reset_customization
+import cashbuddy.shared.generated.resources.settings_section_app_customization
+import cashbuddy.shared.generated.resources.settings_show_app_logo
+import cashbuddy.shared.generated.resources.settings_show_app_logo_desc
+import com.cashbuddy.domain.model.UserSettings
 import org.jetbrains.compose.resources.painterResource
+import org.jetbrains.compose.resources.stringResource
 import com.cashbuddy.presentation.settings.components.DuplicateReconciliationDialog
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -40,30 +69,44 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.key
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.zIndex
 import com.cashbuddy.presentation.theme.ExpenseCrimson
 import com.cashbuddy.presentation.theme.TealMintSecondary
 import com.cashbuddy.presentation.theme.TrustBluePrimary
@@ -83,6 +126,7 @@ import com.cashbuddy.presentation.theme.RadiusSmall
 @Composable
 fun SettingsScreen(
     viewModel: SettingsViewModel,
+    onNavigateBack: (() -> Unit)? = null,
     onNavigateToPersonalization: () -> Unit = {},
     onNavigateToDebugLog: () -> Unit = {},
     onOpenNotificationSettings: () -> Unit = {},
@@ -125,15 +169,180 @@ fun SettingsScreen(
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
                 item {
-                    Text(
-                        text = "Settings",
-                        style = CashBuddyTypography.headlineMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onBackground
-                    )
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        if (onNavigateBack != null) {
+                            IconButton(onClick = onNavigateBack) {
+                                Icon(
+                                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                                    contentDescription = stringResource(Res.string.cd_back),
+                                    tint = MaterialTheme.colorScheme.onBackground
+                                )
+                            }
+                        }
+                        Text(
+                            text = "Settings",
+                            style = CashBuddyTypography.headlineMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onBackground
+                        )
+                    }
                 }
 
 
+
+                // App Customization
+                item {
+                    val isCustomized = state.customAppName != UserSettings.DEFAULT_APP_NAME ||
+                        state.customAppSubtitle != UserSettings.DEFAULT_APP_SUBTITLE ||
+                        !state.showAppLogo ||
+                        state.navOrder != UserSettings.DEFAULT_NAV_ORDER
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = stringResource(Res.string.settings_section_app_customization),
+                            style = CashBuddyTypography.titleLarge,
+                            fontWeight = FontWeight.Bold
+                        )
+                        TextButton(
+                            onClick = { viewModel.resetAppCustomization() },
+                            enabled = isCustomized
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.RestartAlt,
+                                contentDescription = stringResource(Res.string.settings_reset_customization),
+                                modifier = Modifier.size(18.dp)
+                            )
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text(stringResource(Res.string.settings_reset_customization))
+                        }
+                    }
+                }
+
+                item {
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RadiusLarge,
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+                    ) {
+                        Column(
+                            modifier = Modifier.padding(18.dp),
+                            verticalArrangement = Arrangement.spacedBy(16.dp)
+                        ) {
+                            var appNameInput by rememberSaveable { mutableStateOf(state.customAppName) }
+                            var appSubtitleInput by rememberSaveable { mutableStateOf(state.customAppSubtitle) }
+
+                            LaunchedEffect(state.customAppName) {
+                                if (appNameInput != state.customAppName) {
+                                    appNameInput = state.customAppName
+                                }
+                            }
+                            LaunchedEffect(state.customAppSubtitle) {
+                                if (appSubtitleInput != state.customAppSubtitle) {
+                                    appSubtitleInput = state.customAppSubtitle
+                                }
+                            }
+
+                            OutlinedTextField(
+                                value = appNameInput,
+                                onValueChange = {
+                                    val limited = it.take(UserSettings.MAX_APP_NAME_LENGTH)
+                                    appNameInput = limited
+                                    viewModel.setCustomAppName(limited)
+                                },
+                                label = { Text(stringResource(Res.string.settings_app_name_label)) },
+                                supportingText = {
+                                    Text(
+                                        text = stringResource(
+                                            Res.string.settings_char_count,
+                                            appNameInput.length,
+                                            UserSettings.MAX_APP_NAME_LENGTH
+                                        ),
+                                        modifier = Modifier.fillMaxWidth(),
+                                        textAlign = TextAlign.End
+                                    )
+                                },
+                                singleLine = true,
+                                modifier = Modifier.fillMaxWidth(),
+                                shape = RadiusMedium
+                            )
+
+                            OutlinedTextField(
+                                value = appSubtitleInput,
+                                onValueChange = {
+                                    val limited = it.take(UserSettings.MAX_APP_SUBTITLE_LENGTH)
+                                    appSubtitleInput = limited
+                                    viewModel.setCustomAppSubtitle(limited)
+                                },
+                                label = { Text(stringResource(Res.string.settings_app_subtitle_label)) },
+                                supportingText = {
+                                    Text(
+                                        text = stringResource(
+                                            Res.string.settings_char_count,
+                                            appSubtitleInput.length,
+                                            UserSettings.MAX_APP_SUBTITLE_LENGTH
+                                        ),
+                                        modifier = Modifier.fillMaxWidth(),
+                                        textAlign = TextAlign.End
+                                    )
+                                },
+                                singleLine = true,
+                                modifier = Modifier.fillMaxWidth(),
+                                shape = RadiusMedium
+                            )
+
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(
+                                        text = stringResource(Res.string.settings_show_app_logo),
+                                        style = MaterialTheme.typography.titleMedium,
+                                        fontWeight = FontWeight.SemiBold
+                                    )
+                                    Text(
+                                        text = stringResource(Res.string.settings_show_app_logo_desc),
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                                Switch(
+                                    checked = state.showAppLogo,
+                                    onCheckedChange = { viewModel.setShowAppLogo(it) }
+                                )
+                            }
+
+                            Column(
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                Text(
+                                    text = stringResource(Res.string.settings_nav_order_label),
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.SemiBold
+                                )
+                                Text(
+                                    text = stringResource(Res.string.settings_nav_order_hint),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                                ReorderableNavOrderList(
+                                    navItems = state.navOrderList,
+                                    onMove = { from, to -> viewModel.moveNavItem(from, to) },
+                                    onDragFinish = { viewModel.commitNavOrder() }
+                                )
+                            }
+                        }
+                    }
+                }
 
                 // Automation & Threshold Rules
                 item {
@@ -1024,5 +1233,181 @@ fun SettingsScreen(
                 }
             }
         )
+    }
+}
+
+@Composable
+private fun ReorderableNavOrderList(
+    navItems: List<String>,
+    onMove: (fromIndex: Int, toIndex: Int) -> Unit,
+    onDragFinish: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val haptic = LocalHapticFeedback.current
+    val spacingPx = LocalDensity.current.run { 8.dp.toPx() }
+    val latestItems = rememberUpdatedState(navItems)
+    val latestOnMove = rememberUpdatedState(onMove)
+    val latestOnDragFinish = rememberUpdatedState(onDragFinish)
+
+    var draggedKey by remember { mutableStateOf<String?>(null) }
+    var draggingOffsetY by remember { mutableFloatStateOf(0f) }
+    var itemPitchPx by remember { mutableFloatStateOf(160f) }
+
+    fun handleDragStart(key: String) {
+        draggedKey = key
+        draggingOffsetY = 0f
+        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+    }
+
+    fun handleDragDelta(key: String, deltaY: Float) {
+        if (draggedKey != key || itemPitchPx <= 0f) return
+        draggingOffsetY += deltaY
+        val items = latestItems.value
+        val currentIdx = items.indexOf(key)
+        if (currentIdx == -1) return
+
+        val slotDelta = kotlin.math.round(draggingOffsetY / itemPitchPx).toInt()
+        val targetIdx = (currentIdx + slotDelta).coerceIn(0, items.lastIndex)
+        if (targetIdx != currentIdx) {
+            draggingOffsetY -= (targetIdx - currentIdx) * itemPitchPx
+            latestOnMove.value(currentIdx, targetIdx)
+            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+        }
+    }
+
+    fun handleDragEnd() {
+        if (draggedKey != null) {
+            draggedKey = null
+            draggingOffsetY = 0f
+            latestOnDragFinish.value()
+        }
+    }
+
+    Column(
+        modifier = modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        navItems.forEachIndexed { index, key ->
+            key(key) {
+                val isDragging = key == draggedKey
+                val scale by animateFloatAsState(
+                    targetValue = if (isDragging) 1.04f else 1f,
+                    animationSpec = spring(stiffness = Spring.StiffnessMediumLow),
+                    label = "navCardScale"
+                )
+                val elevation by animateDpAsState(
+                    targetValue = if (isDragging) 8.dp else 0.dp,
+                    label = "navCardElevation"
+                )
+
+                var previousIndex by remember { mutableIntStateOf(index) }
+                val siblingSlideAnim = remember { Animatable(0f) }
+
+                LaunchedEffect(index) {
+                    if (index != previousIndex && !isDragging) {
+                        val deltaPx = (previousIndex - index) * itemPitchPx
+                        siblingSlideAnim.snapTo(deltaPx)
+                        siblingSlideAnim.animateTo(
+                            targetValue = 0f,
+                            animationSpec = spring(
+                                stiffness = Spring.StiffnessMediumLow,
+                                dampingRatio = Spring.DampingRatioNoBouncy
+                            )
+                        )
+                    }
+                    previousIndex = index
+                }
+
+                val iconRes = when (key) {
+                    "home" -> Res.drawable.ic_home
+                    "stats" -> Res.drawable.ic_monitoring
+                    else -> Res.drawable.ic_receipt_long
+                }
+                val titleText = when (key) {
+                    "home" -> stringResource(Res.string.nav_home)
+                    "stats" -> stringResource(Res.string.nav_stats)
+                    else -> stringResource(Res.string.nav_history)
+                }
+
+                Surface(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .onSizeChanged { size ->
+                            if (size.height > 0) {
+                                itemPitchPx = size.height + spacingPx
+                            }
+                        }
+                        .zIndex(if (isDragging) 1f else 0f)
+                        .graphicsLayer {
+                            translationY = if (isDragging) draggingOffsetY else siblingSlideAnim.value
+                            scaleX = scale
+                            scaleY = scale
+                        }
+                        .pointerInput(key) {
+                            detectDragGesturesAfterLongPress(
+                                onDragStart = { handleDragStart(key) },
+                                onDragEnd = { handleDragEnd() },
+                                onDragCancel = { handleDragEnd() },
+                                onDrag = { change, dragAmount ->
+                                    change.consume()
+                                    handleDragDelta(key, dragAmount.y)
+                                }
+                            )
+                        },
+                    shape = RadiusMedium,
+                    color = MaterialTheme.colorScheme.surfaceVariant,
+                    shadowElevation = elevation,
+                    tonalElevation = if (isDragging) 4.dp else 0.dp,
+                    border = if (isDragging) {
+                        BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.6f))
+                    } else null
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 14.dp, vertical = 14.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            painter = painterResource(iconRes),
+                            contentDescription = titleText,
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(22.dp)
+                        )
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Text(
+                            text = titleText,
+                            style = MaterialTheme.typography.bodyLarge,
+                            fontWeight = FontWeight.Medium,
+                            color = MaterialTheme.colorScheme.onSurface,
+                            modifier = Modifier.weight(1f)
+                        )
+                        // Immediate drag handle (no long-press delay needed on the handle itself)
+                        Box(
+                            modifier = Modifier
+                                .size(32.dp)
+                                .pointerInput(key) {
+                                    detectDragGestures(
+                                        onDragStart = { handleDragStart(key) },
+                                        onDragEnd = { handleDragEnd() },
+                                        onDragCancel = { handleDragEnd() },
+                                        onDrag = { change, dragAmount ->
+                                            change.consume()
+                                            handleDragDelta(key, dragAmount.y)
+                                        }
+                                    )
+                                },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.DragHandle,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                }
+            }
+        }
     }
 }
