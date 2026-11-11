@@ -170,7 +170,8 @@ val appModule = module {
         BudgetViewModel(
             budgetRepository = get(),
             categoryRepository = get(),
-            budgetEngine = get()
+            budgetEngine = get(),
+            transactionRepository = getOrNull()
         )
     }
     viewModel { (category: String, period: String) ->

@@ -11,6 +11,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.onStart
 import androidx.compose.runtime.Immutable
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
@@ -44,8 +45,9 @@ class StatsViewModel(
 
             combine(
                 transactionRepository.getMonthlySummary(),
-                transactionRepository.getCategoryBreakdown(startOfMonth, endOfMonth)
-            ) { monthly, categories ->
+                transactionRepository.getCategoryBreakdown(startOfMonth, endOfMonth),
+                transactionRepository.transactionUpdates.onStart { emit(Unit) }
+            ) { monthly, categories, _ ->
                 val latest = monthly.firstOrNull()
                 // The three month-range projections are independent queries; the combine
                 // transform re-runs them on every upstream emission, so run them

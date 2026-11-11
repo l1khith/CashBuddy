@@ -22,10 +22,15 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.conflate
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 
 @Immutable
 data class TransactionListUiState(
@@ -69,6 +74,8 @@ class TransactionListViewModel(
     private val _summary = MutableStateFlow(HistorySummary(0.0, 0.0, 0L))
     private val _isLoading = MutableStateFlow(true)
     private val _isLoadingMore = MutableStateFlow(false)
+    private val _isEndReached = MutableStateFlow(false)
+    private val pagerMutex = Mutex()
 
     private data class FilterCriteria(
         val query: String,
@@ -79,6 +86,45 @@ class TransactionListViewModel(
         val minAmt: Double?,
         val maxAmt: Double?
     )
+
+    private data class ResolvedQueryArgs(
+        val searchQuery: String?,
+        val type: String?,
+        val categoryId: Long?,
+        val startTime: Long?,
+        val endTime: Long?,
+        val minAmount: Double?,
+        val maxAmount: Double?
+    )
+
+    private fun currentCriteria() = FilterCriteria(
+        query = _searchQuery.value,
+        type = _selectedType.value,
+        catId = _selectedCategoryId.value,
+        period = _selectedPeriod.value,
+        customRange = _customDateRange.value,
+        minAmt = _minAmount.value,
+        maxAmt = _maxAmount.value
+    )
+
+    private fun resolveQueryArgs(criteria: FilterCriteria): ResolvedQueryArgs {
+        val range = DateRangeHelper.calculateDateRange(
+            criteria.period,
+            criteria.customRange?.startTimestamp,
+            criteria.customRange?.endTimestamp
+        )
+        val startTime = if (criteria.period == TimePeriod.ALL_TIME) null else range.startTimestamp
+        val endTime = if (criteria.period == TimePeriod.ALL_TIME) null else range.endTimestamp
+        return ResolvedQueryArgs(
+            searchQuery = criteria.query.trim().ifEmpty { null },
+            type = criteria.type?.name,
+            categoryId = criteria.catId,
+            startTime = startTime,
+            endTime = endTime,
+            minAmount = criteria.minAmt,
+            maxAmount = criteria.maxAmt
+        )
+    }
 
     private val filterCriteriaFlow = combine(
         _searchQuery.debounce(300),
@@ -107,80 +153,141 @@ class TransactionListViewModel(
             }
         }
 
+        // Reactive SQLDelight summary stream scoped to the active filter criteria
         viewModelScope.launch(ioDispatcher) {
-            filterCriteriaFlow.collectLatest { criteria ->
-                _isLoading.value = true
-                pager.reset()
+            filterCriteriaFlow
+                .flatMapLatest { criteria ->
+                    val args = resolveQueryArgs(criteria)
+                    transactionRepository.getHistorySummaryFlow(
+                        searchQuery = args.searchQuery,
+                        type = args.type,
+                        categoryId = args.categoryId,
+                        startTime = args.startTime,
+                        endTime = args.endTime,
+                        minAmount = args.minAmount,
+                        maxAmount = args.maxAmount
+                    )
+                }
+                .collect { summary ->
+                    _summary.value = summary
+                }
+        }
 
-                val range = DateRangeHelper.calculateDateRange(
-                    criteria.period,
-                    criteria.customRange?.startTimestamp,
-                    criteria.customRange?.endTimestamp
-                )
-                val startTime = if (criteria.period == TimePeriod.ALL_TIME) null else range.startTimestamp
-                val endTime = if (criteria.period == TimePeriod.ALL_TIME) null else range.endTimestamp
-
-                val summary = transactionRepository.getHistorySummary(
-                    searchQuery = criteria.query.trim().ifEmpty { null },
-                    type = criteria.type?.name,
-                    categoryId = criteria.catId,
-                    startTime = startTime,
-                    endTime = endTime,
-                    minAmount = criteria.minAmt,
-                    maxAmount = criteria.maxAmt
-                )
-                _summary.value = summary
-
-                val firstPage = pager.loadNextPage(
-                    searchQuery = criteria.query.trim().ifEmpty { null },
-                    type = criteria.type?.name,
-                    categoryId = criteria.catId,
-                    startTime = startTime,
-                    endTime = endTime,
-                    minAmount = criteria.minAmt,
-                    maxAmount = criteria.maxAmt
-                )
-                _transactions.value = firstPage
-                _isLoading.value = false
-            }
+        // Reactive paginated list: resets on filter changes and reloads the visible window
+        // whenever underlying transactions change (delete, edit, insert, merge, or ingest).
+        viewModelScope.launch(ioDispatcher) {
+            filterCriteriaFlow
+                .flatMapLatest { criteria ->
+                    var isInitialForCriteria = true
+                    kotlinx.coroutines.flow.flow {
+                        transactionRepository.transactionUpdates
+                            .onStart { emit(Unit) }
+                            .conflate()
+                            .collect {
+                                emit(criteria to isInitialForCriteria)
+                                isInitialForCriteria = false
+                            }
+                    }
+                }
+                .collectLatest { (criteria, isInitial) ->
+                    val args = resolveQueryArgs(criteria)
+                    pagerMutex.withLock {
+                        if (isInitial) {
+                            _isLoading.value = true
+                            pager.reset()
+                            val firstPage = pager.loadNextPage(
+                                searchQuery = args.searchQuery,
+                                type = args.type,
+                                categoryId = args.categoryId,
+                                startTime = args.startTime,
+                                endTime = args.endTime,
+                                minAmount = args.minAmount,
+                                maxAmount = args.maxAmount
+                            )
+                            _transactions.value = firstPage
+                            _isEndReached.value = pager.isEndReached
+                            _isLoading.value = false
+                        } else {
+                            val currentCount = maxOf(pager.pageSize.toInt(), _transactions.value.size)
+                            val reloaded = pager.reload(
+                                searchQuery = args.searchQuery,
+                                type = args.type,
+                                categoryId = args.categoryId,
+                                startTime = args.startTime,
+                                endTime = args.endTime,
+                                minAmount = args.minAmount,
+                                maxAmount = args.maxAmount,
+                                currentCount = currentCount
+                            )
+                            _transactions.value = reloaded
+                            _isEndReached.value = pager.isEndReached
+                        }
+                    }
+                }
         }
     }
 
     fun loadNextPage() {
         if (pager.isEndReached || _isLoading.value || _isLoadingMore.value) return
         viewModelScope.launch(ioDispatcher) {
-            _isLoadingMore.value = true
-            val criteria = FilterCriteria(
-                _searchQuery.value,
-                _selectedType.value,
-                _selectedCategoryId.value,
-                _selectedPeriod.value,
-                _customDateRange.value,
-                _minAmount.value,
-                _maxAmount.value
-            )
-            val range = DateRangeHelper.calculateDateRange(
-                criteria.period,
-                criteria.customRange?.startTimestamp,
-                criteria.customRange?.endTimestamp
-            )
-            val startTime = if (criteria.period == TimePeriod.ALL_TIME) null else range.startTimestamp
-            val endTime = if (criteria.period == TimePeriod.ALL_TIME) null else range.endTimestamp
-
-            val nextPage = pager.loadNextPage(
-                searchQuery = criteria.query.trim().ifEmpty { null },
-                type = criteria.type?.name,
-                categoryId = criteria.catId,
-                startTime = startTime,
-                endTime = endTime,
-                minAmount = criteria.minAmt,
-                maxAmount = criteria.maxAmt
-            )
-            if (nextPage.isNotEmpty()) {
-                _transactions.value = _transactions.value + nextPage
+            pagerMutex.withLock {
+                if (pager.isEndReached || _isLoading.value || _isLoadingMore.value) return@withLock
+                _isLoadingMore.value = true
+                try {
+                    val args = resolveQueryArgs(currentCriteria())
+                    val nextPage = pager.loadNextPage(
+                        searchQuery = args.searchQuery,
+                        type = args.type,
+                        categoryId = args.categoryId,
+                        startTime = args.startTime,
+                        endTime = args.endTime,
+                        minAmount = args.minAmount,
+                        maxAmount = args.maxAmount
+                    )
+                    if (nextPage.isNotEmpty()) {
+                        _transactions.value = _transactions.value + nextPage
+                    }
+                    _isEndReached.value = pager.isEndReached
+                } finally {
+                    _isLoadingMore.value = false
+                }
             }
-            _isLoadingMore.value = false
         }
+    }
+
+    fun refresh() {
+        viewModelScope.launch(ioDispatcher) {
+            reloadCurrent()
+        }
+    }
+
+    private suspend fun reloadCurrent() {
+        val criteria = currentCriteria()
+        val args = resolveQueryArgs(criteria)
+        pagerMutex.withLock {
+            val currentCount = maxOf(pager.pageSize.toInt(), _transactions.value.size)
+            val reloaded = pager.reload(
+                searchQuery = args.searchQuery,
+                type = args.type,
+                categoryId = args.categoryId,
+                startTime = args.startTime,
+                endTime = args.endTime,
+                minAmount = args.minAmount,
+                maxAmount = args.maxAmount,
+                currentCount = currentCount
+            )
+            _transactions.value = reloaded
+            _isEndReached.value = pager.isEndReached
+        }
+        _summary.value = transactionRepository.getHistorySummary(
+            searchQuery = args.searchQuery,
+            type = args.type,
+            categoryId = args.categoryId,
+            startTime = args.startTime,
+            endTime = args.endTime,
+            minAmount = args.minAmount,
+            maxAmount = args.maxAmount
+        )
     }
 
     val uiState: StateFlow<TransactionListUiState> = combine(
@@ -196,6 +303,7 @@ class TransactionListViewModel(
         _summary,
         _isLoading,
         _isLoadingMore,
+        _isEndReached,
         _editingTransaction
     ) { args: Array<Any?> ->
         @Suppress("UNCHECKED_CAST")
@@ -212,7 +320,8 @@ class TransactionListViewModel(
         val summary = args[9] as HistorySummary
         val loading = args[10] as Boolean
         val loadingMore = args[11] as Boolean
-        val editingTx = args[12] as Transaction?
+        val endReached = args[12] as Boolean
+        val editingTx = args[13] as Transaction?
 
         TransactionListUiState(
             filteredTransactions = txs,
@@ -229,7 +338,7 @@ class TransactionListViewModel(
             totalCount = summary.totalCount.toInt(),
             isLoading = loading,
             isLoadingMore = loadingMore,
-            isEndReached = pager.isEndReached,
+            isEndReached = endReached,
             editingTransaction = editingTx
         )
     }.stateIn(
@@ -297,13 +406,16 @@ class TransactionListViewModel(
                     updatedAt = com.cashbuddy.platform.currentTimeMillis()
                 )
                 transactionRepository.update(updated)
+                com.cashbuddy.platform.notifyTransactionsUpdated()
                 _editingTransaction.value = null
-
-                // Optimistically update list
-                _transactions.value = _transactions.value.map {
-                    if (it.id == id) updated else it
-                }
             }
+        }
+    }
+
+    fun deleteTransaction(id: Long) {
+        viewModelScope.launch(ioDispatcher) {
+            transactionRepository.deleteById(id)
+            com.cashbuddy.platform.notifyTransactionsUpdated()
         }
     }
 
