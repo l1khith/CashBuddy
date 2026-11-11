@@ -1,176 +1,162 @@
 package com.cashbuddy.presentation.components
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.shape.CircleShape
-import cashbuddy.shared.generated.resources.Res
-import cashbuddy.shared.generated.resources.ic_add
-import cashbuddy.shared.generated.resources.ic_home
-import cashbuddy.shared.generated.resources.ic_monitoring
-import cashbuddy.shared.generated.resources.ic_receipt_long
-import cashbuddy.shared.generated.resources.ic_settings
-import org.jetbrains.compose.resources.DrawableResource
-import org.jetbrains.compose.resources.painterResource
-import androidx.compose.material3.Badge
-import androidx.compose.material3.BadgedBox
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.FloatingActionButton
-import androidx.compose.material3.FloatingActionButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-import com.cashbuddy.presentation.theme.CashBuddyTypography
-import com.cashbuddy.presentation.theme.PrimaryIndigo
-import com.cashbuddy.presentation.theme.RadiusXLarge
+import cashbuddy.shared.generated.resources.Res
+import cashbuddy.shared.generated.resources.action_add_transaction
+import cashbuddy.shared.generated.resources.ic_home
+import cashbuddy.shared.generated.resources.ic_monitoring
+import cashbuddy.shared.generated.resources.ic_receipt_long
+import cashbuddy.shared.generated.resources.nav_history
+import cashbuddy.shared.generated.resources.nav_home
+import cashbuddy.shared.generated.resources.nav_stats
+import com.cashbuddy.domain.model.UserSettings
+import org.jetbrains.compose.resources.DrawableResource
+import org.jetbrains.compose.resources.painterResource
+import org.jetbrains.compose.resources.stringResource
+
+private val DEFAULT_NAV_KEYS = listOf("home", "stats", "history")
 
 @Composable
 fun CashBuddyBottomBar(
     currentRoute: String,
+    navOrder: String = UserSettings.DEFAULT_NAV_ORDER,
     onNavigateToHome: () -> Unit,
-    onNavigateToTransactions: () -> Unit,
     onNavigateToStats: () -> Unit,
-    onNavigateToSettings: () -> Unit,
+    onNavigateToTransactions: () -> Unit,
     onAddClick: () -> Unit,
-    unreviewedCount: Int = 0,
-    onNavigateToReview: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
-    Box(
+    val orderedKeys = remember(navOrder) {
+        val parsed = navOrder.split(",")
+            .map { it.trim().lowercase() }
+            .filter { it in DEFAULT_NAV_KEYS }
+            .distinct()
+        (parsed + DEFAULT_NAV_KEYS).distinct()
+    }
+
+    Row(
         modifier = modifier
             .fillMaxWidth()
-            .height(84.dp)
+            .windowInsetsPadding(WindowInsets.navigationBars)
+            .padding(horizontal = 16.dp, vertical = 16.dp),
+        horizontalArrangement = Arrangement.Center,
+        verticalAlignment = Alignment.CenterVertically
     ) {
-        // Bar Background with rounded top corners and subtle border
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .clip(RadiusXLarge)
-                .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.96f))
-                .border(
-                    width = 1.dp,
-                    color = MaterialTheme.colorScheme.outline.copy(alpha = 0.25f),
-                    shape = RadiusXLarge
-                )
-        )
-
+        // Left Side: Floating Nav Pill rendered dynamically from navOrder
         Row(
             modifier = Modifier
-                .fillMaxSize()
-                .padding(horizontal = 16.dp),
-            horizontalArrangement = Arrangement.SpaceAround,
+                .weight(1f, fill = false)
+                .height(64.dp)
+                .clip(RoundedCornerShape(50))
+                .background(MaterialTheme.colorScheme.surfaceContainerHigh)
+                .padding(horizontal = 10.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Home
-            BarNavItem(
-                icon = Res.drawable.ic_home,
-                label = "Home",
-                selected = currentRoute.contains("Home", ignoreCase = true),
-                onClick = onNavigateToHome
-            )
-
-            // Transactions
-            BarNavItem(
-                icon = Res.drawable.ic_receipt_long,
-                label = "History",
-                selected = currentRoute.contains("Transactions", ignoreCase = true),
-                onClick = onNavigateToTransactions
-            )
-
-            // Center FAB (Add)
-            FloatingActionButton(
-                onClick = onAddClick,
-                containerColor = PrimaryIndigo,
-                contentColor = Color.White,
-                shape = CircleShape,
-                elevation = FloatingActionButtonDefaults.elevation(defaultElevation = 6.dp),
-                modifier = Modifier
-                    .size(54.dp)
-                    .offset(y = (-4).dp)
-            ) {
-                Icon(
-                    painter = painterResource(Res.drawable.ic_add),
-                    contentDescription = "Add Transaction",
-                    tint = Color.White,
-                    modifier = Modifier.size(28.dp)
-                )
+            orderedKeys.forEach { key ->
+                when (key) {
+                    "home" -> FloatingNavPillItem(
+                        icon = Res.drawable.ic_home,
+                        contentDescription = stringResource(Res.string.nav_home),
+                        selected = currentRoute.equals("Home", ignoreCase = true),
+                        onClick = onNavigateToHome
+                    )
+                    "stats" -> FloatingNavPillItem(
+                        icon = Res.drawable.ic_monitoring,
+                        contentDescription = stringResource(Res.string.nav_stats),
+                        selected = currentRoute.equals("Stats", ignoreCase = true),
+                        onClick = onNavigateToStats
+                    )
+                    "history" -> FloatingNavPillItem(
+                        icon = Res.drawable.ic_receipt_long,
+                        contentDescription = stringResource(Res.string.nav_history),
+                        selected = currentRoute.equals("Transactions", ignoreCase = true),
+                        onClick = onNavigateToTransactions
+                    )
+                }
             }
+        }
 
-            // Stats
-            BarNavItem(
-                icon = Res.drawable.ic_monitoring,
-                label = "Stats",
-                selected = currentRoute.contains("Stats", ignoreCase = true),
-                onClick = onNavigateToStats
-            )
+        Spacer(modifier = Modifier.width(12.dp))
 
-            // Settings
-            BarNavItem(
-                icon = Res.drawable.ic_settings,
-                label = "Settings",
-                selected = currentRoute.contains("Settings", ignoreCase = true),
-                onClick = onNavigateToSettings
+        // Right Side: Detached Circular FAB
+        FloatingActionButton(
+            onClick = onAddClick,
+            modifier = Modifier.size(64.dp),
+            shape = CircleShape,
+            containerColor = MaterialTheme.colorScheme.primary,
+            contentColor = MaterialTheme.colorScheme.onPrimary
+        ) {
+            Icon(
+                imageVector = Icons.Default.Add,
+                contentDescription = stringResource(Res.string.action_add_transaction)
             )
         }
     }
 }
 
 @Composable
-private fun BarNavItem(
+private fun FloatingNavPillItem(
     icon: DrawableResource,
-    label: String,
+    contentDescription: String,
     selected: Boolean,
     onClick: () -> Unit
 ) {
-    val activeColor = MaterialTheme.colorScheme.primary
-    val inactiveColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
-    val color = if (selected) activeColor else inactiveColor
+    val activeModifier = if (selected) {
+        Modifier.background(MaterialTheme.colorScheme.primaryContainer)
+    } else {
+        Modifier
+    }
+    val tint = if (selected) {
+        MaterialTheme.colorScheme.onPrimaryContainer
+    } else {
+        MaterialTheme.colorScheme.onSurfaceVariant
+    }
 
-    Column(
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center,
+    Box(
         modifier = Modifier
+            .size(48.dp)
             .clip(CircleShape)
+            .then(activeModifier)
             .clickable(
                 interactionSource = remember { MutableInteractionSource() },
                 indication = null,
                 onClick = onClick
-            )
-            .padding(horizontal = 10.dp, vertical = 6.dp)
+            ),
+        contentAlignment = Alignment.Center
     ) {
         Icon(
             painter = painterResource(icon),
-            contentDescription = label,
-            modifier = Modifier.size(24.dp),
-            tint = color
-        )
-        Spacer(modifier = Modifier.height(2.dp))
-        Text(
-            text = label,
-            style = CashBuddyTypography.labelSmall,
-            fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal,
-            color = color
+            contentDescription = contentDescription,
+            tint = tint,
+            modifier = Modifier.size(24.dp)
         )
     }
 }
