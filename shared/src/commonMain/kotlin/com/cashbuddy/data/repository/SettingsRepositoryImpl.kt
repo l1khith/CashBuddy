@@ -28,7 +28,11 @@ class SettingsRepositoryImpl(
                 notificationsEnabled = map["notificationsEnabled"]?.toBooleanStrictOrNull() ?: true,
                 biometricEnabled = map["biometricEnabled"]?.toBooleanStrictOrNull() ?: false,
                 preferredCurrency = map["preferredCurrency"] ?: "INR",
-                smartNotificationsEnabled = map["smartNotificationsEnabled"]?.toBooleanStrictOrNull() ?: true
+                smartNotificationsEnabled = map["smartNotificationsEnabled"]?.toBooleanStrictOrNull() ?: true,
+                customAppName = map["custom_app_name"] ?: UserSettings.DEFAULT_APP_NAME,
+                customAppSubtitle = map["custom_app_subtitle"] ?: UserSettings.DEFAULT_APP_SUBTITLE,
+                showAppLogo = map["show_app_logo"]?.toBooleanStrictOrNull() ?: true,
+                navOrder = map["nav_order"]?.takeIf { it.isNotBlank() } ?: UserSettings.DEFAULT_NAV_ORDER
             )
         }
 
@@ -40,6 +44,10 @@ class SettingsRepositoryImpl(
         queries.set("biometricEnabled", settings.biometricEnabled.toString(), now)
         queries.set("preferredCurrency", settings.preferredCurrency, now)
         queries.set("smartNotificationsEnabled", settings.smartNotificationsEnabled.toString(), now)
+        queries.set("custom_app_name", settings.customAppName, now)
+        queries.set("custom_app_subtitle", settings.customAppSubtitle, now)
+        queries.set("show_app_logo", settings.showAppLogo.toString(), now)
+        queries.set("nav_order", settings.navOrder, now)
     }
 
     override fun getNotificationEnabled(): Flow<Boolean> =
@@ -131,5 +139,41 @@ class SettingsRepositoryImpl(
 
     override suspend fun setSmartNotificationsEnabled(enabled: Boolean): Unit = withContext(dispatcher) {
         queries.set("smartNotificationsEnabled", enabled.toString(), com.cashbuddy.platform.currentTimeMillis())
+    }
+
+    override fun getCustomAppName(): Flow<String> =
+        queries.get("custom_app_name").asFlow().mapToOneOrNull(dispatcher).map { record ->
+            record?.value_ ?: UserSettings.DEFAULT_APP_NAME
+        }
+
+    override suspend fun setCustomAppName(name: String): Unit = withContext(dispatcher) {
+        queries.set("custom_app_name", name, com.cashbuddy.platform.currentTimeMillis())
+    }
+
+    override fun getCustomAppSubtitle(): Flow<String> =
+        queries.get("custom_app_subtitle").asFlow().mapToOneOrNull(dispatcher).map { record ->
+            record?.value_ ?: UserSettings.DEFAULT_APP_SUBTITLE
+        }
+
+    override suspend fun setCustomAppSubtitle(subtitle: String): Unit = withContext(dispatcher) {
+        queries.set("custom_app_subtitle", subtitle, com.cashbuddy.platform.currentTimeMillis())
+    }
+
+    override fun getShowAppLogo(): Flow<Boolean> =
+        queries.get("show_app_logo").asFlow().mapToOneOrNull(dispatcher).map { record ->
+            record?.value_?.toBooleanStrictOrNull() ?: true
+        }
+
+    override suspend fun setShowAppLogo(show: Boolean): Unit = withContext(dispatcher) {
+        queries.set("show_app_logo", show.toString(), com.cashbuddy.platform.currentTimeMillis())
+    }
+
+    override fun getNavOrder(): Flow<String> =
+        queries.get("nav_order").asFlow().mapToOneOrNull(dispatcher).map { record ->
+            record?.value_?.takeIf { it.isNotBlank() } ?: UserSettings.DEFAULT_NAV_ORDER
+        }
+
+    override suspend fun setNavOrder(order: String): Unit = withContext(dispatcher) {
+        queries.set("nav_order", order, com.cashbuddy.platform.currentTimeMillis())
     }
 }

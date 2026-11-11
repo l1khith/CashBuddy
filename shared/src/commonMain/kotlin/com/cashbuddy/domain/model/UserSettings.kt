@@ -6,5 +6,16 @@ data class UserSettings(
     val notificationsEnabled: Boolean = true,
     val biometricEnabled: Boolean = false,
     val preferredCurrency: String = "INR",
-    val smartNotificationsEnabled: Boolean = true
-)
+    val smartNotificationsEnabled: Boolean = true,
+    val customAppName: String = DEFAULT_APP_NAME,
+    val customAppSubtitle: String = DEFAULT_APP_SUBTITLE,
+    val showAppLogo: Boolean = true,
+    val navOrder: String = DEFAULT_NAV_ORDER
+) {
+    companion object {
+        const val DEFAULT_APP_NAME = "CashBuddy"
+        const val DEFAULT_APP_SUBTITLE = "Personal Finance"
+        const val DEFAULT_NAV_ORDER = "home,stats,history"
+        const val ALT_NAV_ORDER = "home,history,stats"
+    }
+}
