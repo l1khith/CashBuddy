@@ -34,6 +34,13 @@ object Tokenizer {
     private val HEX_ONLY = Regex("""^[0-9a-f]{6,}$""")
 
     /**
+     * Audit fix P3: cap token length (value adjustable — conservative default 24;
+     * the longest common English words are ~15 chars, medical jargon ~22).
+     * Lower bound stays at 3.
+     */
+    const val MAX_TOKEN_CHARS = 24
+
+    /**
      * Extracts candidate learning tokens from [rawText].
      */
     fun tokenize(rawText: String): Set<String> {
@@ -61,6 +68,11 @@ object Tokenizer {
             .asSequence()
             .map { it.trim() }
             .filter { it.length >= 3 }
+            // Audit fix P3: cap token length. Garbage tokens (OCR artifacts, base64/hex
+            // fragments, random identifiers) can be arbitrarily long and end up as
+            // learned_token rows that pollute the Naive Bayes vocabulary forever.
+            // English words never exceed ~20 chars; MAX_TOKEN_CHARS is a generous ceiling.
+            .filter { it.length <= MAX_TOKEN_CHARS }
             .filterNot { it.all { ch -> ch == 'x' } }
             .filterNot { HEX_ONLY.matches(it) }
             .filterNot { GRAMMAR.contains(it) }

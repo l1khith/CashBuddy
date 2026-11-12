@@ -739,5 +739,19 @@ class ProbabilisticEngineTest {
         val classification = classifier.classify(evidence, text, NotificationSource.UPI_APP)
         assertTrue(classification.pTransaction >= 0.85, "Expected high confidence for valid bank receipt")
     }
+
+    @Test
+    fun testMerchantExtraction_FavoringWithHelplinePhoneNumber() {
+        val text = "JK-UNIOND-S Union Bank of India A/c*0383 Dr Rs60.00 on 12-11-26 13:02 by MB 142520047769 Fv.BOTTL, Bal Rs212710.08 Not U?Call 18002333/SMS BLOCK 0383 to 8879635472"
+        val merchant = evidenceExtractor.extractMerchant(text, "com.google.android.apps.messaging")
+        assertEquals("Bottl", merchant)
+    }
+
+    @Test
+    fun testMerchantExtraction_RejectsPurePhoneNumbers() {
+        val text = "Call 18002333/SMS BLOCK 0383 to 8879635472"
+        val merchant = evidenceExtractor.extractMerchant(text, null)
+        assertNull(merchant, "Expected purely numeric candidate to be rejected as a merchant")
+    }
 }
 

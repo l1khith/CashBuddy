@@ -167,7 +167,31 @@ class TransactionRepositoryImpl(
     }
 
     override suspend fun deleteById(id: Long): Unit = withContext(dispatcher) {
-        queries.deleteById(id)
+        db.transaction {
+            // Audit fix 1.5: if the deleted row was a merge SURVIVOR, its merged duplicates
+            // would otherwise be orphaned forever (is_merged = 1 pointing at a dead id —
+            // invisible and unrecoverable). Restore them to visible standalone transactions
+            // and re-apply the balance impact that the merge reverted, keeping sums and
+            // account balances consistent. Whole flow commits in ONE transaction.
+            val now = com.cashbuddy.platform.currentTimeMillis()
+            val orphans = queries.getMergedRecordsForSurvivor(id, ::mapTransaction).executeAsList()
+                .filter { it.isMerged }
+            for (dup in orphans) {
+                if (dup.accountId != null &&
+                    (dup.status == TransactionStatus.CONFIRMED || dup.status == TransactionStatus.MODIFIED)
+                ) {
+                    // Merge-time revert was: debit dup → +amount, credit dup → -amount.
+                    // Re-applying the duplicate's own impact: debit → -amount, credit → +amount.
+                    val delta = if (dup.type == TransactionType.DEBIT) -dup.amount else dup.amount
+                    db.accountsQueries.applyBalanceDelta(delta = delta, updatedAt = now, id = dup.accountId)
+                }
+                queries.unmarkMerged(updated_at = now, id = dup.id)
+            }
+            // Explicit audit-log cleanup: the merge_log ON DELETE CASCADE only fires when
+            // the foreign_keys pragma is actually on — don't depend on it.
+            queries.deleteMergeLogForSurvivor(id)
+            queries.deleteById(id)
+        }
         _mutationEvents.tryEmit(Unit)
     }
 

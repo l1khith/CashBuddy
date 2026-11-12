@@ -16,8 +16,46 @@ fun createDatabase(driver: SqlDriver): AppDatabase {
     executeQuietly(driver, "PRAGMA foreign_keys = ON;")
     executeQuietly(driver, "PRAGMA temp_store = MEMORY;")
     executeQuietly(driver, "PRAGMA cache_size = -8000;") // 8 MB cache
+    verifyPragmas(driver)
     ensureSchema(driver)
     return AppDatabase(driver)
+}
+
+/**
+ * Audit fix 1.6: silently-failed pragmas are worse than no pragmas (e.g. FK enforcement
+ * silently off = cascade/invalid-reference guarantees void). Read the live values back
+ * and log loudly when reality doesn't match intent.
+ */
+private fun verifyPragmas(driver: SqlDriver) {
+    try {
+        val journalMode = driver.executeQuery(
+            identifier = null,
+            sql = "PRAGMA journal_mode;",
+            mapper = { cursor -> QueryResult.Value(if (cursor.next().value) cursor.getString(0) else null) },
+            parameters = 0
+        ).value
+        if (journalMode == null || !journalMode.equals("wal", ignoreCase = true)) {
+            println("[DatabaseDriverFactory] WARNING: journal_mode=$journalMode (expected wal)")
+        }
+    } catch (e: Throwable) {
+        println("[DatabaseDriverFactory] WARNING: could not read journal_mode: ${e.message}")
+    }
+    try {
+        val foreignKeys = driver.executeQuery(
+            identifier = null,
+            sql = "PRAGMA foreign_keys;",
+            mapper = { cursor ->
+                val value = if (cursor.next().value) cursor.getLong(0) else null
+                QueryResult.Value(value)
+            },
+            parameters = 0
+        ).value
+        if (foreignKeys != 1L) {
+            println("[DatabaseDriverFactory] WARNING: foreign_keys=$foreignKeys (expected 1) — referential enforcement may be OFF")
+        }
+    } catch (e: Throwable) {
+        println("[DatabaseDriverFactory] WARNING: could not read foreign_keys: ${e.message}")
+    }
 }
 
 private fun executeDdl(driver: SqlDriver, sql: String, logError: Boolean = true) {
@@ -366,11 +404,27 @@ fun ensureSchema(driver: SqlDriver) {
 }
 
 private fun runMigrations(driver: SqlDriver) {
-    executeQuietly(driver, "ALTER TABLE transactions ADD COLUMN is_merged INTEGER NOT NULL DEFAULT 0;")
-    executeQuietly(driver, "ALTER TABLE transactions ADD COLUMN merged_into_id INTEGER;")
-    executeQuietly(driver, "ALTER TABLE transactions ADD COLUMN payment_method TEXT NOT NULL DEFAULT 'UPI';")
-    executeQuietly(driver, "ALTER TABLE transactions ADD COLUMN is_loan_given INTEGER NOT NULL DEFAULT 0;")
-    executeQuietly(driver, """
+    // Audit fix 1.6: these ALTERs used to run unconditionally and throw
+    // "duplicate column name" on every launch for up-to-date DBs (error swallowed,
+    // masking real migration failures). Each patch is now guarded by a schema probe
+    // and runs at most once per column, with an explicit log line when applied.
+    if (!columnExists(driver, "transactions", "is_merged")) {
+        println("[DatabaseDriverFactory] patching schema: transactions.is_merged")
+        executeDdl(driver, "ALTER TABLE transactions ADD COLUMN is_merged INTEGER NOT NULL DEFAULT 0;")
+    }
+    if (!columnExists(driver, "transactions", "merged_into_id")) {
+        println("[DatabaseDriverFactory] patching schema: transactions.merged_into_id")
+        executeDdl(driver, "ALTER TABLE transactions ADD COLUMN merged_into_id INTEGER;")
+    }
+    if (!columnExists(driver, "transactions", "payment_method")) {
+        println("[DatabaseDriverFactory] patching schema: transactions.payment_method")
+        executeDdl(driver, "ALTER TABLE transactions ADD COLUMN payment_method TEXT NOT NULL DEFAULT 'UPI';")
+    }
+    if (!columnExists(driver, "transactions", "is_loan_given")) {
+        println("[DatabaseDriverFactory] patching schema: transactions.is_loan_given")
+        executeDdl(driver, "ALTER TABLE transactions ADD COLUMN is_loan_given INTEGER NOT NULL DEFAULT 0;")
+    }
+    executeDdl(driver, """
         CREATE TABLE IF NOT EXISTS merge_log (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             survivor_id INTEGER NOT NULL,
@@ -380,10 +434,10 @@ private fun runMigrations(driver: SqlDriver) {
             FOREIGN KEY (merged_id) REFERENCES transactions(id) ON DELETE CASCADE
         );
     """.trimIndent())
-    executeQuietly(driver, "CREATE INDEX IF NOT EXISTS idx_transactions_is_merged ON transactions(is_merged);")
-    executeQuietly(driver, "CREATE INDEX IF NOT EXISTS idx_transactions_merged_into ON transactions(merged_into_id);")
-    executeQuietly(driver, "CREATE INDEX IF NOT EXISTS idx_merge_log_survivor ON merge_log(survivor_id);")
-    executeQuietly(driver, "CREATE INDEX IF NOT EXISTS idx_merge_log_merged ON merge_log(merged_id);")
+    executeDdl(driver, "CREATE INDEX IF NOT EXISTS idx_transactions_is_merged ON transactions(is_merged);")
+    executeDdl(driver, "CREATE INDEX IF NOT EXISTS idx_transactions_merged_into ON transactions(merged_into_id);")
+    executeDdl(driver, "CREATE INDEX IF NOT EXISTS idx_merge_log_survivor ON merge_log(survivor_id);")
+    executeDdl(driver, "CREATE INDEX IF NOT EXISTS idx_merge_log_merged ON merge_log(merged_id);")
 
     val needsBudgetMigration = try {
         driver.executeQuery(
@@ -406,10 +460,10 @@ private fun runMigrations(driver: SqlDriver) {
     }
 
     if (needsBudgetMigration) {
-        executeQuietly(driver, "ALTER TABLE budgets ADD COLUMN category TEXT NOT NULL DEFAULT 'Global';")
-        executeQuietly(driver, "ALTER TABLE budgets ADD COLUMN last_alert_state TEXT;")
-        executeQuietly(driver, "ALTER TABLE budgets ADD COLUMN last_alert_at INTEGER;")
-        executeQuietly(driver, """
+        executeDdl(driver, "ALTER TABLE budgets ADD COLUMN category TEXT NOT NULL DEFAULT 'Global';")
+        executeDdl(driver, "ALTER TABLE budgets ADD COLUMN last_alert_state TEXT;")
+        executeDdl(driver, "ALTER TABLE budgets ADD COLUMN last_alert_at INTEGER;")
+        executeDdl(driver, """
             CREATE TABLE IF NOT EXISTS budgets (
                 id TEXT PRIMARY KEY NOT NULL,
                 category TEXT NOT NULL,
@@ -423,11 +477,11 @@ private fun runMigrations(driver: SqlDriver) {
                 updated_at INTEGER NOT NULL
             );
         """.trimIndent())
-        executeQuietly(driver, "CREATE INDEX IF NOT EXISTS idx_budgets_category ON budgets(category);")
-        executeQuietly(driver, "CREATE INDEX IF NOT EXISTS idx_budgets_is_active ON budgets(is_active);")
+        executeDdl(driver, "CREATE INDEX IF NOT EXISTS idx_budgets_category ON budgets(category);")
+        executeDdl(driver, "CREATE INDEX IF NOT EXISTS idx_budgets_is_active ON budgets(is_active);")
     }
 
-    executeQuietly(driver, """
+    executeDdl(driver, """
         CREATE TABLE IF NOT EXISTS learned_token (
             token TEXT PRIMARY KEY NOT NULL,
             transaction_count INTEGER NOT NULL DEFAULT 0,
@@ -436,9 +490,9 @@ private fun runMigrations(driver: SqlDriver) {
             last_updated INTEGER NOT NULL
         );
     """.trimIndent())
-    executeQuietly(driver, "CREATE INDEX IF NOT EXISTS idx_learned_token_counts ON learned_token(transaction_count, non_transaction_count);")
+    executeDdl(driver, "CREATE INDEX IF NOT EXISTS idx_learned_token_counts ON learned_token(transaction_count, non_transaction_count);")
 
-    executeQuietly(driver, """
+    executeDdl(driver, """
         CREATE TABLE IF NOT EXISTS recurring_pattern (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             merchant_normalized TEXT NOT NULL,
@@ -454,13 +508,38 @@ private fun runMigrations(driver: SqlDriver) {
             UNIQUE(merchant_normalized, amount_paise)
         );
     """.trimIndent())
-    executeQuietly(driver, "CREATE INDEX IF NOT EXISTS idx_pattern_merchant ON recurring_pattern(merchant_normalized);")
-    executeQuietly(driver, "CREATE INDEX IF NOT EXISTS idx_pattern_amount ON recurring_pattern(amount_paise);")
+    executeDdl(driver, "CREATE INDEX IF NOT EXISTS idx_pattern_merchant ON recurring_pattern(merchant_normalized);")
+    executeDdl(driver, "CREATE INDEX IF NOT EXISTS idx_pattern_amount ON recurring_pattern(amount_paise);")
 
-    executeQuietly(driver, """
+    executeDdl(driver, """
         CREATE TABLE IF NOT EXISTS ignored_packages (
             package_name TEXT PRIMARY KEY NOT NULL
         );
     """.trimIndent())
+}
+
+/**
+ * Audit fix 1.6: schema probe used to guard idempotent column patches. Returns false on
+ * probe failure so the (idempotent, IF-NOT-EXISTS-free) ALTER is still attempted — and
+ * its failure, if any, is now logged loudly instead of swallowed.
+ */
+private fun columnExists(driver: SqlDriver, table: String, column: String): Boolean {
+    return try {
+        driver.executeQuery(
+            identifier = null,
+            sql = "PRAGMA table_info($table);",
+            mapper = { cursor ->
+                var found = false
+                while (cursor.next().value) {
+                    if (cursor.getString(1) == column) found = true
+                }
+                QueryResult.Value(found)
+            },
+            parameters = 0
+        ).value
+    } catch (e: Throwable) {
+        println("[DatabaseDriverFactory] schema probe failed for $table.$column: ${e.message}")
+        false
+    }
 }
 

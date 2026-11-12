@@ -10,6 +10,7 @@ import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.withTimeout
 import kotlin.test.BeforeTest
 import kotlin.test.Test
@@ -390,5 +391,73 @@ class SqlDelightTransactionRepositoryTest {
             summaryJob.cancel()
             updatesJob.cancel()
         }
+    }
+
+    /**
+     * Audit fix 1.5: deleting a merge SURVIVOR must not orphan its merged duplicates.
+     * Duplicates are restored to visible standalone transactions and their merge-time
+     * balance revert is re-applied — all consistent in one commit.
+     */
+    @Test
+    fun testDeleteSurvivorRestoresMergedDuplicatesAndBalance() = runBlocking {
+        // Account with ₹5000
+        database.accountsQueries.insert(
+            name = "Primary Bank", type = "BANK", number = null, bank = null,
+            balance = 5000.0, currency = "INR", is_active = true, sort_order = 1L,
+            created_at = 0L, updated_at = 0L
+        )
+
+        val survivorId = repository.insert(
+            Transaction(
+                amount = 100.0,
+                type = TransactionType.DEBIT,
+                merchant = "Survivor Store",
+                categoryId = 1L,
+                accountId = 1L,
+                sourceApp = "UPI",
+                rawText = "Paid ₹100",
+                confidence = 0.95f,
+                status = TransactionStatus.CONFIRMED,
+                timestamp = 10_000L
+            )
+        )
+        val dupId = repository.insert(
+            Transaction(
+                amount = 18.0,
+                type = TransactionType.DEBIT,
+                merchant = "BMTC",
+                categoryId = 1L,
+                accountId = 1L,
+                sourceApp = "screenshot",
+                rawText = "₹18 Paid to BMTC",
+                confidence = 0.85f,
+                status = TransactionStatus.CONFIRMED,
+                timestamp = 10_000L
+            )
+        )
+        // Insert triggers deducted both confirmed debits: 5000 - 100 - 18 = 4882
+        assertEquals(4882.0, database.accountsQueries.getById(1L).executeAsOne().balance, 0.001)
+
+        // Merge dup into survivor (reconciler/store semantics: balance revert +18)
+        repository.markMerged(id = dupId, survivorId = survivorId)
+        repository.insertMergeLog(survivorId = survivorId, mergedId = dupId, timestamp = 20_000L)
+        database.accountsQueries.applyBalanceDelta(delta = 18.0, updatedAt = 20_000L, id = 1L)
+        assertEquals(4900.0, database.accountsQueries.getById(1L).executeAsOne().balance, 0.001)
+
+        // Delete the survivor
+        repository.deleteById(survivorId)
+
+        // Survivor gone
+        assertEquals(null, repository.getById(survivorId).firstOrNull())
+        // Duplicate restored to a visible standalone transaction
+        val restoredDup = repository.getById(dupId).firstOrNull()
+        assertTrue(restoredDup != null)
+        assertEquals(false, restoredDup.isMerged)
+        assertEquals(null, restoredDup.mergedIntoId)
+        // Audit log cleaned up
+        assertEquals(0L, repository.getMergeLogCount())
+        // Balance: dup impact re-applied (-18), survivor impact reverted by delete trigger (+100)
+        // 4900 - 18 + 100 = 4982
+        assertEquals(4982.0, database.accountsQueries.getById(1L).executeAsOne().balance, 0.001)
     }
 }

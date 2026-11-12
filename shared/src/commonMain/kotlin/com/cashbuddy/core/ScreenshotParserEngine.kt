@@ -19,7 +19,7 @@ class ScreenshotParserEngine(
     )
 
     private val utrRegex = Regex(
-        """(?i)(?:UPI\s+(?:transaction\s+id|ref(?:\s+no|\s+id|\s+number)?)|Transaction\s+ID|UTR)[:\s]+([A-Za-z0-9]{8,35})"""
+        """(?i)\b(?:UPI\s+(?:transaction\s+id|ref(?:\s+no|\s+id|\s+number)?)|Transaction\s+ID|UTR)[:\s]+([A-Za-z0-9]{8,35})"""
     )
 
     private val vpaRegex = Regex(
@@ -329,7 +329,7 @@ class ScreenshotParserEngine(
         return cleaned
     }
 
-    private fun isSystemLabel(s: String): bool {
+    private fun isSystemLabel(s: String): Boolean {
         val lower = s.lowercase().trim()
         return lower == "completed" ||
             lower == "successful" ||
@@ -352,8 +352,6 @@ class ScreenshotParserEngine(
             lower.startsWith("rs")
     }
 }
-
-private typealias bool = Boolean
 
 // Top-level convenience function
 fun parseScreenshotText(rawText: String): ScreenshotTransaction? {

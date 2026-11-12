@@ -37,17 +37,23 @@ class SettingsRepositoryImpl(
         }
 
     override suspend fun updateSettings(settings: UserSettings): Unit = withContext(dispatcher) {
+        // Audit fix P1-C: all 10 key writes must land as ONE commit. Previously each
+        // queries.set() was its own transaction — a crash mid-write left a half-updated
+        // settings map (e.g. new nav_order with old thresholds), which getSettings()
+        // silently surfaces as a mixed state.
         val now = com.cashbuddy.platform.currentTimeMillis()
-        queries.set("autoConfirmThreshold", settings.autoConfirmThreshold.toString(), now)
-        queries.set("minConfidenceThreshold", settings.minConfidenceThreshold.toString(), now)
-        queries.set("notificationsEnabled", settings.notificationsEnabled.toString(), now)
-        queries.set("biometricEnabled", settings.biometricEnabled.toString(), now)
-        queries.set("preferredCurrency", settings.preferredCurrency, now)
-        queries.set("smartNotificationsEnabled", settings.smartNotificationsEnabled.toString(), now)
-        queries.set("custom_app_name", settings.customAppName, now)
-        queries.set("custom_app_subtitle", settings.customAppSubtitle, now)
-        queries.set("show_app_logo", settings.showAppLogo.toString(), now)
-        queries.set("nav_order", settings.navOrder, now)
+        db.transaction {
+            queries.set("autoConfirmThreshold", settings.autoConfirmThreshold.toString(), now)
+            queries.set("minConfidenceThreshold", settings.minConfidenceThreshold.toString(), now)
+            queries.set("notificationsEnabled", settings.notificationsEnabled.toString(), now)
+            queries.set("biometricEnabled", settings.biometricEnabled.toString(), now)
+            queries.set("preferredCurrency", settings.preferredCurrency, now)
+            queries.set("smartNotificationsEnabled", settings.smartNotificationsEnabled.toString(), now)
+            queries.set("custom_app_name", settings.customAppName, now)
+            queries.set("custom_app_subtitle", settings.customAppSubtitle, now)
+            queries.set("show_app_logo", settings.showAppLogo.toString(), now)
+            queries.set("nav_order", settings.navOrder, now)
+        }
     }
 
     override fun getNotificationEnabled(): Flow<Boolean> =
@@ -92,9 +98,13 @@ class SettingsRepositoryImpl(
         }
 
     override suspend fun setDeveloperMode(enabled: Boolean): Unit = withContext(dispatcher) {
+        // Dual key must flip atomically (audit fix P1-C) — a partial write desyncs
+        // developer_mode from debug_log_viewer_enabled.
         val now = com.cashbuddy.platform.currentTimeMillis()
-        queries.set("developer_mode", enabled.toString(), now)
-        queries.set("debug_log_viewer_enabled", enabled.toString(), now)
+        db.transaction {
+            queries.set("developer_mode", enabled.toString(), now)
+            queries.set("debug_log_viewer_enabled", enabled.toString(), now)
+        }
     }
 
     override fun getDebugLogEnabled(): Flow<Boolean> =
@@ -103,9 +113,12 @@ class SettingsRepositoryImpl(
         }
 
     override suspend fun setDebugLogEnabled(enabled: Boolean): Unit = withContext(dispatcher) {
+        // Dual key must flip atomically (audit fix P1-C).
         val now = com.cashbuddy.platform.currentTimeMillis()
-        queries.set("debug_log_viewer_enabled", enabled.toString(), now)
-        queries.set("developer_mode", enabled.toString(), now)
+        db.transaction {
+            queries.set("debug_log_viewer_enabled", enabled.toString(), now)
+            queries.set("developer_mode", enabled.toString(), now)
+        }
     }
 
     override fun getPreferredCurrency(): Flow<String> =

@@ -30,16 +30,21 @@ class TrainingDataRepositoryImpl(
         extractedMerchant: String?,
         timestamp: Long
     ): Long = withContext(dispatcher) {
-        queries.insertRaw(
-            raw_text = rawText,
-            source = source,
-            source_app = sourceApp,
-            extracted_amount = extractedAmount,
-            extracted_type = extractedType,
-            extracted_merchant = extractedMerchant,
-            timestamp = timestamp
-        )
-        db.transactionsQueries.lastInsertRowId().executeAsOne()
+        // Audit fix B8: insert + last_insert_rowid() read must be one transaction —
+        // last_insert_rowid() is connection-global, so a concurrent insert on the same
+        // connection between the two statements would return the WRONG rowid.
+        db.transactionWithResult {
+            queries.insertRaw(
+                raw_text = rawText,
+                source = source,
+                source_app = sourceApp,
+                extracted_amount = extractedAmount,
+                extracted_type = extractedType,
+                extracted_merchant = extractedMerchant,
+                timestamp = timestamp
+            )
+            db.transactionsQueries.lastInsertRowId().executeAsOne()
+        }
     }
 
     override suspend fun recordCorrection(
@@ -50,15 +55,18 @@ class TrainingDataRepositoryImpl(
         newCategory: String,
         timestamp: Long
     ): Long = withContext(dispatcher) {
-        queries.insertCorrection(
-            merchant = merchant,
-            source_app = sourceApp,
-            raw_text = rawText,
-            old_category = oldCategory,
-            new_category = newCategory,
-            timestamp = timestamp
-        )
-        db.transactionsQueries.lastInsertRowId().executeAsOne()
+        // Audit fix B8: same connection-global last_insert_rowid() race as recordRawNotification.
+        db.transactionWithResult {
+            queries.insertCorrection(
+                merchant = merchant,
+                source_app = sourceApp,
+                raw_text = rawText,
+                old_category = oldCategory,
+                new_category = newCategory,
+                timestamp = timestamp
+            )
+            db.transactionsQueries.lastInsertRowId().executeAsOne()
+        }
     }
 
     override fun getAllRaw(): Flow<List<RawTrainingData>> =

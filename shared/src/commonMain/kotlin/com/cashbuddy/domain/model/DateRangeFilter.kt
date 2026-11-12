@@ -84,4 +84,43 @@ object DateRangeHelper {
             }
         }
     }
+
+    /**
+     * Audit fix 1.2: Material3 `DatePicker` hands back UTC-midnight millis for the picked
+     * calendar day. Convert to the SAME calendar day's LOCAL start-of-day millis so chip
+     * labels (formatted in local time) and applied query windows agree in any timezone.
+     */
+    fun utcPickerMillisToLocalStartOfDay(
+        pickerMillis: Long,
+        timeZone: TimeZone = TimeZone.currentSystemDefault()
+    ): Long {
+        val day = Instant.fromEpochMilliseconds(pickerMillis).toLocalDateTime(TimeZone.UTC).date
+        return LocalDateTime(day, LocalTime(0, 0, 0, 0)).toInstant(timeZone).toEpochMilliseconds()
+    }
+
+    /**
+     * True LOCAL start-of-day / end-of-day bounds for the calendar day containing
+     * [localMillis] (any local timestamp of that day). DST-safe: bounds are derived
+     * from the calendar date, never by adding fixed 24h offsets.
+     */
+    fun localDayBounds(
+        localMillis: Long,
+        timeZone: TimeZone = TimeZone.currentSystemDefault()
+    ): DateRange {
+        val day = Instant.fromEpochMilliseconds(localMillis).toLocalDateTime(timeZone).date
+        return DateRange(
+            startTimestamp = LocalDateTime(day, LocalTime(0, 0, 0, 0)).toInstant(timeZone).toEpochMilliseconds(),
+            endTimestamp = LocalDateTime(day, LocalTime(23, 59, 59, 999_000_000)).toInstant(timeZone).toEpochMilliseconds()
+        )
+    }
+
+    /** Inverse of [utcPickerMillisToLocalStartOfDay]: feeds stored local-day millis back
+     *  into the UTC-based Material3 DatePicker so it highlights the same calendar day. */
+    fun localMillisToUtcPickerMillis(
+        localMillis: Long,
+        timeZone: TimeZone = TimeZone.currentSystemDefault()
+    ): Long {
+        val day = Instant.fromEpochMilliseconds(localMillis).toLocalDateTime(timeZone).date
+        return LocalDateTime(day, LocalTime(0, 0, 0, 0)).toInstant(TimeZone.UTC).toEpochMilliseconds()
+    }
 }
