@@ -56,7 +56,6 @@ data class SettingsUiState(
     val navOrderList: List<String> = listOf("home", "stats", "history"),
     val showHealthInTopBar: Boolean = false,
     val isNotificationAccessGranted: Boolean = false,
-    val isBatteryOptimizationIgnored: Boolean = false,
     val lastSyncTimestamp: Long = 0L,
     val dailyWrapUpHour: Int = com.cashbuddy.domain.model.UserSettings.DEFAULT_WRAP_UP_HOUR,
     val dailyWrapUpMinute: Int = com.cashbuddy.domain.model.UserSettings.DEFAULT_WRAP_UP_MINUTE
@@ -170,7 +169,6 @@ class SettingsViewModel(
                     navOrderList = activeOrder,
                     showHealthInTopBar = settings.showHealthInTopBar,
                     isNotificationAccessGranted = diagnosticsProvider?.checkDiagnostics(settings.lastSyncTimestamp)?.isNotificationAccessGranted ?: false,
-                    isBatteryOptimizationIgnored = diagnosticsProvider?.checkDiagnostics(settings.lastSyncTimestamp)?.isBatteryOptimizationIgnored ?: false,
                     lastSyncTimestamp = settings.lastSyncTimestamp,
                     dailyWrapUpHour = settings.dailyWrapUpHour,
                     dailyWrapUpMinute = settings.dailyWrapUpMinute
@@ -487,18 +485,13 @@ class SettingsViewModel(
         val diagnostics = diagnosticsProvider?.checkDiagnostics(lastSync)
         if (diagnostics != null) {
             _uiState.value = _uiState.value.copy(
-                isNotificationAccessGranted = diagnostics.isNotificationAccessGranted,
-                isBatteryOptimizationIgnored = diagnostics.isBatteryOptimizationIgnored
+                isNotificationAccessGranted = diagnostics.isNotificationAccessGranted
             )
         }
     }
 
     fun openNotificationListenerSettings() {
         diagnosticsProvider?.openNotificationListenerSettings()
-    }
-
-    fun openBatteryOptimizationSettings() {
-        diagnosticsProvider?.openBatteryOptimizationSettings()
     }
 
     fun importCsvData(csvContent: String) {

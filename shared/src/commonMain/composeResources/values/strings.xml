@@ -315,15 +315,11 @@
     <!-- System Diagnostics & Health Shield -->
     <string name="diagnostics_section_title">System Diagnostics &amp; Reminders</string>
     <string name="diagnostics_health_icon_toggle_title">Show Health Icon in Top Bar</string>
-    <string name="diagnostics_health_icon_toggle_desc">Display real-time listener and battery status beside the Settings gear</string>
+    <string name="diagnostics_health_icon_toggle_desc">Display real-time notification listener status beside the Settings gear</string>
     <string name="diagnostics_notif_access_title">Notification Access</string>
     <string name="diagnostics_notif_access_enabled">Active</string>
     <string name="diagnostics_notif_access_disabled">Action Required</string>
     <string name="diagnostics_notif_access_desc">Required to capture bank &amp; UPI notifications passively</string>
-    <string name="diagnostics_battery_title">Battery Optimization</string>
-    <string name="diagnostics_battery_unrestricted">Unrestricted</string>
-    <string name="diagnostics_battery_restricted">Restricted</string>
-    <string name="diagnostics_battery_desc">Restricted battery may delay or kill background expense tracking</string>
     <string name="diagnostics_last_sync_title">Last Sync</string>
     <string name="diagnostics_last_sync_never">Never</string>
     <string name="diagnostics_action_fix">Fix</string>
@@ -333,8 +329,8 @@
     <string name="diagnostics_sheet_attention_needed">Attention Required</string>
     <string name="diagnostics_sheet_open_settings">Open Diagnostics Settings</string>
     <string name="cd_health_shield">System Health Status</string>
-    <string name="cd_health_shield_healthy">System Healthy: Listener and Battery active</string>
-    <string name="cd_health_shield_warning">System Alert: Tap to resolve listener or battery issue</string>
+    <string name="cd_health_shield_healthy">System Healthy: Notification Listener active</string>
+    <string name="cd_health_shield_warning">System Alert: Tap to resolve notification listener issue</string>
 
     <!-- Daily Wrap-Up Reminder -->
     <string name="wrapup_title">Daily Wrap-Up Reminder</string>

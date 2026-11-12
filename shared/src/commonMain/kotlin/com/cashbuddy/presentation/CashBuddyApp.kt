@@ -395,9 +395,6 @@ fun CashBuddyApp(
             onFixNotificationAccess = {
                 diagnosticsProvider.openNotificationListenerSettings()
             },
-            onFixBatteryOptimization = {
-                diagnosticsProvider.openBatteryOptimizationSettings()
-            },
             onOpenSettings = {
                 navController.navigate(ScreenRoute.Settings) {
                     popUpTo(ScreenRoute.Home) { saveState = true }

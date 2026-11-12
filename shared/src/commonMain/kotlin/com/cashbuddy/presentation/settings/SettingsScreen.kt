@@ -145,13 +145,11 @@ fun SettingsScreen(
                     DiagnosticsSection(
                         showHealthInTopBar = state.showHealthInTopBar,
                         isNotificationAccessGranted = state.isNotificationAccessGranted,
-                        isBatteryOptimizationIgnored = state.isBatteryOptimizationIgnored,
                         lastSyncTimestamp = state.lastSyncTimestamp,
                         dailyWrapUpHour = state.dailyWrapUpHour,
                         dailyWrapUpMinute = state.dailyWrapUpMinute,
                         onShowHealthInTopBarChange = viewModel::setShowHealthInTopBar,
                         onOpenNotificationSettings = viewModel::openNotificationListenerSettings,
-                        onOpenBatterySettings = viewModel::openBatteryOptimizationSettings,
                         onRefreshDiagnostics = viewModel::refreshDiagnostics,
                         onDailyWrapUpTimeSelected = viewModel::setDailyWrapUpTime,
                         onRefreshRecurrencePatterns = viewModel::forceRefreshRecurrencePatterns

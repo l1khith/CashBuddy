@@ -35,10 +35,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import cashbuddy.shared.generated.resources.Res
 import cashbuddy.shared.generated.resources.diagnostics_action_fix
-import cashbuddy.shared.generated.resources.diagnostics_battery_desc
-import cashbuddy.shared.generated.resources.diagnostics_battery_restricted
-import cashbuddy.shared.generated.resources.diagnostics_battery_title
-import cashbuddy.shared.generated.resources.diagnostics_battery_unrestricted
 import cashbuddy.shared.generated.resources.diagnostics_last_sync_never
 import cashbuddy.shared.generated.resources.diagnostics_last_sync_title
 import cashbuddy.shared.generated.resources.diagnostics_notif_access_desc
@@ -49,7 +45,6 @@ import cashbuddy.shared.generated.resources.diagnostics_sheet_all_healthy
 import cashbuddy.shared.generated.resources.diagnostics_sheet_attention_needed
 import cashbuddy.shared.generated.resources.diagnostics_sheet_open_settings
 import cashbuddy.shared.generated.resources.diagnostics_sheet_title
-import cashbuddy.shared.generated.resources.ic_battery_alert
 import cashbuddy.shared.generated.resources.ic_check_circle
 import cashbuddy.shared.generated.resources.ic_notifications_active
 import cashbuddy.shared.generated.resources.ic_schedule
@@ -77,7 +72,6 @@ fun DiagnosticBottomSheet(
     diagnostics: SystemDiagnostics,
     onDismissRequest: () -> Unit,
     onFixNotificationAccess: () -> Unit,
-    onFixBatteryOptimization: () -> Unit,
     onOpenSettings: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -173,21 +167,7 @@ fun DiagnosticBottomSheet(
                 onActionClick = onFixNotificationAccess
             )
 
-            // Card 2: Battery Optimization
-            DiagnosticMetricCard(
-                icon = Res.drawable.ic_battery_alert,
-                title = stringResource(Res.string.diagnostics_battery_title),
-                subtitle = stringResource(Res.string.diagnostics_battery_desc),
-                statusLabel = stringResource(
-                    if (diagnostics.isBatteryOptimizationIgnored) Res.string.diagnostics_battery_unrestricted
-                    else Res.string.diagnostics_battery_restricted
-                ),
-                isHealthy = diagnostics.isBatteryOptimizationIgnored,
-                actionText = if (!diagnostics.isBatteryOptimizationIgnored) stringResource(Res.string.diagnostics_action_fix) else null,
-                onActionClick = onFixBatteryOptimization
-            )
-
-            // Card 3: Last Sync Timestamp
+            // Card 2: Last Sync Timestamp
             val syncText = formatRelativeSyncTime(diagnostics.lastSyncTimestamp)
             DiagnosticMetricCard(
                 icon = Res.drawable.ic_schedule,

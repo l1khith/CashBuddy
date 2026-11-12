@@ -24,10 +24,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import cashbuddy.shared.generated.resources.Res
 import cashbuddy.shared.generated.resources.diagnostics_action_fix
-import cashbuddy.shared.generated.resources.diagnostics_battery_desc
-import cashbuddy.shared.generated.resources.diagnostics_battery_restricted
-import cashbuddy.shared.generated.resources.diagnostics_battery_title
-import cashbuddy.shared.generated.resources.diagnostics_battery_unrestricted
 import cashbuddy.shared.generated.resources.diagnostics_health_icon_toggle_desc
 import cashbuddy.shared.generated.resources.diagnostics_health_icon_toggle_title
 import cashbuddy.shared.generated.resources.diagnostics_notif_access_desc
@@ -36,7 +32,6 @@ import cashbuddy.shared.generated.resources.diagnostics_notif_access_enabled
 import cashbuddy.shared.generated.resources.diagnostics_notif_access_title
 import cashbuddy.shared.generated.resources.diagnostics_refresh_recurrence_patterns
 import cashbuddy.shared.generated.resources.diagnostics_section_title
-import cashbuddy.shared.generated.resources.ic_battery_alert
 import cashbuddy.shared.generated.resources.ic_notifications_active
 import cashbuddy.shared.generated.resources.ic_refresh
 import com.cashbuddy.presentation.settings.components.DailyWrapUpTimePickerRow
@@ -51,13 +46,11 @@ import org.jetbrains.compose.resources.stringResource
 fun DiagnosticsSection(
     showHealthInTopBar: Boolean,
     isNotificationAccessGranted: Boolean,
-    isBatteryOptimizationIgnored: Boolean,
     lastSyncTimestamp: Long,
     dailyWrapUpHour: Int,
     dailyWrapUpMinute: Int,
     onShowHealthInTopBarChange: (Boolean) -> Unit,
     onOpenNotificationSettings: () -> Unit,
-    onOpenBatterySettings: () -> Unit,
     onRefreshDiagnostics: () -> Unit,
     onDailyWrapUpTimeSelected: (Int, Int) -> Unit,
     onRefreshRecurrencePatterns: () -> Unit,
@@ -122,21 +115,7 @@ fun DiagnosticsSection(
                     onActionClick = onOpenNotificationSettings
                 )
 
-                // Status Card 2: Battery Saver
-                DiagnosticStatusRow(
-                    icon = Res.drawable.ic_battery_alert,
-                    title = stringResource(Res.string.diagnostics_battery_title),
-                    subtitle = stringResource(Res.string.diagnostics_battery_desc),
-                    statusLabel = stringResource(
-                        if (isBatteryOptimizationIgnored) Res.string.diagnostics_battery_unrestricted
-                        else Res.string.diagnostics_battery_restricted
-                    ),
-                    isHealthy = isBatteryOptimizationIgnored,
-                    actionText = if (!isBatteryOptimizationIgnored) stringResource(Res.string.diagnostics_action_fix) else null,
-                    onActionClick = onOpenBatterySettings
-                )
-
-                // Status Card 3: Last Sync Time
+                // Status Card 2: Last Sync Time
                 DiagnosticSyncRow(
                     lastSyncTimestamp = lastSyncTimestamp,
                     onRefresh = onRefreshDiagnostics

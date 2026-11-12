@@ -6,16 +6,11 @@ actual class PlatformDiagnosticsProvider actual constructor() {
     actual fun checkDiagnostics(lastSyncTimestamp: Long): SystemDiagnostics {
         return SystemDiagnostics(
             isNotificationAccessGranted = true,
-            isBatteryOptimizationIgnored = true,
             lastSyncTimestamp = lastSyncTimestamp
         )
     }
 
     actual fun openNotificationListenerSettings() {
-        // No-op on iOS
-    }
-
-    actual fun openBatteryOptimizationSettings() {
         // No-op on iOS
     }
 
