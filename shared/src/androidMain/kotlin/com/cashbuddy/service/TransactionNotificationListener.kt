@@ -45,6 +45,9 @@ class TransactionNotificationListener : NotificationListenerService(), KoinCompo
         const val REVIEW_CHANNEL_ID = "cashbuddy_review_channel"
         const val REVIEW_CHANNEL_NAME = "Transaction Reviews"
         const val NOTIFICATION_ID_BASE = 1000
+        // Audit fix P2: bounded notification input (see onNotificationPosted).
+        private const val MAX_TEXT_CHARS = 4000
+        private const val MAX_TITLE_CHARS = 200
     }
 
     override fun onCreate() {
@@ -96,12 +99,12 @@ class TransactionNotificationListener : NotificationListenerService(), KoinCompo
         if (packageName == applicationContext.packageName) return
         val extras = activeSbn.notification?.extras ?: return
 
-        val title = extras.getCharSequence(android.app.Notification.EXTRA_TITLE)?.toString() ?: ""
+        val rawTitle = extras.getCharSequence(android.app.Notification.EXTRA_TITLE)?.toString() ?: ""
         val subText = extras.getCharSequence(android.app.Notification.EXTRA_SUB_TEXT)?.toString()
-        val effectiveTitle = when {
-            title.isNotBlank() && !subText.isNullOrBlank() && !title.contains(subText, ignoreCase = true) -> "$subText · $title"
-            title.isBlank() && !subText.isNullOrBlank() -> subText
-            else -> title
+        var effectiveTitle = when {
+            rawTitle.isNotBlank() && !subText.isNullOrBlank() && !rawTitle.contains(subText, ignoreCase = true) -> "$subText · $rawTitle"
+            rawTitle.isBlank() && !subText.isNullOrBlank() -> subText
+            else -> rawTitle
         }
         var text = extras.getCharSequence(android.app.Notification.EXTRA_BIG_TEXT)?.toString()
             ?: extras.getCharSequence(android.app.Notification.EXTRA_TEXT)?.toString()
@@ -148,10 +151,19 @@ class TransactionNotificationListener : NotificationListenerService(), KoinCompo
         if (senderId == null) {
             if (!subText.isNullOrBlank() && (subText.contains('-') || subText.length in 3..12)) {
                 senderId = subText
-            } else if (title.contains('-') || (title.length in 3..12 && title.all { it.isLetterOrDigit() || it == '-' })) {
-                senderId = title
+            } else if (rawTitle.contains('-') || (rawTitle.length in 3..12 && rawTitle.all { it.isLetterOrDigit() || it == '-' })) {
+                senderId = rawTitle
             }
         }
+
+        // Audit fix P2: cap notification input size. InboxStyle extras and BIG_TEXT can be
+        // arbitrarily large (a single notification carrying hundreds of lines); everything
+        // downstream (SentenceScopedExtractor, Naive Bayes tokenization, regex passes,
+        // raw-text storage) is linear in input length. A real bank SMS/notification never
+        // exceeds a few hundred chars — 4000 is a generous ceiling that keeps worst-case
+        // parsing bounded without clipping any legitimate transaction text.
+        if (text.length > MAX_TEXT_CHARS) text = text.take(MAX_TEXT_CHARS)
+        if (effectiveTitle.length > MAX_TITLE_CHARS) effectiveTitle = effectiveTitle.take(MAX_TITLE_CHARS)
 
         if (effectiveTitle.isBlank() && text.isBlank()) return
         val postTime = if (activeSbn.postTime > 0) activeSbn.postTime else System.currentTimeMillis()
@@ -179,9 +191,9 @@ class TransactionNotificationListener : NotificationListenerService(), KoinCompo
                 val outcome = messagePipeline.ingest(rawMessage)
 
                 // 2. Training Data Pipeline: Record raw notification for banking apps or parsed transactions
-                val source = sourceDetector.detect(packageName, if (title.isNotBlank()) "$title: $text" else text)
+                val source = sourceDetector.detect(packageName, if (effectiveTitle.isNotBlank()) "$effectiveTitle: $text" else text)
                 if (source != com.cashbuddy.core.prob.NotificationSource.UNKNOWN || outcome !is com.cashbuddy.core.prob.PipelineOutcome.Ignored) {
-                    val fullRawText = if (title.isNotBlank()) "$title: $text" else text
+                    val fullRawText = if (effectiveTitle.isNotBlank()) "$effectiveTitle: $text" else text
                     try {
                         trainingDataRepository.recordRawNotification(
                             rawText = fullRawText,

@@ -39,6 +39,11 @@ class CashBuddyApplication : Application() {
         // Setup notification channels for Assistant features
         com.cashbuddy.notification.NotificationHelper.createChannels(this)
 
+        // Audit fix 1.4: the learned-token GC is core data maintenance — schedule it
+        // unconditionally so it can never be cancelled by the notifications toggle
+        // (previously disabling smart notifications left learned_token growing unbounded).
+        com.cashbuddy.worker.AssistantWorkManager.scheduleTokenPurge(this)
+
         // Observe smart notifications setting to schedule or cancel workers & persistent notification
         applicationScope.launch {
             try {

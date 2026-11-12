@@ -20,6 +20,17 @@ actual fun currentTimeMillis(): Long = System.currentTimeMillis()
 
 actual fun getAppVersionDisplay(): String = "CashBuddy v$androidVersionName (Build $androidVersionCode)"
 
+actual fun getApplicationLabel(packageName: String): String {
+    val ctx = appContext ?: return packageName.substringAfterLast('.').replaceFirstChar { if (it.isLowerCase()) it.titlecase() else it.toString() }
+    return try {
+        val pm = ctx.packageManager
+        val appInfo = pm.getApplicationInfo(packageName, 0)
+        pm.getApplicationLabel(appInfo).toString()
+    } catch (_: Throwable) {
+        packageName.substringAfterLast('.').replaceFirstChar { if (it.isLowerCase()) it.titlecase() else it.toString() }
+    }
+}
+
 actual val ioDispatcher: kotlinx.coroutines.CoroutineDispatcher = kotlinx.coroutines.Dispatchers.IO
 
 actual fun notifyTransactionsUpdated() {
