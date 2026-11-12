@@ -43,7 +43,25 @@ object AssistantWorkManager {
             weeklyRequest
         )
 
-        // 3. TokenPurgeWorker — Runs weekly on Sunday at 2:00 AM for dictionary garbage collection
+        // NOTE: TokenPurgeWorker is intentionally NOT scheduled here. The learned-token
+        // GC is core data maintenance and must run regardless of notification settings —
+        // it is scheduled unconditionally via [scheduleTokenPurge] (audit fix 1.4).
+    }
+
+    fun cancelAll(context: Context) {
+        val workManager = WorkManager.getInstance(context)
+        workManager.cancelUniqueWork(BudgetAlertWorker.WORK_NAME)
+        workManager.cancelUniqueWork(WeeklyDigestWorker.WORK_NAME)
+        // NOTE: TokenPurgeWorker is never cancelled here (audit fix 1.4) — see scheduleAll.
+    }
+
+    /**
+     * Schedules the weekly learned-token GC. Core data maintenance: always scheduled,
+     * independent of the "smart notifications" toggle, so the learned_token table can
+     * never grow unbounded because the user disabled assistant notifications.
+     */
+    fun scheduleTokenPurge(context: Context) {
+        val workManager = WorkManager.getInstance(context)
         val purgeDelay = calculateWeeklySundayDelay(
             targetHour = 2,
             targetMinute = 0
@@ -57,13 +75,6 @@ object AssistantWorkManager {
             ExistingPeriodicWorkPolicy.UPDATE,
             purgeRequest
         )
-    }
-
-    fun cancelAll(context: Context) {
-        val workManager = WorkManager.getInstance(context)
-        workManager.cancelUniqueWork(BudgetAlertWorker.WORK_NAME)
-        workManager.cancelUniqueWork(WeeklyDigestWorker.WORK_NAME)
-        workManager.cancelUniqueWork(TokenPurgeWorker.WORK_NAME)
     }
 
     private fun calculateInitialDelay(targetHour: Int, targetMinute: Int, daysInterval: Int): Long {

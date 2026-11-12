@@ -67,7 +67,10 @@ class SettingsViewModel(
     private val importDataUseCase: com.cashbuddy.domain.usecase.ImportDataUseCase? = null,
     // C10: learned tokens are derived from training data — clearing one clears the other,
     // otherwise clearAllData leaves the classifier's learned vocabulary inconsistent.
-    private val learnedTokenRepository: com.cashbuddy.domain.repository.LearnedTokenRepository? = null
+    private val learnedTokenRepository: com.cashbuddy.domain.repository.LearnedTokenRepository? = null,
+    // Audit fix P1-C: wipe all data in ONE driver-level transaction instead of four
+    // separate repository transactions from the ViewModel.
+    private val dataResetStore: com.cashbuddy.domain.repository.DataResetStore? = null
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(SettingsUiState(isOcrAvailable = ocrEngine?.isAvailable ?: false))
@@ -243,12 +246,12 @@ class SettingsViewModel(
         _pendingNavOrder.value = current
     }
 
-    fun commitNavOrder() {
-        val orderList = _pendingNavOrder.value ?: return
-        val serialized = orderList.joinToString(",")
+    fun commitNavOrder(newOrder: List<String>) {
+        val serialized = newOrder.joinToString(",")
+        _pendingNavOrder.value = newOrder
         viewModelScope.launch {
             settingsRepository.setNavOrder(serialized)
-            if (_pendingNavOrder.value == orderList) {
+            if (_pendingNavOrder.value == newOrder) {
                 _pendingNavOrder.value = null
             }
         }
@@ -336,12 +339,20 @@ class SettingsViewModel(
     fun clearAllData() {
         viewModelScope.launch {
             val allTxs = _uiState.value.totalTransactionsCount
-            transactionRepository.deleteAll()
-            trainingDataRepository.clearTrainingData()
-            learnedTokenRepository?.clear()
-            val accounts = accountRepository.getAll().first()
-            for (acc in accounts) {
-                accountRepository.updateBalance(acc.id, 0.0)
+            // Audit fix P1-C: the whole wipe commits atomically via the store when
+            // available; the legacy multi-repository path remains as a fallback for
+            // construction sites that don't pass the store.
+            val store = dataResetStore
+            if (store != null) {
+                store.clearAllData()
+            } else {
+                transactionRepository.deleteAll()
+                trainingDataRepository.clearTrainingData()
+                learnedTokenRepository?.clear()
+                val accounts = accountRepository.getAll().first()
+                for (acc in accounts) {
+                    accountRepository.updateBalance(acc.id, 0.0)
+                }
             }
             _messageEffect.emit("All data deleted ($allTxs transactions)")
         }

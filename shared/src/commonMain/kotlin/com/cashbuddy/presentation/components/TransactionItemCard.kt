@@ -17,6 +17,15 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import cashbuddy.shared.generated.resources.Res
+import cashbuddy.shared.generated.resources.time_days_ago
+import cashbuddy.shared.generated.resources.time_hours_ago
+import cashbuddy.shared.generated.resources.time_just_now
+import cashbuddy.shared.generated.resources.time_minutes_ago
+import cashbuddy.shared.generated.resources.time_yesterday
+import cashbuddy.shared.generated.resources.tx_general_category
+import cashbuddy.shared.generated.resources.tx_tag_loan
+import cashbuddy.shared.generated.resources.tx_unknown_merchant
+import org.jetbrains.compose.resources.stringResource
 import cashbuddy.shared.generated.resources.ic_account_balance_wallet
 import cashbuddy.shared.generated.resources.ic_attach_money
 import cashbuddy.shared.generated.resources.ic_category
@@ -138,24 +147,26 @@ fun TransactionCard(
                 modifier = Modifier.weight(1f)
             ) {
                 Text(
-                    text = transaction.merchant.ifBlank { "Unknown Merchant" },
+                    text = transaction.merchant.ifBlank { stringResource(Res.string.tx_unknown_merchant) },
                     style = CashBuddyTypography.titleLarge,
                     color = MaterialTheme.colorScheme.onSurface,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
                 Spacer(modifier = Modifier.height(2.dp))
+                val loanTag = stringResource(Res.string.tx_tag_loan)
                 val extraTag = buildString {
                     if (transaction.paymentMethod.isNotBlank() && !transaction.paymentMethod.equals("UPI", ignoreCase = true)) {
                         append(" • ${transaction.paymentMethod}")
                     }
                     if (transaction.isLoanGiven) {
-                        append(" • Loan")
+                        append(" • $loanTag")
                     }
                 }
+                val timeAgo = formatTimestampResource(transaction.timestamp)
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
-                        text = "$categoryName • ${formatTimestamp(transaction.timestamp)}$extraTag",
+                        text = "$categoryName • $timeAgo$extraTag",
                         style = CashBuddyTypography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         maxLines = 1,
@@ -231,6 +242,19 @@ fun formatCurrency(
     includeSymbol: Boolean = false
 ): String {
     return com.cashbuddy.domain.model.CurrencyRegistry.format(amount, currencyCode, includeSymbol)
+}
+
+@Composable
+fun formatTimestampResource(timestamp: Long): String {
+    val now = com.cashbuddy.platform.currentTimeMillis()
+    val diff = now - timestamp
+    return when {
+        diff < 60_000 -> stringResource(Res.string.time_just_now)
+        diff < 3600_000 -> stringResource(Res.string.time_minutes_ago, (diff / 60_000).toInt())
+        diff < 86400_000 -> stringResource(Res.string.time_hours_ago, (diff / 3600_000).toInt())
+        diff < 172800_000 -> stringResource(Res.string.time_yesterday)
+        else -> stringResource(Res.string.time_days_ago, (diff / 86400_000).toInt())
+    }
 }
 
 fun formatTimestamp(timestamp: Long): String {

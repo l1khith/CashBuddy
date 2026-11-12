@@ -87,6 +87,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
@@ -336,8 +337,7 @@ fun SettingsScreen(
                                 )
                                 ReorderableNavOrderList(
                                     navItems = state.navOrderList,
-                                    onMove = { from, to -> viewModel.moveNavItem(from, to) },
-                                    onDragFinish = { viewModel.commitNavOrder() }
+                                    onOrderChanged = { newOrder -> viewModel.commitNavOrder(newOrder) }
                                 )
                             }
                         }
@@ -1239,15 +1239,22 @@ fun SettingsScreen(
 @Composable
 private fun ReorderableNavOrderList(
     navItems: List<String>,
-    onMove: (fromIndex: Int, toIndex: Int) -> Unit,
-    onDragFinish: () -> Unit,
+    onOrderChanged: (List<String>) -> Unit,
     modifier: Modifier = Modifier
 ) {
     val haptic = LocalHapticFeedback.current
     val spacingPx = LocalDensity.current.run { 8.dp.toPx() }
-    val latestItems = rememberUpdatedState(navItems)
-    val latestOnMove = rememberUpdatedState(onMove)
-    val latestOnDragFinish = rememberUpdatedState(onDragFinish)
+
+    // Maintain a local state list in UI memory.
+    // The Database/ViewModel is completely untouched while the finger is dragging.
+    val localItems = remember { mutableStateListOf<String>().also { it.addAll(navItems) } }
+
+    LaunchedEffect(navItems) {
+        if (localItems.toList() != navItems) {
+            localItems.clear()
+            localItems.addAll(navItems)
+        }
+    }
 
     var draggedKey by remember { mutableStateOf<String?>(null) }
     var draggingOffsetY by remember { mutableFloatStateOf(0f) }
@@ -1262,24 +1269,27 @@ private fun ReorderableNavOrderList(
     fun handleDragDelta(key: String, deltaY: Float) {
         if (draggedKey != key || itemPitchPx <= 0f) return
         draggingOffsetY += deltaY
-        val items = latestItems.value
-        val currentIdx = items.indexOf(key)
+
+        val currentIdx = localItems.indexOf(key)
         if (currentIdx == -1) return
 
         val slotDelta = kotlin.math.round(draggingOffsetY / itemPitchPx).toInt()
-        val targetIdx = (currentIdx + slotDelta).coerceIn(0, items.lastIndex)
+        val targetIdx = (currentIdx + slotDelta).coerceIn(0, localItems.lastIndex)
         if (targetIdx != currentIdx) {
             draggingOffsetY -= (targetIdx - currentIdx) * itemPitchPx
-            latestOnMove.value(currentIdx, targetIdx)
+            val item = localItems.removeAt(currentIdx)
+            localItems.add(targetIdx, item)
             haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
         }
     }
 
     fun handleDragEnd() {
-        if (draggedKey != null) {
-            draggedKey = null
-            draggingOffsetY = 0f
-            latestOnDragFinish.value()
+        val wasDragging = draggedKey != null
+        draggedKey = null
+        draggingOffsetY = 0f
+        if (wasDragging) {
+            // ONLY sync to Database/ViewModel when user drops the plate
+            onOrderChanged(localItems.toList())
         }
     }
 
@@ -1287,7 +1297,7 @@ private fun ReorderableNavOrderList(
         modifier = modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        navItems.forEachIndexed { index, key ->
+        localItems.forEach { key ->
             key(key) {
                 val isDragging = key == draggedKey
                 val scale by animateFloatAsState(
@@ -1299,24 +1309,6 @@ private fun ReorderableNavOrderList(
                     targetValue = if (isDragging) 8.dp else 0.dp,
                     label = "navCardElevation"
                 )
-
-                var previousIndex by remember { mutableIntStateOf(index) }
-                val siblingSlideAnim = remember { Animatable(0f) }
-
-                LaunchedEffect(index) {
-                    if (index != previousIndex && !isDragging) {
-                        val deltaPx = (previousIndex - index) * itemPitchPx
-                        siblingSlideAnim.snapTo(deltaPx)
-                        siblingSlideAnim.animateTo(
-                            targetValue = 0f,
-                            animationSpec = spring(
-                                stiffness = Spring.StiffnessMediumLow,
-                                dampingRatio = Spring.DampingRatioNoBouncy
-                            )
-                        )
-                    }
-                    previousIndex = index
-                }
 
                 val iconRes = when (key) {
                     "home" -> Res.drawable.ic_home
@@ -1339,7 +1331,9 @@ private fun ReorderableNavOrderList(
                         }
                         .zIndex(if (isDragging) 1f else 0f)
                         .graphicsLayer {
-                            translationY = if (isDragging) draggingOffsetY else siblingSlideAnim.value
+                            // Only translate the single card currently being dragged by the finger.
+                            // Sibling items are laid out cleanly in their Column slots without any stuck offsets!
+                            translationY = if (isDragging) draggingOffsetY else 0f
                             scaleX = scale
                             scaleY = scale
                         }
@@ -1382,29 +1376,13 @@ private fun ReorderableNavOrderList(
                             color = MaterialTheme.colorScheme.onSurface,
                             modifier = Modifier.weight(1f)
                         )
-                        // Immediate drag handle (no long-press delay needed on the handle itself)
-                        Box(
-                            modifier = Modifier
-                                .size(32.dp)
-                                .pointerInput(key) {
-                                    detectDragGestures(
-                                        onDragStart = { handleDragStart(key) },
-                                        onDragEnd = { handleDragEnd() },
-                                        onDragCancel = { handleDragEnd() },
-                                        onDrag = { change, dragAmount ->
-                                            change.consume()
-                                            handleDragDelta(key, dragAmount.y)
-                                        }
-                                    )
-                                },
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.DragHandle,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
+                        // Drag handle icon (visual affordance; card itself handles gesture cleanly)
+                        Icon(
+                            imageVector = Icons.Default.DragHandle,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.size(24.dp)
+                        )
                     }
                 }
             }

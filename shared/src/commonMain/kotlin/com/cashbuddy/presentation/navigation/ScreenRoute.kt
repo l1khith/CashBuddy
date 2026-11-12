@@ -7,7 +7,13 @@ sealed interface ScreenRoute {
     data object Home : ScreenRoute
 
     @Serializable
-    data object Transactions : ScreenRoute
+    data class Transactions(
+        val initialCategoryId: Long? = null,
+        val initialType: String? = null,
+        val initialPeriod: String? = null,
+        val initialStartMillis: Long? = null,
+        val initialEndMillis: Long? = null
+    ) : ScreenRoute
 
     @Serializable
     data class TransactionDetail(val transactionId: Long) : ScreenRoute

@@ -45,7 +45,7 @@ class EvidenceExtractor(
         private val SENTENCE_SPLIT_REGEX = Regex("""[.!?\n\r•·|—]+""")
 
         private val PAYER_REGEX = Regex("""(?i)(?:^|[\n\r•·|—:]|\b(?:from|by)\s+)\s*([A-Za-z0-9\s&'.-]{2,40}?)\s+(?:paid\s+(?:to\s+)?you|sent\s+you|transferred\s+to\s+you)\b""")
-        private val FVG_REGEX = Regex("""(?i)(?:fvg:?|favoring|in\s+favou?r\s+of|banking\s+name:?)\s*([A-Za-z0-9\s&'.-]{2,30}?)(?:\s+avl|\s+bal|\s+ref|\s+on|\n|\.|\z)""")
+        private val FVG_REGEX = Regex("""(?i)(?:fv[g.]?:?|favoring|in\s+favou?r\s+of|banking\s+name:?)\s*([A-Za-z0-9\s&'.-]{2,30}?)(?:\s*,|\s+avl|\s+bal|\s+ref|\s+on|\n|\.|\z)""")
         private val RECIPIENT_REGEX = Regex("""(?i)(?:paid|sent|transferred|payment(?:\s+of)?)\s+(?:(?:₹|Rs[.:]?|INR|[$€£¥])\s*[\d,.]+\s+)?to\s+([A-Za-z0-9\s&'-]{2,30}?)(?:\s*\(|\s+is\b|\s+was\b|\s+on\b|\s+ref\b|\s+via\b|\s+using\b|\s+bal\b|\s+avl\b|\s+upi\b|\s+successfully\b|\n|\.|\z)""")
         private val RECEIVED_REGEX = Regex("""(?i)\b(?:received\s+(?:(?:₹|Rs[.:]?|INR|[$€£¥])\s*[\d,.]+\s+)?from|received\s+from)\s+([A-Za-z0-9\s&'-]{2,30}?)(?:\s+via|\s+using|\s+on|\s+ref|\s+upi|\s+bal|\s+avl|\n|\.|\z)""")
         private val PREFIX_REGEX = Regex("""(?i)(?:towards|for|at|to)\s+([A-Za-z0-9\s&'-]{2,30}?)(?:\s*\(|\s+is\b|\s+was\b|\s+on|\s+ref|\s+via|\s+using|\s+bal|\s+avl|\s+upi|\n|\.|\z)""")
@@ -219,9 +219,9 @@ class EvidenceExtractor(
         val vpa = Regexes.UPI_HANDLE.find(text)?.value
         if (vpa != null) {
             val handle = vpa.substringBefore("@").replace(".", " ").replace("-", " ").trim()
-            if (handle.length >= 3 && !handle.all { it.isDigit() } && !PAYMENT_RAILS.contains(handle.lowercase())) {
+            if (isValidMerchantCandidate(handle)) {
                 val explicitRecipient = RECIPIENT_REGEX.find(text)?.groups?.get(1)?.value?.trim()
-                if (!explicitRecipient.isNullOrBlank() && explicitRecipient.length in 2..30 && !PAYMENT_RAILS.contains(explicitRecipient.lowercase())) {
+                if (!explicitRecipient.isNullOrBlank() && isValidMerchantCandidate(explicitRecipient)) {
                     return formatMerchant(explicitRecipient)
                 }
                 return formatMerchant(handle)
@@ -232,7 +232,7 @@ class EvidenceExtractor(
         val mPayer = PAYER_REGEX.find(text)
         if (mPayer != null) {
             val raw = mPayer.groups[1]?.value?.trim()
-            if (!raw.isNullOrBlank() && raw.length in 2..40 && !PAYMENT_RAILS.contains(raw.lowercase())) {
+            if (!raw.isNullOrBlank() && isValidMerchantCandidate(raw)) {
                 return formatMerchant(raw)
             }
         }
@@ -241,7 +241,7 @@ class EvidenceExtractor(
         val mFvg = FVG_REGEX.find(text)
         if (mFvg != null) {
             val raw = mFvg.groups[1]?.value?.trim()
-            if (!raw.isNullOrBlank() && raw.length >= 2 && !PAYMENT_RAILS.contains(raw.lowercase())) {
+            if (!raw.isNullOrBlank() && isValidMerchantCandidate(raw)) {
                 return formatMerchant(raw)
             }
         }
@@ -252,10 +252,10 @@ class EvidenceExtractor(
             val l = lines[i].lowercase()
             if (l == "paid to" || l == "to:" || l == "to" || l == "payment to") {
                 val next = lines.getOrNull(i + 1)?.trim()
-                if (!next.isNullOrBlank() && next.length in 2..40 &&
+                if (!next.isNullOrBlank() &&
                     !next.startsWith("₹") && !next.startsWith("Rs", ignoreCase = true) &&
                     !next.lowercase().startsWith("banking name") && !next.lowercase().startsWith("receiver") &&
-                    !PAYMENT_RAILS.contains(next.lowercase())
+                    isValidMerchantCandidate(next)
                 ) {
                     return formatMerchant(next)
                 }
@@ -266,7 +266,7 @@ class EvidenceExtractor(
         val mRecipient = RECIPIENT_REGEX.find(text)
         if (mRecipient != null) {
             val raw = mRecipient.groups[1]?.value?.trim()
-            if (!raw.isNullOrBlank() && raw.length in 2..30 && !PAYMENT_RAILS.contains(raw.lowercase())) {
+            if (!raw.isNullOrBlank() && isValidMerchantCandidate(raw)) {
                 return formatMerchant(raw)
             }
         }
@@ -275,7 +275,7 @@ class EvidenceExtractor(
         val mReceived = RECEIVED_REGEX.find(text)
         if (mReceived != null) {
             val raw = mReceived.groups[1]?.value?.trim()
-            if (!raw.isNullOrBlank() && raw.length in 2..30 && !PAYMENT_RAILS.contains(raw.lowercase())) {
+            if (!raw.isNullOrBlank() && isValidMerchantCandidate(raw)) {
                 return formatMerchant(raw)
             }
         }
@@ -284,7 +284,7 @@ class EvidenceExtractor(
         val m = PREFIX_REGEX.find(text)
         if (m != null) {
             val raw = m.groups[1]?.value?.trim()
-            if (!raw.isNullOrBlank() && raw.length >= 2 && !PAYMENT_RAILS.contains(raw.lowercase())) {
+            if (!raw.isNullOrBlank() && isValidMerchantCandidate(raw)) {
                 return formatMerchant(raw)
             }
         }
@@ -295,13 +295,31 @@ class EvidenceExtractor(
                 .split('.', '_', '-')
                 .filter { it.length >= 3 && it != "com" && it != "app" && it != "apps" && it != "android" && it != "user" }
                 .lastOrNull()
-            if (!pkgBrand.isNullOrBlank() && !PAYMENT_RAILS.contains(pkgBrand)) {
+            if (!pkgBrand.isNullOrBlank() && isValidMerchantCandidate(pkgBrand)) {
                 return pkgBrand.replaceFirstChar { if (it.isLowerCase()) it.titlecase() else it.toString() }
             }
         }
 
         // 9. If no explicit merchant/recipient could be extracted, return null to let user label it in Review Inbox
         return null
+    }
+
+    private fun isValidMerchantCandidate(candidate: String): Boolean {
+        val trimmed = candidate.trim()
+        if (trimmed.length < 2 || trimmed.length > 50) return false
+        if (PAYMENT_RAILS.contains(trimmed.lowercase())) return false
+
+        // A merchant name must contain at least one letter.
+        // Pure digit sequences, phone numbers, OTPs, or dates (e.g. "8879635472", "18002333") are not merchants.
+        val hasLetter = trimmed.any { it.isLetter() }
+        if (!hasLetter) return false
+
+        // Reject candidate if it is purely numeric digits and phone punctuation (+91, hyphens, spaces)
+        val digitsOnly = trimmed.filter { it.isDigit() }
+        val lettersOnly = trimmed.filter { it.isLetter() }
+        if (lettersOnly.isEmpty() || digitsOnly.length >= 10 && lettersOnly.length <= 2) return false
+
+        return true
     }
 
     private fun formatMerchant(name: String): String {

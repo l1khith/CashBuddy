@@ -45,79 +45,20 @@ class ProbabilisticClassifier(
     private val fieldConfidenceEstimator: FieldConfidenceEstimator = FieldConfidenceEstimator()
 ) {
 
+    /**
+     * Synchronous convenience wrapper for TESTS and debug harnesses only (audit fix P3:
+     * this used to duplicate the entire scoring body, so the calibrated path and the
+     * sync path could silently drift — the body now lives ONLY in
+     * [classifySuspending], and this delegates to it). Production code must call
+     * [classifySuspending]; with the default [NoOpCalibrator] results are identical.
+     */
     fun classify(
         evidence: Evidence,
         rawText: String = "",
         source: NotificationSource = NotificationSource.UNKNOWN,
         packageName: String? = null
-    ): ClassificationResult {
-        val priorLogit = ln(Priors.P_TRANSACTION / (1.0 - Priors.P_TRANSACTION))
-        var logit = priorLogit
-
-        val contributions = mutableListOf<Contribution>()
-
-        fun apply(name: String, present: Boolean, baseLR: Double) {
-            if (!present) return
-            val lr = baseLR
-            val delta = ln(lr)
-            logit += delta
-            contributions.add(Contribution(name, delta, lr))
-        }
-
-        apply("amount_in_context", evidence.amountInTransactionContext, LikelihoodRatios.AMOUNT_IN_CONTEXT)
-        apply("amount_debit_sent", evidence.amountAndDebitSameSentence, LikelihoodRatios.AMOUNT_AND_DEBIT_SAME_SENT)
-        apply("amount_credit_sent", evidence.amountAndCreditSameSentence, LikelihoodRatios.AMOUNT_AND_CREDIT_SAME_SENT)
-        apply("amount_forbidden_shape", evidence.amountHasForbiddenShape, LikelihoodRatios.AMOUNT_FORBIDDEN_SHAPE)
-        apply("amount", evidence.hasAmount && !evidence.amountInTransactionContext, LikelihoodRatios.AMOUNT_ANYWHERE)
-        apply("account", evidence.hasAccount, LikelihoodRatios.ACCOUNT_PRESENT)
-        apply("utr", evidence.hasUtr, LikelihoodRatios.UTR_PRESENT)
-        apply("bank_sender", evidence.senderLooksBank, LikelihoodRatios.BANK_SENDER_HINT)
-        apply("upi_handle", evidence.hasUpiHandle, LikelihoodRatios.UPI_HANDLE_PRESENT)
-        apply("balance", evidence.hasBalanceMention, LikelihoodRatios.BALANCE_MENTIONED)
-        apply("merchant_pkg", evidence.fromMerchantPackage, LikelihoodRatios.MERCHANT_APP_PACKAGE)
-        apply("success", evidence.hasSuccessWord, LikelihoodRatios.SUCCESS_WORD)
-        apply("OTP", evidence.hasOtp, LikelihoodRatios.OTP_KEYWORD)
-        apply("promo", evidence.hasPromo, LikelihoodRatios.PROMO_KEYWORD)
-        apply("offer", evidence.hasOffer, LikelihoodRatios.OFFER_KEYWORD)
-        apply("recent_similar_amount", evidence.recentSimilarAmount, LikelihoodRatios.RECENT_SIMILAR_AMOUNT)
-        apply("recent_same_merchant", evidence.recentSameMerchant, LikelihoodRatios.RECENT_SAME_MERCHANT)
-        apply("burst_detected", evidence.burstDetected, LikelihoodRatios.BURST_DETECTED)
-
-        if (evidence.tokenLogOdds != 0.0) {
-            logit += evidence.tokenLogOdds
-            contributions.add(Contribution("learned_tokens", evidence.tokenLogOdds, exp(evidence.tokenLogOdds)))
-        }
-
-        val p = 1.0 / (1.0 + exp(-logit))
-
-        val amount = evidenceExtractor.extractAmount(rawText)
-        val type = evidenceExtractor.extractType(rawText)
-        val accountLast4 = evidenceExtractor.extractAccountLast4(rawText)
-        val merchant = evidenceExtractor.extractMerchant(rawText, packageName)
-        val bankHint = if (evidence.senderLooksBank) "Bank" else null
-        val utr = evidenceExtractor.extractUtr(rawText)
-
-        val fieldConfidences = fieldConfidenceEstimator.estimate(
-            rawText = rawText,
-            amount = amount,
-            type = type,
-            accountLast4 = accountLast4,
-            merchant = merchant
-        )
-
-        return ClassificationResult(
-            pTransaction = p,
-            fieldConfidences = fieldConfidences,
-            evidence = evidence,
-            contributions = contributions,
-            source = source,
-            amount = amount,
-            type = type,
-            accountLast4 = accountLast4,
-            merchant = merchant,
-            bankHint = bankHint,
-            utr = utr
-        )
+    ): ClassificationResult = kotlinx.coroutines.runBlocking {
+        classifySuspending(evidence, rawText, source, packageName)
     }
 
     suspend fun classifySuspending(

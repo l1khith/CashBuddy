@@ -129,14 +129,19 @@ class RejectTransactionUseCase(
 ) {
     suspend operator fun invoke(id: Long) {
         val tx = repository.getById(id).firstOrNull()
-        // Phase 3 Loop: Record tokens as non-transaction in Zero-Map learned_token table
+        // Audit fix B3: delete FIRST, record learning signals AFTER. The old order recorded
+        // tokens before the delete — a crash (or failed delete) in between left the tokens
+        // recorded as non-transaction for a transaction the user did not successfully
+        // reject, and retrying the rejection double-incremented learned_token counts
+        // (the upsert blindly adds +1). The new worst case — crash after a successful
+        // delete — only loses one training signal, which is harmless and retry-safe.
+        repository.deleteById(id)
         if (tx != null && tx.rawText.isNotBlank()) {
             val tokens = com.cashbuddy.core.prob.Tokenizer.tokenize(tx.rawText)
             if (tokens.isNotEmpty()) {
                 learnedTokenRepository?.record(isTransaction = false, tokens = tokens)
             }
         }
-        repository.deleteById(id)
     }
 }
 

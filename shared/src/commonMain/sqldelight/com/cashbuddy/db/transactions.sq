@@ -181,7 +181,10 @@ ORDER BY t.timestamp DESC;
 
 getMonthlySummary:
 SELECT 
-    strftime('%Y-%m', datetime(t.timestamp/1000, 'unixepoch')) AS month,
+    -- 'localtime' modifier (audit fix P3): plain unixepoch buckets by UTC month, so a
+    -- transaction at 00:30 IST on the 1st was grouped into the PREVIOUS month.
+    -- Device-local month matches the app's day/month semantics everywhere else.
+    strftime('%Y-%m', datetime(t.timestamp/1000, 'unixepoch', 'localtime')) AS month,
     SUM(CASE WHEN t.type = 'DEBIT' AND t.status IN ('CONFIRMED', 'MODIFIED') THEN t.amount ELSE 0.0 END) AS total_debit,
     SUM(CASE WHEN t.type = 'CREDIT' AND t.status IN ('CONFIRMED', 'MODIFIED') THEN t.amount ELSE 0.0 END) AS total_credit,
     COUNT(*) AS transaction_count

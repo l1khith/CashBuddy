@@ -20,9 +20,28 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import cashbuddy.shared.generated.resources.Res
+import cashbuddy.shared.generated.resources.action_cancel
+import cashbuddy.shared.generated.resources.action_delete
+import cashbuddy.shared.generated.resources.action_edit
+import cashbuddy.shared.generated.resources.cd_back
+import cashbuddy.shared.generated.resources.dialog_delete_tx_message
+import cashbuddy.shared.generated.resources.dialog_delete_tx_title
+import cashbuddy.shared.generated.resources.dialog_edit_tx_save_changes
+import cashbuddy.shared.generated.resources.dialog_edit_tx_title
 import cashbuddy.shared.generated.resources.ic_delete_forever
 import cashbuddy.shared.generated.resources.ic_edit
+import cashbuddy.shared.generated.resources.tx_detail_change_category
+import cashbuddy.shared.generated.resources.tx_detail_credit_label
+import cashbuddy.shared.generated.resources.tx_detail_debit_label
+import cashbuddy.shared.generated.resources.tx_detail_delete_button
+import cashbuddy.shared.generated.resources.tx_detail_merchant_label
+import cashbuddy.shared.generated.resources.tx_detail_original_notification
+import cashbuddy.shared.generated.resources.tx_detail_source_label
+import cashbuddy.shared.generated.resources.tx_detail_status_label
+import cashbuddy.shared.generated.resources.tx_detail_title
+import cashbuddy.shared.generated.resources.tx_unknown_merchant
 import org.jetbrains.compose.resources.painterResource
+import org.jetbrains.compose.resources.stringResource
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -119,19 +138,19 @@ fun TransactionDetailScreen(
                     IconButton(onClick = onNavigateBack) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Back",
+                            contentDescription = stringResource(Res.string.cd_back),
                             tint = MaterialTheme.colorScheme.onBackground
                         )
                     }
                     Text(
-                        text = "Transaction Details",
+                        text = stringResource(Res.string.tx_detail_title),
                         style = CashBuddyTypography.titleLarge,
                         fontWeight = FontWeight.Bold
                     )
                     IconButton(onClick = { showEditDialog = true }) {
                         Icon(
                             painter = painterResource(Res.drawable.ic_edit),
-                            contentDescription = "Edit Transaction",
+                            contentDescription = stringResource(Res.string.action_edit),
                             tint = MaterialTheme.colorScheme.primary
                         )
                     }
@@ -160,7 +179,7 @@ fun TransactionDetailScreen(
                         )
                         Spacer(modifier = Modifier.height(4.dp))
                         Text(
-                            text = if (isDebit) "Debit Expense" else "Credit Income",
+                            text = if (isDebit) stringResource(Res.string.tx_detail_debit_label) else stringResource(Res.string.tx_detail_credit_label),
                             style = CashBuddyTypography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -190,15 +209,16 @@ fun TransactionDetailScreen(
                             .padding(18.dp),
                         verticalArrangement = Arrangement.spacedBy(14.dp)
                     ) {
-                        DetailRow(label = "Merchant", value = tx.merchant.ifBlank { "Unknown" })
-                        DetailRow(label = "Status", value = tx.status.name)
-                        DetailRow(label = "Source App", value = tx.sourceApp)
+                        val unknownMerchant = stringResource(Res.string.tx_unknown_merchant)
+                        DetailRow(label = stringResource(Res.string.tx_detail_merchant_label), value = tx.merchant.ifBlank { unknownMerchant })
+                        DetailRow(label = stringResource(Res.string.tx_detail_status_label), value = tx.status.name)
+                        DetailRow(label = stringResource(Res.string.tx_detail_source_label), value = com.cashbuddy.platform.getApplicationLabel(tx.sourceApp))
                     }
                 }
 
                 // Category Selector
                 Text(
-                    text = "Change Category",
+                    text = stringResource(Res.string.tx_detail_change_category),
                     style = CashBuddyTypography.titleMedium,
                     fontWeight = FontWeight.SemiBold
                 )
@@ -233,7 +253,7 @@ fun TransactionDetailScreen(
                 // Raw Source Text
                 if (tx.rawText.isNotBlank()) {
                     Text(
-                        text = "Original Notification",
+                        text = stringResource(Res.string.tx_detail_original_notification),
                         style = CashBuddyTypography.titleMedium,
                         fontWeight = FontWeight.SemiBold
                     )
@@ -255,6 +275,8 @@ fun TransactionDetailScreen(
                 Spacer(modifier = Modifier.height(8.dp))
 
                 // Edit Button
+                val editLabel = stringResource(Res.string.action_edit)
+                val deleteLabel = stringResource(Res.string.tx_detail_delete_button)
                 Button(
                     onClick = { showEditDialog = true },
                     modifier = Modifier
@@ -266,12 +288,12 @@ fun TransactionDetailScreen(
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Icon(
                             painter = painterResource(Res.drawable.ic_edit),
-                            contentDescription = "Edit Transaction",
+                            contentDescription = editLabel,
                             tint = Color.White,
                             modifier = Modifier.size(18.dp)
                         )
                         Spacer(modifier = Modifier.width(8.dp))
-                        Text(text = "Edit Transaction", style = CashBuddyTypography.labelLarge, color = Color.White)
+                        Text(text = editLabel, style = CashBuddyTypography.labelLarge, color = Color.White)
                     }
                 }
 
@@ -287,12 +309,12 @@ fun TransactionDetailScreen(
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Icon(
                             painter = painterResource(Res.drawable.ic_delete_forever),
-                            contentDescription = "Delete Transaction",
+                            contentDescription = deleteLabel,
                             tint = DangerRed,
                             modifier = Modifier.size(18.dp)
                         )
                         Spacer(modifier = Modifier.width(8.dp))
-                        Text(text = "Delete Transaction", style = CashBuddyTypography.labelLarge, color = DangerRed)
+                        Text(text = deleteLabel, style = CashBuddyTypography.labelLarge, color = DangerRed)
                     }
                 }
 
@@ -303,8 +325,8 @@ fun TransactionDetailScreen(
         if (showDeleteConfirmDialog) {
             AlertDialog(
                 onDismissRequest = { showDeleteConfirmDialog = false },
-                title = { Text("Delete Transaction?", style = CashBuddyTypography.titleMedium, fontWeight = FontWeight.Bold) },
-                text = { Text("Are you sure you want to permanently delete this transaction? This action cannot be undone.", style = CashBuddyTypography.bodyMedium) },
+                title = { Text(stringResource(Res.string.dialog_delete_tx_title), style = CashBuddyTypography.titleMedium, fontWeight = FontWeight.Bold) },
+                text = { Text(stringResource(Res.string.dialog_delete_tx_message), style = CashBuddyTypography.bodyMedium) },
                 confirmButton = {
                     Button(
                         onClick = {
@@ -313,12 +335,12 @@ fun TransactionDetailScreen(
                         },
                         colors = ButtonDefaults.buttonColors(containerColor = DangerRed)
                     ) {
-                        Text("Delete", color = Color.White)
+                        Text(stringResource(Res.string.action_delete), color = Color.White)
                     }
                 },
                 dismissButton = {
                     TextButton(onClick = { showDeleteConfirmDialog = false }) {
-                        Text("Cancel")
+                        Text(stringResource(Res.string.action_cancel))
                     }
                 }
             )
@@ -332,8 +354,8 @@ fun TransactionDetailScreen(
                 initialMerchant = currentTx.merchant,
                 initialCategoryId = currentTx.categoryId,
                 categories = state.categories,
-                title = "Edit Transaction",
-                confirmButtonText = "Save Changes",
+                title = stringResource(Res.string.dialog_edit_tx_title),
+                confirmButtonText = stringResource(Res.string.dialog_edit_tx_save_changes),
                 onDismiss = { showEditDialog = false },
                 onConfirm = { amount, type, merchant, categoryId ->
                     viewModel.onUpdateTransaction(amount, type, merchant, categoryId)

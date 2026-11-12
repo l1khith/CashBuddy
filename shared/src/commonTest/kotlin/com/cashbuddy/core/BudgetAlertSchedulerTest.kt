@@ -99,7 +99,11 @@ class BudgetAlertSchedulerTest {
         override fun getById(id: Long): Flow<Transaction?> = flowOf(txs.find { it.id == id })
         override fun getPending(): Flow<List<Transaction>> = flowOf(emptyList())
         override fun getRecent(limit: Long): Flow<List<Transaction>> = flowOf(emptyList())
-        override fun getByDateRange(start: Long, end: Long): Flow<List<Transaction>> = flowOf(emptyList())
+        override fun getByDateRange(start: Long, end: Long): Flow<List<Transaction>> =
+            // Mirror the production SQL (transactions.sq getByDateRange):
+            // timestamp BETWEEN ? AND ? AND is_merged = 0. Status/type filters are
+            // applied by BudgetEngine.computeStatus, exactly like the real queries.
+            flowOf(txs.filter { it.timestamp in start..end && !it.isMerged })
         override fun getByDateRangeWithLimit(start: Long, end: Long, limit: Long): Flow<List<Transaction>> = flowOf(emptyList())
         override fun getSummaryByDateRange(start: Long, end: Long): Flow<DateRangeSummary> = flowOf(DateRangeSummary(0.0, 0.0, 0L))
         override fun getByCategory(categoryId: Long): Flow<List<Transaction>> = flowOf(emptyList())
