@@ -164,8 +164,8 @@
     <string name="stats_budget_progress">%1$s / %2$s (%3$d%)</string>
     <string name="stats_budget_exceeded">Exceeded by %1$s</string>
     <string name="stats_budget_remaining">%1$s remaining</string>
-    <string name="stats_cmp_up">↑ %1$d%% vs %2$s</string>
-    <string name="stats_cmp_down">↓ %1$d%% vs %2$s</string>
+    <string name="stats_cmp_up">↑ %1$d% vs %2$s</string>
+    <string name="stats_cmp_down">↓ %1$d% vs %2$s</string>
     <string name="stats_cmp_flat">0% vs %1$s</string>
     <string name="stats_period_last_week">Last Week</string>
     <string name="stats_period_last_month">Last Month</string>

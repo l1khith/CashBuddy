@@ -46,7 +46,7 @@ data class CategoryStatsItem(
     val breakdown: CategoryBreakdown,
     val categoryId: Long?,
     val comparisonPercent: Int?,
-    val progressFraction: Float,
+    val barFraction: Float,
     val percentageInt: Int
 )
 
@@ -179,6 +179,7 @@ class StatsViewModel(
                     val categoryIdByName = ctx.categories.associateBy({ it.name }, { it.id })
 
                     val totalSpendingForBreakdowns = breakdowns.sumOf { it.totalAmount }.coerceAtLeast(1.0)
+                    val maxCategorySpent = breakdowns.maxOfOrNull { it.totalAmount }?.coerceAtLeast(1.0) ?: 1.0
                     val categoryItems = breakdowns.map { cat ->
                         val prevAmount = prevByCategory[cat.categoryName]?.totalAmount ?: 0.0
                         val comparisonPercent = if (prevAmount > 0.0) {
@@ -186,14 +187,15 @@ class StatsViewModel(
                         } else {
                             null
                         }
-                        val fraction = (cat.totalAmount / totalSpendingForBreakdowns).toFloat().coerceIn(0f, 1f)
-                        val pctInt = (fraction * 100).toInt()
+                        val textFraction = (cat.totalAmount / totalSpendingForBreakdowns).toFloat().coerceIn(0f, 1f)
+                        val textPctInt = (textFraction * 100).toInt()
+                        val barFraction = (cat.totalAmount / maxCategorySpent).toFloat().coerceIn(0f, 1f)
                         CategoryStatsItem(
                             breakdown = cat,
                             categoryId = categoryIdByName[cat.categoryName],
                             comparisonPercent = comparisonPercent,
-                            progressFraction = fraction,
-                            percentageInt = pctInt
+                            barFraction = barFraction,
+                            percentageInt = textPctInt
                         )
                     }
 

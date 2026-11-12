@@ -1,5 +1,6 @@
 package com.cashbuddy.presentation.stats
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
@@ -588,7 +589,7 @@ private fun CategorySpendingRow(
     onClick: () -> Unit
 ) {
     val cat = catItem.breakdown
-    val fraction = catItem.progressFraction
+    val barFraction = catItem.barFraction
     val percentage = catItem.percentageInt
     val categoryColor = getCategoryColor(cat.categoryName)
 
@@ -643,15 +644,26 @@ private fun CategorySpendingRow(
                 )
             }
             Spacer(modifier = Modifier.height(8.dp))
-            LinearProgressIndicator(
-                progress = { fraction },
+
+            // Custom Pill Progress Bar without M3 Stop Indicator dot
+            Box(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(8.dp)
-                    .clip(RadiusSmall),
-                color = categoryColor,
-                trackColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
-            )
+                    .clip(RoundedCornerShape(50))
+                    .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+            ) {
+                if (barFraction > 0f) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth(barFraction)
+                            .height(8.dp)
+                            .clip(RoundedCornerShape(50))
+                            .background(categoryColor)
+                    )
+                }
+            }
+
             Spacer(modifier = Modifier.height(6.dp))
             Row(
                 modifier = Modifier.fillMaxWidth(),
