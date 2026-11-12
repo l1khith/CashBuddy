@@ -18,10 +18,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
@@ -30,11 +27,8 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import cashbuddy.shared.generated.resources.Res
 import cashbuddy.shared.generated.resources.cd_back
 import cashbuddy.shared.generated.resources.ic_arrow_back
-import com.cashbuddy.presentation.settings.components.DuplicateReconciliationDialog
-import com.cashbuddy.presentation.settings.dialogs.ClearDataDialog
-import com.cashbuddy.presentation.settings.dialogs.ClearTrainingDialog
-import com.cashbuddy.presentation.settings.dialogs.IgnoredAppsDialog
-import com.cashbuddy.presentation.settings.dialogs.ImportCsvDialog
+import com.cashbuddy.presentation.settings.dialogs.SettingsDialogState
+import com.cashbuddy.presentation.settings.dialogs.SettingsDialogsHost
 import com.cashbuddy.presentation.settings.sections.AboutSection
 import com.cashbuddy.presentation.settings.sections.AppCustomizationSection
 import com.cashbuddy.presentation.settings.sections.AutomationSection
@@ -59,11 +53,29 @@ fun SettingsScreen(
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
-    var showClearDialog by rememberSaveable { mutableStateOf(false) }
-    var showClearTrainingDialog by rememberSaveable { mutableStateOf(false) }
-    var showDuplicateDialog by rememberSaveable { mutableStateOf(false) }
-    var showIgnoreDialog by rememberSaveable { mutableStateOf(false) }
-    var showImportDialog by rememberSaveable { mutableStateOf(false) }
+
+    // Rule 2: Dialog visibility state is isolated in a stable state holder.
+    // SettingsScreen never reads these boolean flags, so opening a dialog never re-evaluates LazyColumn!
+    val dialogState = remember { SettingsDialogState() }
+
+    // Rule 3: Define stable callbacks outside the LazyColumn to avoid allocating new closures on every emission.
+    val onOpenIgnoreList = remember { { dialogState.showIgnoreDialog = true } }
+    val onOpenClearTraining = remember { { dialogState.showClearTrainingDialog = true } }
+    val onOpenImportCsv = remember { { dialogState.showImportDialog = true } }
+    val onOpenClearAllData = remember { { dialogState.showClearDialog = true } }
+    val onExportCsv = remember(viewModel) { { viewModel.exportCsvData {} } }
+    val onScanDuplicates = remember(viewModel) {
+        {
+            viewModel.scanDuplicates { dialogState.showDuplicateDialog = true }
+        }
+    }
+    val onMergeDuplicates = remember(viewModel, state.duplicateGroups) {
+        {
+            viewModel.mergeDuplicates(state.duplicateGroups) {
+                dialogState.showDuplicateDialog = false
+            }
+        }
+    }
 
     LaunchedEffect(Unit) {
         viewModel.messageEffect.collectLatest { msg ->
@@ -154,7 +166,7 @@ fun SettingsScreen(
                         onNotificationEnabledChange = viewModel::setNotificationEnabled,
                         onSmartNotificationsEnabledChange = viewModel::setSmartNotificationsEnabled,
                         onOpenNotificationSettings = onOpenNotificationSettings,
-                        onOpenIgnoreList = { showIgnoreDialog = true }
+                        onOpenIgnoreList = onOpenIgnoreList
                     )
                 }
 
@@ -171,7 +183,7 @@ fun SettingsScreen(
                         userCorrectionsCount = state.userCorrectionsCount,
                         onNavigateToPersonalization = onNavigateToPersonalization,
                         onExportTrainingDataset = viewModel::exportTrainingDataset,
-                        onResetTrainingData = { showClearTrainingDialog = true }
+                        onResetTrainingData = onOpenClearTraining
                     )
                 }
 
@@ -179,13 +191,11 @@ fun SettingsScreen(
                     DataManagementSection(
                         isScanningDuplicates = state.isScanningDuplicates,
                         hasRecentMerges = state.hasRecentMerges,
-                        onExportCsv = { viewModel.exportCsvData {} },
-                        onImportCsvClick = { showImportDialog = true },
-                        onScanDuplicatesClick = {
-                            viewModel.scanDuplicates { showDuplicateDialog = true }
-                        },
+                        onExportCsv = onExportCsv,
+                        onImportCsvClick = onOpenImportCsv,
+                        onScanDuplicatesClick = onScanDuplicates,
                         onUndoMergeClick = viewModel::undoLastMerge,
-                        onClearAllDataClick = { showClearDialog = true }
+                        onClearAllDataClick = onOpenClearAllData
                     )
                 }
 
@@ -207,58 +217,21 @@ fun SettingsScreen(
         }
     }
 
-    if (showClearDialog) {
-        ClearDataDialog(
-            onConfirm = {
-                viewModel.clearAllData()
-                showClearDialog = false
-            },
-            onDismiss = { showClearDialog = false }
-        )
-    }
-
-    if (showClearTrainingDialog) {
-        ClearTrainingDialog(
-            onConfirm = {
-                viewModel.clearTrainingData()
-                showClearTrainingDialog = false
-            },
-            onDismiss = { showClearTrainingDialog = false }
-        )
-    }
-
-    if (showDuplicateDialog) {
-        DuplicateReconciliationDialog(
-            duplicateGroups = state.duplicateGroups,
-            preferredCurrency = state.preferredCurrency,
-            isMerging = state.isMerging,
-            onMergeConfirmed = {
-                viewModel.mergeDuplicates(state.duplicateGroups) {
-                    showDuplicateDialog = false
-                }
-            },
-            onPreviewCsv = { viewModel.exportCsvData {} },
-            onDismiss = { showDuplicateDialog = false }
-        )
-    }
-
-    if (showIgnoreDialog) {
-        IgnoredAppsDialog(
-            ignoredPackages = state.ignoredPackages,
-            onAddPackage = viewModel::addIgnoredPackage,
-            onRemovePackage = viewModel::removeIgnoredPackage,
-            onDismiss = { showIgnoreDialog = false }
-        )
-    }
-
-    if (showImportDialog) {
-        ImportCsvDialog(
-            isImporting = state.isImportingCsv,
-            onImport = { csvText ->
-                viewModel.importCsvData(csvText)
-                showImportDialog = false
-            },
-            onDismiss = { showImportDialog = false }
-        )
-    }
+    // Rule 2: Dialogs host rendered as a sibling composable.
+    // It alone observes dialogState properties.
+    SettingsDialogsHost(
+        dialogState = dialogState,
+        duplicateGroups = state.duplicateGroups,
+        preferredCurrency = state.preferredCurrency,
+        isMerging = state.isMerging,
+        ignoredPackages = state.ignoredPackages,
+        isImportingCsv = state.isImportingCsv,
+        onClearAllData = viewModel::clearAllData,
+        onClearTrainingData = viewModel::clearTrainingData,
+        onMergeDuplicates = onMergeDuplicates,
+        onPreviewCsv = onExportCsv,
+        onAddIgnoredPackage = viewModel::addIgnoredPackage,
+        onRemoveIgnoredPackage = viewModel::removeIgnoredPackage,
+        onImportCsv = viewModel::importCsvData
+    )
 }

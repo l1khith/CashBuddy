@@ -45,6 +45,95 @@ import com.cashbuddy.presentation.theme.RadiusMedium
 import com.cashbuddy.presentation.theme.RadiusSmall
 import org.jetbrains.compose.resources.painterResource
 
+import androidx.compose.runtime.Stable
+import com.cashbuddy.core.DuplicateReconciler.DuplicateGroup
+import com.cashbuddy.presentation.settings.components.DuplicateReconciliationDialog
+
+@Stable
+class SettingsDialogState {
+    var showClearDialog by mutableStateOf(false)
+    var showClearTrainingDialog by mutableStateOf(false)
+    var showDuplicateDialog by mutableStateOf(false)
+    var showIgnoreDialog by mutableStateOf(false)
+    var showImportDialog by mutableStateOf(false)
+
+    fun dismissAll() {
+        showClearDialog = false
+        showClearTrainingDialog = false
+        showDuplicateDialog = false
+        showIgnoreDialog = false
+        showImportDialog = false
+    }
+}
+
+@Composable
+fun SettingsDialogsHost(
+    dialogState: SettingsDialogState,
+    duplicateGroups: List<DuplicateGroup>,
+    preferredCurrency: String,
+    isMerging: Boolean,
+    ignoredPackages: List<String>,
+    isImportingCsv: Boolean,
+    onClearAllData: () -> Unit,
+    onClearTrainingData: () -> Unit,
+    onMergeDuplicates: () -> Unit,
+    onPreviewCsv: () -> Unit,
+    onAddIgnoredPackage: (String) -> Unit,
+    onRemoveIgnoredPackage: (String) -> Unit,
+    onImportCsv: (String) -> Unit
+) {
+    if (dialogState.showClearDialog) {
+        ClearDataDialog(
+            onConfirm = {
+                onClearAllData()
+                dialogState.showClearDialog = false
+            },
+            onDismiss = { dialogState.showClearDialog = false }
+        )
+    }
+
+    if (dialogState.showClearTrainingDialog) {
+        ClearTrainingDialog(
+            onConfirm = {
+                onClearTrainingData()
+                dialogState.showClearTrainingDialog = false
+            },
+            onDismiss = { dialogState.showClearTrainingDialog = false }
+        )
+    }
+
+    if (dialogState.showDuplicateDialog) {
+        DuplicateReconciliationDialog(
+            duplicateGroups = duplicateGroups,
+            preferredCurrency = preferredCurrency,
+            isMerging = isMerging,
+            onMergeConfirmed = onMergeDuplicates,
+            onPreviewCsv = onPreviewCsv,
+            onDismiss = { dialogState.showDuplicateDialog = false }
+        )
+    }
+
+    if (dialogState.showIgnoreDialog) {
+        IgnoredAppsDialog(
+            ignoredPackages = ignoredPackages,
+            onAddPackage = onAddIgnoredPackage,
+            onRemovePackage = onRemoveIgnoredPackage,
+            onDismiss = { dialogState.showIgnoreDialog = false }
+        )
+    }
+
+    if (dialogState.showImportDialog) {
+        ImportCsvDialog(
+            isImporting = isImportingCsv,
+            onImport = { csvText ->
+                onImportCsv(csvText)
+                dialogState.showImportDialog = false
+            },
+            onDismiss = { dialogState.showImportDialog = false }
+        )
+    }
+}
+
 @Composable
 fun ClearDataDialog(
     onConfirm: () -> Unit,
