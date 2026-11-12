@@ -1,13 +1,247 @@
 <resources>
+    <!-- App Branding -->
     <string name="app_name">CashBuddy</string>
     <string name="app_subtitle">Personal Finance</string>
+
+    <!-- Navigation -->
     <string name="nav_home">Home</string>
     <string name="nav_stats">Stats</string>
     <string name="nav_history">History</string>
     <string name="action_add_transaction">Add Transaction</string>
+
+    <!-- Content Descriptions & Common Actions -->
     <string name="cd_app_icon">CashBuddy</string>
     <string name="cd_settings">Settings</string>
     <string name="cd_back">Back</string>
+    <string name="action_save">Save</string>
+    <string name="action_cancel">Cancel</string>
+    <string name="action_close">Close</string>
+    <string name="action_delete">Delete</string>
+    <string name="action_edit">Edit</string>
+    <string name="action_confirm">Confirm</string>
+    <string name="action_discard">Discard</string>
+    <string name="action_apply">Apply</string>
+    <string name="action_see_all">See All</string>
+    <string name="action_search">Search</string>
+    <string name="action_clear_search">Clear search</string>
+    <string name="action_reset_all">Reset All</string>
+    <string name="action_keep_editing">Keep Editing</string>
+    <string name="action_log_it">Log it</string>
+
+    <!-- Notification / Detection Prompts -->
+    <string name="upi_ref_detected">UPI Ref %1$s detected.</string>
+
+    <!-- Balance & Header Card -->
+    <string name="balance_total_active">Total Active Balance</string>
+    <string name="balance_action_show">Show</string>
+    <string name="balance_action_hide">Hide</string>
+    <string name="balance_period_in">%1$s In</string>
+    <string name="balance_period_out">%1$s Out</string>
+
+    <!-- Status Badges & Confidence -->
+    <string name="status_review">Review</string>
+    <string name="status_confirmed">Confirmed</string>
+    <string name="status_rejected">Rejected</string>
+    <string name="status_modified">Modified</string>
+    <string name="confidence_high">High</string>
+    <string name="confidence_medium">Medium</string>
+    <string name="confidence_low">Low</string>
+    <string name="confidence_label_format">%1$s (%2$d%%)</string>
+
+    <!-- Time Formatting -->
+    <string name="time_just_now">Just now</string>
+    <string name="time_minutes_ago">%1$dm ago</string>
+    <string name="time_hours_ago">%1$dh ago</string>
+    <string name="time_yesterday">Yesterday</string>
+    <string name="time_days_ago">%1$dd ago</string>
+
+    <!-- Transaction Types & Common Labels -->
+    <string name="tx_type_expense">Expense</string>
+    <string name="tx_type_income">Income</string>
+    <string name="tx_type_debit">Debit</string>
+    <string name="tx_type_credit">Credit</string>
+    <string name="tx_tag_loan">Loan</string>
+    <string name="tx_unknown_merchant">Unknown Merchant</string>
+    <string name="tx_general_category">General</string>
+
+    <!-- Dialogs: Edit Transaction -->
+    <string name="dialog_edit_tx_title">Edit Transaction</string>
+    <string name="dialog_edit_tx_review_title">Edit &amp; Review Transaction</string>
+    <string name="dialog_edit_tx_type">Transaction Type</string>
+    <string name="dialog_edit_tx_amount_label">Amount (₹)</string>
+    <string name="dialog_edit_tx_merchant_label">Merchant / Description</string>
+    <string name="dialog_edit_tx_category_label">Category</string>
+    <string name="dialog_edit_tx_save_changes">Save Changes</string>
+    <string name="dialog_edit_tx_save_confirm">Save &amp; Confirm</string>
+
+    <!-- Dialogs: Discard & Delete -->
+    <string name="dialog_discard_title">Discard Changes?</string>
+    <string name="dialog_discard_message">You have unsaved changes. Are you sure you want to discard them?</string>
+    <string name="dialog_delete_tx_title">Delete Transaction?</string>
+    <string name="dialog_delete_tx_message">Are you sure you want to permanently delete this transaction? This action cannot be undone.</string>
+
+    <!-- Home Screen -->
+    <string name="home_budgets_title">Budgets</string>
+    <string name="home_budgets_desc">Track and control category spending limits</string>
+    <string name="home_pending_review_title">%1$d Pending Review</string>
+    <string name="home_pending_review_desc">Tap to verify categorized transactions</string>
+    <string name="home_action_review">Review</string>
+    <string name="home_recent_transactions">Recent Transactions</string>
+    <string name="home_empty_title">No activity for %1$s</string>
+    <string name="home_empty_subtitle">Transactions from bank and UPI notifications will appear here automatically.</string>
+    <string name="home_add_first_tx">Add First Transaction</string>
+
+    <!-- Add Transaction Screen -->
+    <string name="add_tx_title">New Transaction</string>
+    <string name="add_tx_amount_header">AMOUNT</string>
+    <string name="add_tx_merchant_hint">Merchant / Description (e.g. Swiggy, Metro)</string>
+    <string name="add_tx_payment_method">Payment Method</string>
+    <string name="add_tx_loan_checkbox">This is a loan I expect back</string>
+    <string name="add_tx_account">Account</string>
+    <string name="add_tx_notes_hint">Notes (Optional)</string>
+    <string name="add_tx_save_button">Save Transaction</string>
+    <string name="add_tx_method_upi">UPI</string>
+    <string name="add_tx_method_card">Card</string>
+    <string name="add_tx_method_cash">Cash</string>
+    <string name="add_tx_manual_entry">Manual Entry</string>
+
+    <!-- Transaction List Screen -->
+    <string name="tx_list_title">Transactions</string>
+    <string name="tx_list_search_placeholder">Search merchant, note, or raw text...</string>
+    <string name="tx_list_filter_all_types">All Types</string>
+    <string name="tx_list_filter_expenses">Expenses (Debits)</string>
+    <string name="tx_list_filter_income">Income (Credits)</string>
+    <string name="tx_list_total_count">%1$d transactions</string>
+    <string name="tx_list_total_spent">Spent: ₹%1$s</string>
+    <string name="tx_list_total_received">Income: ₹%1$s</string>
+    <string name="tx_list_empty_title">No matching transactions</string>
+    <string name="tx_list_empty_subtitle">Try adjusting your search query, type filter, or selected time period.</string>
+    <string name="tx_filter_title">Filter Transactions</string>
+    <string name="tx_filter_amount_range">Amount Range (₹)</string>
+    <string name="tx_filter_min_amount">Min Amount</string>
+    <string name="tx_filter_max_amount">Max Amount</string>
+    <string name="tx_filter_all_categories">All Categories</string>
+    <string name="tx_filter_apply">Apply Filters</string>
+    <string name="date_range_title">Select Custom Date Range</string>
+    <string name="date_range_presets">Quick Presets</string>
+    <string name="date_range_preset_7d">Last 7 Days</string>
+    <string name="date_range_preset_30d">Last 30 Days</string>
+    <string name="date_range_preset_90d">Last 90 Days</string>
+    <string name="date_range_preset_6m">Last 6 Months</string>
+    <string name="date_range_or_specific">Or Specific Dates</string>
+    <string name="date_range_from">From Date</string>
+    <string name="date_range_to">To Date</string>
+    <string name="date_range_apply">Apply Range</string>
+    <string name="dialog_ok">OK</string>
+
+    <!-- Transaction Detail Screen -->
+    <string name="tx_detail_title">Transaction Details</string>
+    <string name="tx_detail_debit_label">Debit Expense</string>
+    <string name="tx_detail_credit_label">Credit Income</string>
+    <string name="tx_detail_merchant_label">Merchant</string>
+    <string name="tx_detail_status_label">Status</string>
+    <string name="tx_detail_source_label">Source App</string>
+    <string name="tx_detail_change_category">Change Category</string>
+    <string name="tx_detail_original_notification">Original Notification</string>
+    <string name="tx_detail_delete_button">Delete Transaction</string>
+
+    <!-- Stats & Analytics Screen -->
+    <string name="stats_title">Analytics &amp; Insights</string>
+    <string name="stats_month_summary">Current Month Summary</string>
+    <string name="stats_total_spent">Total Spent</string>
+    <string name="stats_total_received">Total Received</string>
+    <string name="stats_total_income">Total Income</string>
+    <string name="stats_outstanding_cards">Outstanding on Cards</string>
+    <string name="stats_lent_out">Lent Out (To Receive)</string>
+    <string name="stats_spending_by_category">Spending by Category</string>
+    <string name="stats_empty_title">No category data yet</string>
+    <string name="stats_empty_subtitle">Confirmed transactions will generate spending analytics automatically.</string>
+    <string name="stats_tx_count_avg">%1$d transactions • avg ₹%2$s</string>
+    <string name="stats_see_more">Tap to view</string>
+    <string name="stats_budget_status">Budget Status</string>
+    <string name="stats_no_budget_set">No budget set</string>
+    <string name="stats_set_budget">Set Budget</string>
+    <string name="stats_budget_progress">%1$s / %2$s (%3$d%)</string>
+    <string name="stats_budget_exceeded">Exceeded by %1$s</string>
+    <string name="stats_budget_remaining">%1$s remaining</string>
+    <string name="stats_cmp_up">↑ %1$d%% vs %2$s</string>
+    <string name="stats_cmp_down">↓ %1$d%% vs %2$s</string>
+    <string name="stats_cmp_flat">0% vs %1$s</string>
+    <string name="stats_period_last_week">Last Week</string>
+    <string name="stats_period_last_month">Last Month</string>
+    <string name="stats_period_last_year">Last Year</string>
+    <string name="stats_period_prev_period">Prev Period</string>
+    <string name="stats_insights_title">Insights</string>
+    <string name="stats_top_merchant">Top Merchant: %1$s (%2$s)</string>
+    <string name="stats_highest_spend_day">Highest Spend Day: %1$s (%2$s)</string>
+    <string name="stats_no_insights">Not enough spending data in this period yet.</string>
+    <string name="stats_sheet_view_in_history">View in History</string>
+    <string name="stats_sheet_empty">No transactions in this selection.</string>
+
+    <!-- Review Screen -->
+    <string name="review_inbox_title">Review Inbox</string>
+    <string name="review_inbox_subtitle">Verify categorized transactions from payment notifications</string>
+    <string name="review_pending_count">%1$d pending</string>
+    <string name="review_filter_all">All (%1$d)</string>
+    <string name="review_filter_high">High (≥85%) • %1$d</string>
+    <string name="review_filter_medium">Medium (≥50%)</string>
+    <string name="review_quick_confirm_all">Quick Confirm All (%1$d)</string>
+    <string name="review_empty_title">Inbox Zero</string>
+    <string name="review_empty_subtitle">All pending transactions have been reviewed and confirmed.</string>
+    <string name="review_detected_via">Detected via %1$s</string>
+    <string name="review_assigned_category_label">Assigned Category (Confirm to teach app):</string>
+    <string name="review_ignore_prompt_title">Ignore App Notifications?</string>
+    <string name="review_ignore_prompt_message">You discarded transactions from %1$s 3 times. Would you like to ignore all future notifications from this app?</string>
+    <string name="review_action_ignore_app">Ignore App</string>
+    <string name="review_action_keep_receiving">Keep Receiving</string>
+
+    <!-- Budgets Screen -->
+    <string name="budget_screen_title">Budgets</string>
+    <string name="budget_add_action">Add Budget</string>
+    <string name="budget_unbudgeted_title">Unbudgeted</string>
+    <string name="budget_unbudgeted_desc">Spending outside tracked categories</string>
+    <string name="budget_empty_title">No Budgets Yet</string>
+    <string name="budget_empty_subtitle">Set spending limits for categories to stay in control of your monthly expenses.</string>
+    <string name="budget_set_first_action">Set First Budget</string>
+    <string name="budget_category_budgets_header">Category Budgets</string>
+    <string name="budget_unbudgeted_header">Unbudgeted Spending</string>
+    <string name="budget_global_monthly">Monthly Budget</string>
+    <string name="budget_global_weekly">Weekly Budget</string>
+    <string name="budget_global_yearly">Yearly Budget</string>
+    <string name="budget_status_exceeded">Exceeded by ₹%1$s</string>
+    <string name="budget_status_approaching">Approaching limit (%1$d%% used)</string>
+    <string name="budget_status_projected">Projected over by ₹%1$s</string>
+    <string name="budget_status_remaining">₹%1$s remaining (%2$d%% used)</string>
+    <string name="budget_days_left">%1$d days left</string>
+    <string name="budget_drilldown_spending">%1$s Budget Spending</string>
+    <string name="budget_drilldown_tx_count">%1$d txns</string>
+    <string name="budget_drilldown_empty_title">No transactions found</string>
+    <string name="budget_drilldown_empty_subtitle">No spending recorded for %1$s in this period.</string>
+    <string name="budget_edit_new_title">New Budget</string>
+    <string name="budget_edit_edit_title">Edit Budget</string>
+    <string name="budget_global_all_spending">Global (all spending)</string>
+    <string name="budget_limit_amount_label">Limit Amount</string>
+    <string name="budget_limit_amount_hint">e.g. 5000</string>
+    <string name="budget_period_label">Period</string>
+    <string name="budget_update_button">Update Budget</string>
+    <string name="budget_save_button">Save Budget</string>
+
+    <!-- Duplicate Reconciliation Dialog -->
+    <string name="dup_title">Clean Up Duplicates</string>
+    <string name="dup_groups_found">Found %1$d duplicate group(s) (%2$d records → %3$d records)</string>
+    <string name="dup_zero_found_title">Zero Duplicates Found</string>
+    <string name="dup_zero_found_desc">Your transaction ledger has no identical payment entries or duplicated screenshot imports.</string>
+    <string name="dup_merging_progress">Merging...</string>
+    <string name="dup_merge_button">Merge %1$d Duplicates</string>
+    <string name="dup_preview_csv">Preview CSV</string>
+    <string name="dup_summary_line">%1$d records → keep 1 (%2$s, p=%3$d%%)</string>
+    <string name="dup_view_all">View all %1$d</string>
+    <string name="dup_hide">Hide</string>
+    <string name="dup_keep_survivor">Keep • Survivor</string>
+    <string name="dup_merge_duplicate">Merge • Duplicate</string>
+
+    <!-- Settings Screen -->
+    <string name="settings_title">Settings</string>
     <string name="settings_section_app_customization">App Customization</string>
     <string name="settings_app_name_label">Top Bar Title</string>
     <string name="settings_app_subtitle_label">Top Bar Subtitle</string>
@@ -17,4 +251,64 @@
     <string name="settings_nav_order_label">Navigation Order</string>
     <string name="settings_nav_order_hint">Long-press and drag to reorder bottom tabs</string>
     <string name="settings_reset_customization">Reset to Defaults</string>
+    <string name="settings_section_notifications">Notifications &amp; Parsing</string>
+    <string name="settings_notification_listener_title">Notification Listener</string>
+    <string name="settings_notification_listener_desc">Read UPI and bank notifications to auto-detect payments locally</string>
+    <string name="settings_smart_notifications_title">Smart Notifications</string>
+    <string name="settings_smart_notifications_desc">Budget pacing alerts, anomaly warnings &amp; weekly recaps</string>
+    <string name="settings_android_notification_settings_btn">Android Notification Access Settings</string>
+    <string name="settings_ignored_apps_btn">Ignored Apps List (%1$d)</string>
+    <string name="settings_ocr_title">Screenshot Receipt OCR</string>
+    <string name="settings_ocr_desc">Screenshot OCR uses ML Kit on the Play Store build and Tesseract on the F-Droid build. Both run entirely on-device.</string>
+    <string name="settings_ocr_active">Active</string>
+    <string name="settings_section_security">Security &amp; Biometrics</string>
+    <string name="settings_biometric_lock_title">Biometric Lock</string>
+    <string name="settings_biometric_lock_desc">Require fingerprint / face unlock on launch</string>
+    <string name="settings_section_learning">On-Device Learning &amp; Training Data</string>
+    <string name="settings_learning_desc">Personalize categorization by correcting categories. Correcting a transaction saves a merchant rule for future transactions.</string>
+    <string name="settings_raw_samples">Raw Samples</string>
+    <string name="settings_user_corrections">User Corrections</string>
+    <string name="settings_personalization_dashboard_btn">Personalization Dashboard</string>
+    <string name="settings_export_dataset_btn">Export Training Dataset (JSONL)</string>
+    <string name="settings_reset_dataset_btn">Reset Training Data &amp; Corrections</string>
+    <string name="settings_section_data_mgmt">Data Management</string>
+    <string name="settings_export_csv_btn">Export All Transactions (CSV)</string>
+    <string name="settings_import_csv_btn">Import Transactions (CSV)</string>
+    <string name="settings_clean_duplicates_btn">Clean Up Duplicates</string>
+    <string name="settings_scanning_duplicates">Scanning Duplicates...</string>
+    <string name="settings_undo_merge_btn">Undo Last Duplicate Merge</string>
+    <string name="settings_clear_all_data_btn">Clear All Data</string>
+    <string name="settings_section_dev">Developer &amp; Diagnostics</string>
+    <string name="settings_debug_viewer_title">Debug Log Viewer</string>
+    <string name="settings_debug_active_status">Active • Capturing pipeline logs</string>
+    <string name="settings_debug_disabled_status">Disabled • Zero logs captured</string>
+    <string name="settings_debug_desc">Inspect on-device parser decisions, regex extractions, and classification confidence scores. All data stays 100% on-device.</string>
+    <string name="settings_open_log_viewer_btn">Open Log Viewer</string>
+    <string name="settings_debug_toggle_hint">Toggle ON to enable recording and view debug logs. When turned off, no logs are taken.</string>
+    <string name="settings_section_legal">About, Privacy Policy &amp; Legal</string>
+    <string name="settings_legal_desc">Read CashBuddy\'s 100% offline architecture philosophy, core capabilities, privacy policy, and terms of service.</string>
+    <string name="settings_privacy_policy_btn">Privacy Policy</string>
+    <string name="settings_terms_btn">Terms of Service</string>
+    <string name="settings_about_website_btn">About CashBuddy (Official Website)</string>
+    <string name="settings_github_repo_btn">GitHub Repository</string>
+    <string name="settings_debug_active_badge">Debug Logging Active</string>
+    <string name="settings_clear_all_dialog_title">Delete All Transactions?</string>
+    <string name="settings_clear_all_dialog_msg">This will permanently remove all stored transactions from the local encrypted database. This action cannot be undone.</string>
+    <string name="settings_clear_all_confirm">Delete Everything</string>
+    <string name="settings_clear_training_dialog_title">Reset Training Data &amp; Corrections?</string>
+    <string name="settings_clear_training_dialog_msg">This will permanently delete all captured raw notification logs and user corrections used for local fine-tuning. Learned merchant rules will also be cleared. This action cannot be undone.</string>
+    <string name="settings_clear_training_confirm">Reset Dataset</string>
+    <string name="settings_ignored_apps_title">Ignored Apps</string>
+    <string name="settings_ignored_apps_desc">Notifications from these packages will be silently dropped and ignored by the parser.</string>
+    <string name="settings_ignored_apps_empty">No packages currently ignored.</string>
+    <string name="settings_action_add">Add</string>
+    <string name="settings_action_remove">Remove</string>
+    <string name="settings_import_csv_title">Import Transactions (CSV)</string>
+    <string name="settings_import_csv_desc">Choose a CSV file from your device storage, or paste CSV text manually below.</string>
+    <string name="settings_select_csv_file">Select CSV File from Device</string>
+    <string name="settings_change_file">Change File (%1$s)</string>
+    <string name="settings_loaded_csv_rows">Loaded %1$s (%2$d rows)</string>
+    <string name="settings_csv_preview_label">CSV Preview / Manual Paste:</string>
+    <string name="settings_action_import">Import</string>
+    <string name="settings_action_importing">Importing...</string>
 </resources>
