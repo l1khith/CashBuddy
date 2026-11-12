@@ -51,7 +51,13 @@ data class SettingsUiState(
     val customAppSubtitle: String = com.cashbuddy.domain.model.UserSettings.DEFAULT_APP_SUBTITLE,
     val showAppLogo: Boolean = true,
     val navOrder: String = com.cashbuddy.domain.model.UserSettings.DEFAULT_NAV_ORDER,
-    val navOrderList: List<String> = listOf("home", "stats", "history")
+    val navOrderList: List<String> = listOf("home", "stats", "history"),
+    val showHealthInTopBar: Boolean = false,
+    val isNotificationAccessGranted: Boolean = false,
+    val isBatteryOptimizationIgnored: Boolean = false,
+    val lastSyncTimestamp: Long = 0L,
+    val dailyWrapUpHour: Int = com.cashbuddy.domain.model.UserSettings.DEFAULT_WRAP_UP_HOUR,
+    val dailyWrapUpMinute: Int = com.cashbuddy.domain.model.UserSettings.DEFAULT_WRAP_UP_MINUTE
 )
 
 class SettingsViewModel(
@@ -70,7 +76,8 @@ class SettingsViewModel(
     private val learnedTokenRepository: com.cashbuddy.domain.repository.LearnedTokenRepository? = null,
     // Audit fix P1-C: wipe all data in ONE driver-level transaction instead of four
     // separate repository transactions from the ViewModel.
-    private val dataResetStore: com.cashbuddy.domain.repository.DataResetStore? = null
+    private val dataResetStore: com.cashbuddy.domain.repository.DataResetStore? = null,
+    private val diagnosticsProvider: com.cashbuddy.platform.PlatformDiagnosticsProvider? = null
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(SettingsUiState(isOcrAvailable = ocrEngine?.isAvailable ?: false))
@@ -157,7 +164,13 @@ class SettingsViewModel(
                     customAppSubtitle = pendingSubtitle ?: settings.customAppSubtitle,
                     showAppLogo = settings.showAppLogo,
                     navOrder = activeOrder.joinToString(","),
-                    navOrderList = activeOrder
+                    navOrderList = activeOrder,
+                    showHealthInTopBar = settings.showHealthInTopBar,
+                    isNotificationAccessGranted = diagnosticsProvider?.checkDiagnostics(settings.lastSyncTimestamp)?.isNotificationAccessGranted ?: false,
+                    isBatteryOptimizationIgnored = diagnosticsProvider?.checkDiagnostics(settings.lastSyncTimestamp)?.isBatteryOptimizationIgnored ?: false,
+                    lastSyncTimestamp = settings.lastSyncTimestamp,
+                    dailyWrapUpHour = settings.dailyWrapUpHour,
+                    dailyWrapUpMinute = settings.dailyWrapUpMinute
                 )
             }.collect {
                 _uiState.value = it
@@ -440,6 +453,37 @@ class SettingsViewModel(
             settingsRepository.removeIgnoredPackage(clean)
             _messageEffect.emit("Removed $clean from Ignore List")
         }
+    }
+
+    fun setShowHealthInTopBar(show: Boolean) {
+        viewModelScope.launch {
+            settingsRepository.setShowHealthInTopBar(show)
+        }
+    }
+
+    fun setDailyWrapUpTime(hour: Int, minute: Int) {
+        viewModelScope.launch {
+            settingsRepository.setDailyWrapUpTime(hour, minute)
+        }
+    }
+
+    fun refreshDiagnostics() {
+        val lastSync = _uiState.value.lastSyncTimestamp
+        val diagnostics = diagnosticsProvider?.checkDiagnostics(lastSync)
+        if (diagnostics != null) {
+            _uiState.value = _uiState.value.copy(
+                isNotificationAccessGranted = diagnostics.isNotificationAccessGranted,
+                isBatteryOptimizationIgnored = diagnostics.isBatteryOptimizationIgnored
+            )
+        }
+    }
+
+    fun openNotificationListenerSettings() {
+        diagnosticsProvider?.openNotificationListenerSettings()
+    }
+
+    fun openBatteryOptimizationSettings() {
+        diagnosticsProvider?.openBatteryOptimizationSettings()
     }
 
     fun importCsvData(csvContent: String) {

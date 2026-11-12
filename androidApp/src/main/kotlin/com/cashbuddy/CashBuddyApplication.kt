@@ -62,6 +62,18 @@ class CashBuddyApplication : Application() {
             }
         }
 
+        // Observe daily wrap-up reminder time
+        applicationScope.launch {
+            try {
+                val settingsRepository: com.cashbuddy.domain.repository.SettingsRepository = get()
+                settingsRepository.getDailyWrapUpTime().collect { (hour, minute) ->
+                    com.cashbuddy.worker.AssistantWorkManager.scheduleDailyWrapUp(this@CashBuddyApplication, hour, minute)
+                }
+            } catch (e: Throwable) {
+                Log.e("CashBuddyApplication", "Failed to schedule daily wrap-up", e)
+            }
+        }
+
         // Listen for transaction updates to refresh persistent notification & Glance widget
         val filter = android.content.IntentFilter("com.cashbuddy.ACTION_TRANSACTIONS_UPDATED")
         androidx.core.content.ContextCompat.registerReceiver(

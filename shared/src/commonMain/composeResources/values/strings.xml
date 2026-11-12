@@ -311,4 +311,37 @@
     <string name="settings_csv_preview_label">CSV Preview / Manual Paste:</string>
     <string name="settings_action_import">Import</string>
     <string name="settings_action_importing">Importing...</string>
+
+    <!-- System Diagnostics & Health Shield -->
+    <string name="diagnostics_section_title">System Diagnostics &amp; Reminders</string>
+    <string name="diagnostics_health_icon_toggle_title">Show Health Icon in Top Bar</string>
+    <string name="diagnostics_health_icon_toggle_desc">Display real-time listener and battery status beside the Settings gear</string>
+    <string name="diagnostics_notif_access_title">Notification Access</string>
+    <string name="diagnostics_notif_access_enabled">Active</string>
+    <string name="diagnostics_notif_access_disabled">Action Required</string>
+    <string name="diagnostics_notif_access_desc">Required to capture bank &amp; UPI notifications passively</string>
+    <string name="diagnostics_battery_title">Battery Optimization</string>
+    <string name="diagnostics_battery_unrestricted">Unrestricted</string>
+    <string name="diagnostics_battery_restricted">Restricted</string>
+    <string name="diagnostics_battery_desc">Restricted battery may delay or kill background expense tracking</string>
+    <string name="diagnostics_last_sync_title">Last Sync</string>
+    <string name="diagnostics_last_sync_never">Never</string>
+    <string name="diagnostics_action_fix">Fix</string>
+    <string name="diagnostics_action_refresh">Refresh Status</string>
+    <string name="diagnostics_sheet_title">System Health</string>
+    <string name="diagnostics_sheet_all_healthy">All Systems Active</string>
+    <string name="diagnostics_sheet_attention_needed">Attention Required</string>
+    <string name="diagnostics_sheet_open_settings">Open Diagnostics Settings</string>
+    <string name="cd_health_shield">System Health Status</string>
+    <string name="cd_health_shield_healthy">System Healthy: Listener and Battery active</string>
+    <string name="cd_health_shield_warning">System Alert: Tap to resolve listener or battery issue</string>
+
+    <!-- Daily Wrap-Up Reminder -->
+    <string name="wrapup_title">Daily Wrap-Up Reminder</string>
+    <string name="wrapup_desc">Review unlogged cash and day totals every evening</string>
+    <string name="wrapup_time_picker_title">Select Reminder Time</string>
+    <string name="wrapup_notification_title">Daily Wrap-Up</string>
+    <string name="wrapup_notification_msg">You spent %1$s today. Did you miss any cash transactions?</string>
+    <string name="wrapup_notification_channel_name">Daily Wrap-Up Reminder</string>
+    <string name="wrapup_notification_channel_desc">Daily notification reminding you to review your spending</string>
 </resources>

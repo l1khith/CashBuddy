@@ -52,7 +52,26 @@ object AssistantWorkManager {
         val workManager = WorkManager.getInstance(context)
         workManager.cancelUniqueWork(BudgetAlertWorker.WORK_NAME)
         workManager.cancelUniqueWork(WeeklyDigestWorker.WORK_NAME)
+        workManager.cancelUniqueWork(DailyWrapUpWorker.WORK_NAME)
         // NOTE: TokenPurgeWorker is never cancelled here (audit fix 1.4) — see scheduleAll.
+    }
+
+    fun scheduleDailyWrapUp(context: Context, hour: Int, minute: Int) {
+        val workManager = WorkManager.getInstance(context)
+        val delay = calculateInitialDelay(targetHour = hour, targetMinute = minute, daysInterval = 1)
+        val wrapUpRequest = androidx.work.OneTimeWorkRequestBuilder<DailyWrapUpWorker>()
+            .setInitialDelay(delay, TimeUnit.MILLISECONDS)
+            .build()
+        workManager.enqueueUniqueWork(
+            DailyWrapUpWorker.WORK_NAME,
+            androidx.work.ExistingWorkPolicy.REPLACE,
+            wrapUpRequest
+        )
+    }
+
+    fun cancelDailyWrapUp(context: Context) {
+        val workManager = WorkManager.getInstance(context)
+        workManager.cancelUniqueWork(DailyWrapUpWorker.WORK_NAME)
     }
 
     /**

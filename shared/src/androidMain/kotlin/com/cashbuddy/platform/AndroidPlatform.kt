@@ -11,6 +11,8 @@ fun setAppContext(context: Context) {
     appContext = context.applicationContext
 }
 
+fun getAppContext(): Context? = appContext
+
 fun setAppVersionInfo(versionName: String, versionCode: Int) {
     androidVersionName = versionName
     androidVersionCode = versionCode

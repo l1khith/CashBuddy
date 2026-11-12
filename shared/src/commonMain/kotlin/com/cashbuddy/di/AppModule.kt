@@ -191,7 +191,9 @@ val appModule = module {
             budgetEngine = get()
         )
     }
-    viewModel { SettingsViewModel(get(), get(), get(), get(), get(), getOrNull(), getOrNull(), getOrNull(), getOrNull(), getOrNull(), getOrNull(), getOrNull()) }
+    single<com.cashbuddy.platform.PlatformDiagnosticsProvider> { com.cashbuddy.platform.PlatformDiagnosticsProvider() }
+
+    viewModel { SettingsViewModel(get(), get(), get(), get(), get(), getOrNull(), getOrNull(), getOrNull(), getOrNull(), getOrNull(), getOrNull(), getOrNull(), getOrNull()) }
     viewModel { PersonalizationViewModel(get(), get(), get(), get(), getOrNull(), getOrNull()) }
     viewModelOf(::AddTransactionViewModel)
     viewModel { DebugLogViewModel(get(), get(), getOrNull()) }

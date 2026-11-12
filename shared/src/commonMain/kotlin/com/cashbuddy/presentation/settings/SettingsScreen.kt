@@ -26,15 +26,15 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.MergeType
 import androidx.compose.material.icons.automirrored.filled.Undo
-import androidx.compose.material.icons.filled.DragHandle
-import androidx.compose.material.icons.filled.RestartAlt
 import cashbuddy.shared.generated.resources.Res
 import cashbuddy.shared.generated.resources.cd_back
+import cashbuddy.shared.generated.resources.diagnostics_action_refresh
 import cashbuddy.shared.generated.resources.ic_bug_report
 import cashbuddy.shared.generated.resources.ic_cashbuddy_logo
 import cashbuddy.shared.generated.resources.ic_delete_forever
@@ -68,6 +68,8 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -80,6 +82,36 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.TimePicker
+import androidx.compose.material3.rememberTimePickerState
+import cashbuddy.shared.generated.resources.action_cancel
+import cashbuddy.shared.generated.resources.action_save
+import cashbuddy.shared.generated.resources.diagnostics_action_fix
+import cashbuddy.shared.generated.resources.diagnostics_battery_desc
+import cashbuddy.shared.generated.resources.diagnostics_battery_restricted
+import cashbuddy.shared.generated.resources.diagnostics_battery_title
+import cashbuddy.shared.generated.resources.diagnostics_battery_unrestricted
+import cashbuddy.shared.generated.resources.diagnostics_health_icon_toggle_desc
+import cashbuddy.shared.generated.resources.diagnostics_health_icon_toggle_title
+import cashbuddy.shared.generated.resources.diagnostics_last_sync_never
+import cashbuddy.shared.generated.resources.diagnostics_last_sync_title
+import cashbuddy.shared.generated.resources.diagnostics_notif_access_desc
+import cashbuddy.shared.generated.resources.diagnostics_notif_access_disabled
+import cashbuddy.shared.generated.resources.diagnostics_notif_access_enabled
+import cashbuddy.shared.generated.resources.diagnostics_notif_access_title
+import cashbuddy.shared.generated.resources.diagnostics_section_title
+import cashbuddy.shared.generated.resources.ic_battery_alert
+import cashbuddy.shared.generated.resources.ic_check_circle
+import cashbuddy.shared.generated.resources.ic_notifications_active
+import cashbuddy.shared.generated.resources.ic_refresh
+import cashbuddy.shared.generated.resources.ic_schedule
+import cashbuddy.shared.generated.resources.time_days_ago
+import cashbuddy.shared.generated.resources.time_hours_ago
+import cashbuddy.shared.generated.resources.time_just_now
+import cashbuddy.shared.generated.resources.time_minutes_ago
+import cashbuddy.shared.generated.resources.wrapup_desc
+import cashbuddy.shared.generated.resources.wrapup_time_picker_title
+import cashbuddy.shared.generated.resources.wrapup_title
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.key
@@ -123,6 +155,7 @@ import com.cashbuddy.presentation.theme.PrimaryIndigo
 import com.cashbuddy.presentation.theme.RadiusLarge
 import com.cashbuddy.presentation.theme.RadiusMedium
 import com.cashbuddy.presentation.theme.RadiusSmall
+import com.cashbuddy.presentation.theme.WarningAmber
 
 @Composable
 fun SettingsScreen(
@@ -216,7 +249,7 @@ fun SettingsScreen(
                             enabled = isCustomized
                         ) {
                             Icon(
-                                imageVector = Icons.Default.RestartAlt,
+                                painter = painterResource(Res.drawable.ic_refresh),
                                 contentDescription = stringResource(Res.string.settings_reset_customization),
                                 modifier = Modifier.size(18.dp)
                             )
@@ -340,6 +373,97 @@ fun SettingsScreen(
                                     onOrderChanged = { newOrder -> viewModel.commitNavOrder(newOrder) }
                                 )
                             }
+                        }
+                    }
+                }
+
+                // System Diagnostics & Reminders
+                item {
+                    Text(
+                        text = stringResource(Res.string.diagnostics_section_title),
+                        style = CashBuddyTypography.titleLarge,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+
+                item {
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RadiusLarge,
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+                    ) {
+                        Column(
+                            modifier = Modifier.padding(18.dp),
+                            verticalArrangement = Arrangement.spacedBy(16.dp)
+                        ) {
+                            // Top Bar Health Icon Toggle
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(
+                                        text = stringResource(Res.string.diagnostics_health_icon_toggle_title),
+                                        style = MaterialTheme.typography.titleMedium,
+                                        fontWeight = FontWeight.SemiBold
+                                    )
+                                    Text(
+                                        text = stringResource(Res.string.diagnostics_health_icon_toggle_desc),
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                                Switch(
+                                    checked = state.showHealthInTopBar,
+                                    onCheckedChange = { viewModel.setShowHealthInTopBar(it) }
+                                )
+                            }
+
+                            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+
+                            // Status Card 1: Notification Access
+                            DiagnosticStatusRow(
+                                icon = Res.drawable.ic_notifications_active,
+                                title = stringResource(Res.string.diagnostics_notif_access_title),
+                                subtitle = stringResource(Res.string.diagnostics_notif_access_desc),
+                                statusLabel = stringResource(
+                                    if (state.isNotificationAccessGranted) Res.string.diagnostics_notif_access_enabled
+                                    else Res.string.diagnostics_notif_access_disabled
+                                ),
+                                isHealthy = state.isNotificationAccessGranted,
+                                actionText = if (!state.isNotificationAccessGranted) stringResource(Res.string.diagnostics_action_fix) else null,
+                                onActionClick = { viewModel.openNotificationListenerSettings() }
+                            )
+
+                            // Status Card 2: Battery Saver
+                            DiagnosticStatusRow(
+                                icon = Res.drawable.ic_battery_alert,
+                                title = stringResource(Res.string.diagnostics_battery_title),
+                                subtitle = stringResource(Res.string.diagnostics_battery_desc),
+                                statusLabel = stringResource(
+                                    if (state.isBatteryOptimizationIgnored) Res.string.diagnostics_battery_unrestricted
+                                    else Res.string.diagnostics_battery_restricted
+                                ),
+                                isHealthy = state.isBatteryOptimizationIgnored,
+                                actionText = if (!state.isBatteryOptimizationIgnored) stringResource(Res.string.diagnostics_action_fix) else null,
+                                onActionClick = { viewModel.openBatteryOptimizationSettings() }
+                            )
+
+                            // Status Card 3: Last Sync Time
+                            DiagnosticSyncRow(
+                                lastSyncTimestamp = state.lastSyncTimestamp,
+                                onRefresh = { viewModel.refreshDiagnostics() }
+                            )
+
+                            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+
+                            // Daily Wrap-Up Reminder Time Picker Row
+                            DailyWrapUpTimePickerRow(
+                                hour = state.dailyWrapUpHour,
+                                minute = state.dailyWrapUpMinute,
+                                onTimeSelected = { h, m -> viewModel.setDailyWrapUpTime(h, m) }
+                            )
                         }
                     }
                 }
@@ -1378,7 +1502,7 @@ private fun ReorderableNavOrderList(
                         )
                         // Drag handle icon (visual affordance; card itself handles gesture cleanly)
                         Icon(
-                            imageVector = Icons.Default.DragHandle,
+                            painter = painterResource(Res.drawable.ic_tune),
                             contentDescription = null,
                             tint = MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.size(24.dp)
@@ -1388,4 +1512,307 @@ private fun ReorderableNavOrderList(
             }
         }
     }
+}
+
+@Composable
+private fun DiagnosticStatusRow(
+    icon: org.jetbrains.compose.resources.DrawableResource,
+    title: String,
+    subtitle: String,
+    statusLabel: String,
+    isHealthy: Boolean,
+    actionText: String?,
+    onActionClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Row(
+        modifier = modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Row(
+            modifier = Modifier.weight(1f),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(36.dp)
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(
+                        if (isHealthy) AccentEmerald.copy(alpha = 0.12f)
+                        else WarningAmber.copy(alpha = 0.15f)
+                    ),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    painter = painterResource(icon),
+                    contentDescription = null,
+                    tint = if (isHealthy) AccentEmerald else WarningAmber,
+                    modifier = Modifier.size(20.dp)
+                )
+            }
+
+            Column(modifier = Modifier.weight(1f)) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    Text(
+                        text = title,
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                    Icon(
+                        painter = painterResource(
+                            if (isHealthy) Res.drawable.ic_check_circle else Res.drawable.ic_warning
+                        ),
+                        contentDescription = null,
+                        tint = if (isHealthy) AccentEmerald else DangerRed,
+                        modifier = Modifier.size(14.dp)
+                    )
+                }
+                Text(
+                    text = subtitle,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Spacer(modifier = Modifier.height(2.dp))
+                Text(
+                    text = statusLabel,
+                    style = MaterialTheme.typography.labelSmall,
+                    fontWeight = FontWeight.Bold,
+                    color = if (isHealthy) AccentEmerald else DangerRed
+                )
+            }
+        }
+
+        if (!actionText.isNullOrBlank()) {
+            Spacer(modifier = Modifier.width(8.dp))
+            Button(
+                onClick = onActionClick,
+                shape = CircleShape,
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = MaterialTheme.colorScheme.primary,
+                    contentColor = MaterialTheme.colorScheme.onPrimary
+                ),
+                contentPadding = PaddingValues(horizontal = 14.dp, vertical = 6.dp)
+            ) {
+                Text(
+                    text = actionText,
+                    style = MaterialTheme.typography.labelMedium,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun DiagnosticSyncRow(
+    lastSyncTimestamp: Long,
+    onRefresh: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val syncText = if (lastSyncTimestamp <= 0L) {
+        stringResource(Res.string.diagnostics_last_sync_never)
+    } else {
+        val now = com.cashbuddy.platform.currentTimeMillis()
+        val diff = (now - lastSyncTimestamp).coerceAtLeast(0L)
+        val minutes = diff / (1000 * 60)
+        val hours = minutes / 60
+        val days = hours / 24
+        when {
+            minutes < 1 -> stringResource(Res.string.time_just_now)
+            minutes < 60 -> stringResource(Res.string.time_minutes_ago, minutes.toInt())
+            hours < 24 -> stringResource(Res.string.time_hours_ago, hours.toInt())
+            else -> stringResource(Res.string.time_days_ago, days.toInt())
+        }
+    }
+
+    Row(
+        modifier = modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Row(
+            modifier = Modifier.weight(1f),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(36.dp)
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(PrimaryIndigo.copy(alpha = 0.10f)),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    painter = painterResource(Res.drawable.ic_schedule),
+                    contentDescription = null,
+                    tint = PrimaryIndigo,
+                    modifier = Modifier.size(20.dp)
+                )
+            }
+
+            Column {
+                Text(
+                    text = stringResource(Res.string.diagnostics_last_sync_title),
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold
+                )
+                Text(
+                    text = syncText,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    fontWeight = FontWeight.Medium
+                )
+            }
+        }
+
+        IconButton(onClick = onRefresh) {
+            Icon(
+                painter = painterResource(Res.drawable.ic_refresh),
+                contentDescription = stringResource(Res.string.diagnostics_action_refresh),
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(20.dp)
+            )
+        }
+    }
+}
+
+@Composable
+private fun DailyWrapUpTimePickerRow(
+    hour: Int,
+    minute: Int,
+    onTimeSelected: (Int, Int) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    var showDialog by rememberSaveable { mutableStateOf(false) }
+
+    Row(
+        modifier = modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Row(
+            modifier = Modifier.weight(1f),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(36.dp)
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(AccentEmerald.copy(alpha = 0.12f)),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    painter = painterResource(Res.drawable.ic_schedule),
+                    contentDescription = null,
+                    tint = AccentEmerald,
+                    modifier = Modifier.size(20.dp)
+                )
+            }
+
+            Column {
+                Text(
+                    text = stringResource(Res.string.wrapup_title),
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold
+                )
+                Text(
+                    text = stringResource(Res.string.wrapup_desc),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
+
+        OutlinedButton(
+            onClick = { showDialog = true },
+            shape = CircleShape,
+            contentPadding = PaddingValues(horizontal = 14.dp, vertical = 6.dp)
+        ) {
+            Text(
+                text = formatTime12Hour(hour, minute),
+                style = MaterialTheme.typography.labelMedium,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.primary
+            )
+        }
+    }
+
+    if (showDialog) {
+        TimePickerSelectionDialog(
+            initialHour = hour,
+            initialMinute = minute,
+            onDismiss = { showDialog = false },
+            onConfirm = { h, m ->
+                onTimeSelected(h, m)
+                showDialog = false
+            }
+        )
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun TimePickerSelectionDialog(
+    initialHour: Int,
+    initialMinute: Int,
+    onDismiss: () -> Unit,
+    onConfirm: (Int, Int) -> Unit
+) {
+    val timePickerState = androidx.compose.material3.rememberTimePickerState(
+        initialHour = initialHour,
+        initialMinute = initialMinute,
+        is24Hour = false
+    )
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Text(
+                text = stringResource(Res.string.wrapup_time_picker_title),
+                style = CashBuddyTypography.titleLarge,
+                fontWeight = FontWeight.Bold
+            )
+        },
+        text = {
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                androidx.compose.material3.TimePicker(
+                    state = timePickerState
+                )
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = { onConfirm(timePickerState.hour, timePickerState.minute) },
+                shape = RadiusMedium
+            ) {
+                Text(stringResource(Res.string.action_save))
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text(stringResource(Res.string.action_cancel))
+            }
+        }
+    )
+}
+
+private fun formatTime12Hour(hour24: Int, minute: Int): String {
+    val isPm = hour24 >= 12
+    val hour12 = when {
+        hour24 == 0 -> 12
+        hour24 > 12 -> hour24 - 12
+        else -> hour24
+    }
+    val minStr = if (minute < 10) "0$minute" else "$minute"
+    val amPm = if (isPm) "PM" else "AM"
+    return "$hour12:$minStr $amPm"
 }

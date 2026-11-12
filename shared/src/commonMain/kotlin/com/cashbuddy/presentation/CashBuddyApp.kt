@@ -5,10 +5,10 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHost
@@ -17,11 +17,12 @@ import androidx.compose.material3.SnackbarResult
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavDestination.Companion.hasRoute
-import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
@@ -61,15 +62,16 @@ import org.koin.compose.koinInject
 import org.koin.compose.viewmodel.koinViewModel
 import org.koin.core.parameter.parametersOf
 
-@OptIn(ExperimentalLayoutApi::class)
+@OptIn(ExperimentalMaterial3Api::class)
+@Suppress("SpellCheckingInspection")
 @Composable
 fun CashBuddyApp(
+    modifier: Modifier = Modifier,
     initialRoute: String? = null,
     onRouteConsumed: () -> Unit = {},
     clipboardUtr: String? = null,
     onConsumeClipboardUtr: () -> Unit = {},
     onOpenNotificationSettings: () -> Unit = {},
-    modifier: Modifier = Modifier
 ) {
     val navController = rememberNavController()
     val snackbarHostState = remember { SnackbarHostState() }
@@ -77,6 +79,12 @@ fun CashBuddyApp(
     val currentDestination = navBackStackEntry?.destination
     val settingsRepository: SettingsRepository = koinInject()
     val userSettings by settingsRepository.getSettings().collectAsStateWithLifecycle(initialValue = UserSettings())
+    val diagnosticsProvider: com.cashbuddy.platform.PlatformDiagnosticsProvider = koinInject()
+    var showDiagnosticSheet by remember { mutableStateOf(false) }
+    val diagnosticSheetState = androidx.compose.material3.rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    val currentDiagnostics = remember(userSettings.lastSyncTimestamp, showDiagnosticSheet) {
+        diagnosticsProvider.checkDiagnostics(userSettings.lastSyncTimestamp)
+    }
 
     val isTopLevelDestination = currentDestination != null && (
         currentDestination.hasRoute(ScreenRoute.Home::class) ||
@@ -113,9 +121,8 @@ fun CashBuddyApp(
 
     LaunchedEffect(clipboardUtr) {
         if (!clipboardUtr.isNullOrBlank()) {
-            val utr = clipboardUtr
             onConsumeClipboardUtr()
-            val msg = getString(Res.string.upi_ref_detected, utr)
+            val msg = getString(Res.string.upi_ref_detected, clipboardUtr)
             val action = getString(Res.string.action_log_it)
             val result = snackbarHostState.showSnackbar(
                 message = msg,
@@ -123,7 +130,7 @@ fun CashBuddyApp(
                 duration = SnackbarDuration.Short
             )
             if (result == SnackbarResult.ActionPerformed) {
-                navController.navigate(ScreenRoute.AddTransaction(prefilledUtr = utr)) {
+                navController.navigate(ScreenRoute.AddTransaction(prefilledUtr = clipboardUtr)) {
                     launchSingleTop = true
                 }
             }
@@ -143,6 +150,9 @@ fun CashBuddyApp(
                     appName = userSettings.customAppName,
                     appSubtitle = userSettings.customAppSubtitle,
                     showLogo = userSettings.showAppLogo,
+                    showHealthShield = userSettings.showHealthInTopBar,
+                    isHealthShieldHealthy = currentDiagnostics.isFullyHealthy,
+                    onHealthShieldClick = { showDiagnosticSheet = true },
                     onSettingsClick = {
                         navController.navigate(ScreenRoute.Settings) {
                             launchSingleTop = true
@@ -159,7 +169,7 @@ fun CashBuddyApp(
             ) {
                 val navigateTopLevel: (ScreenRoute) -> Unit = { route ->
                     navController.navigate(route) {
-                        popUpTo(navController.graph.findStartDestination().id) { saveState = true }
+                        popUpTo(ScreenRoute.Home) { saveState = true }
                         launchSingleTop = true
                         restoreState = true
                     }
@@ -375,5 +385,26 @@ fun CashBuddyApp(
                 )
             }
         }
+    }
+
+    if (showDiagnosticSheet) {
+        com.cashbuddy.presentation.components.DiagnosticBottomSheet(
+            sheetState = diagnosticSheetState,
+            diagnostics = diagnosticsProvider.checkDiagnostics(userSettings.lastSyncTimestamp),
+            onDismissRequest = { showDiagnosticSheet = false },
+            onFixNotificationAccess = {
+                diagnosticsProvider.openNotificationListenerSettings()
+            },
+            onFixBatteryOptimization = {
+                diagnosticsProvider.openBatteryOptimizationSettings()
+            },
+            onOpenSettings = {
+                navController.navigate(ScreenRoute.Settings) {
+                    popUpTo(ScreenRoute.Home) { saveState = true }
+                    launchSingleTop = true
+                    restoreState = true
+                }
+            }
+        )
     }
 }

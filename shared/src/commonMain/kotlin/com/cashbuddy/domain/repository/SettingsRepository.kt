@@ -34,4 +34,10 @@ interface SettingsRepository {
     suspend fun setShowAppLogo(show: Boolean)
     fun getNavOrder(): Flow<String>
     suspend fun setNavOrder(order: String)
+    fun getShowHealthInTopBar(): Flow<Boolean>
+    suspend fun setShowHealthInTopBar(show: Boolean)
+    fun getLastSyncTimestamp(): Flow<Long>
+    suspend fun setLastSyncTimestamp(timestamp: Long)
+    fun getDailyWrapUpTime(): Flow<Pair<Int, Int>>
+    suspend fun setDailyWrapUpTime(hour: Int, minute: Int)
 }
