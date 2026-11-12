@@ -43,6 +43,7 @@ class CashBuddyApplication : Application() {
         // unconditionally so it can never be cancelled by the notifications toggle
         // (previously disabling smart notifications left learned_token growing unbounded).
         com.cashbuddy.worker.AssistantWorkManager.scheduleTokenPurge(this)
+        com.cashbuddy.worker.AssistantWorkManager.scheduleRecurrenceWorker(this)
 
         // Observe smart notifications setting to schedule or cancel workers & persistent notification
         applicationScope.launch {

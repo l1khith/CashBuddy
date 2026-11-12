@@ -86,6 +86,7 @@ import cashbuddy.shared.generated.resources.stats_top_merchant
 import cashbuddy.shared.generated.resources.stats_total_income
 import cashbuddy.shared.generated.resources.stats_total_spent
 import cashbuddy.shared.generated.resources.stats_tx_count_avg
+import cashbuddy.shared.generated.resources.stats_tx_count_total_committed
 import com.cashbuddy.domain.model.DateRangeHelper
 import com.cashbuddy.domain.model.TimePeriod
 import com.cashbuddy.presentation.components.CategoryPieChart
@@ -669,8 +670,18 @@ private fun CategorySpendingRow(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
+                val subtitleText = if (catItem.committedSpend > 0.0) {
+                    stringResource(
+                        Res.string.stats_tx_count_total_committed,
+                        cat.transactionCount,
+                        formatCurrency(cat.totalAmount),
+                        formatCurrency(catItem.committedSpend)
+                    )
+                } else {
+                    stringResource(Res.string.stats_tx_count_avg, cat.transactionCount, formatCurrency(cat.averageAmount))
+                }
                 Text(
-                    text = stringResource(Res.string.stats_tx_count_avg, cat.transactionCount, formatCurrency(cat.averageAmount)),
+                    text = subtitleText,
                     style = CashBuddyTypography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )

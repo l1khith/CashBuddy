@@ -344,4 +344,10 @@
     <string name="wrapup_notification_msg">You spent %1$s today. Did you miss any cash transactions?</string>
     <string name="wrapup_notification_channel_name">Daily Wrap-Up Reminder</string>
     <string name="wrapup_notification_channel_desc">Daily notification reminding you to review your spending</string>
+
+    <!-- Recurring Patterns / Silent Intelligence -->
+    <string name="diagnostics_refresh_recurrence_patterns">Force Refresh Recurring Patterns</string>
+    <string name="recurrence_patterns_refreshed">%1$d recurring patterns updated</string>
+    <string name="tx_recurring_habit">Recurring Habit</string>
+    <string name="stats_tx_count_total_committed">%1$d transactions • ₹%2$s total (₹%3$s committed)</string>
 </resources>

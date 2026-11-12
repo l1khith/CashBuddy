@@ -153,7 +153,8 @@ fun SettingsScreen(
                         onOpenNotificationSettings = viewModel::openNotificationListenerSettings,
                         onOpenBatterySettings = viewModel::openBatteryOptimizationSettings,
                         onRefreshDiagnostics = viewModel::refreshDiagnostics,
-                        onDailyWrapUpTimeSelected = viewModel::setDailyWrapUpTime
+                        onDailyWrapUpTimeSelected = viewModel::setDailyWrapUpTime,
+                        onRefreshRecurrencePatterns = viewModel::forceRefreshRecurrencePatterns
                     )
                 }
 

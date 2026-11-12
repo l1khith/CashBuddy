@@ -7,18 +7,18 @@ import com.cashbuddy.domain.model.TransactionType
 import kotlinx.datetime.Instant
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
+import kotlin.math.abs
 import kotlin.math.roundToLong
 import kotlin.math.sqrt
 
 /**
- * Recurrence Detector for financial transaction streams based on day-of-week histogram analysis.
+ * Unified Recurrence Detector for financial transaction streams combining:
+ * 1. Point Process Analysis (Inter-Arrival Time & Fano Factor)
+ * 2. Day-of-Week Histogram Analysis
  *
  * An event is recurring if:
- * 1. Count in last 30 days >= 4
- * 2. Active days (days with count >= 3) >= 3 (or >= 2 for weekend patterns: Sat & Sun)
- * 3. CV_active <= 0.30
- *
- * Does not check inter-arrival times or autocorrelation.
+ * - Point Process: Fano Factor (Var/Mean) < 0.30 and Mean IAT ~ 24h, 168h, or 720h (or 12h)
+ * - OR Histogram: Count in 30 days >= 4, Active days >= 3 (or weekend), and CV_active <= 0.30
  */
 object RecurrenceDetector {
 
@@ -36,6 +36,14 @@ object RecurrenceDetector {
         val isDebit: Boolean
     )
 
+    data class PointProcessResult(
+        val meanIATHours: Double,
+        val varianceIATHours: Double,
+        val fanoFactor: Double,
+        val detectedPeriodHours: Int?, // 12, 24, 168, 720
+        val isRecurring: Boolean
+    )
+
     data class DetectionResult(
         val isRecurring: Boolean,
         val count: Int,
@@ -48,7 +56,63 @@ object RecurrenceDetector {
     )
 
     /**
-     * Analyzes discrete transaction points for a single merchant/amount group.
+     * Point Process Analysis using Inter-Arrival Times (IAT) and Fano Factor.
+     *
+     * 1. Sort the transactions by timestamp.
+     * 2. Calculate the Inter-Arrival Time (IAT) in hours between each.
+     * 3. Calculate the Mean and Variance of the IAT.
+     * 4. Compute the Fano Factor: Variance / Mean.
+     * 5. If FanoFactor < 0.3 (consistent timing) AND Mean is roughly 24h, 168h (weekly), or 720h (monthly):
+     *    mark as recurring.
+     */
+    fun analyzeIAT(timestamps: List<Long>): PointProcessResult {
+        if (timestamps.size < 3) {
+            return PointProcessResult(
+                meanIATHours = 0.0,
+                varianceIATHours = 0.0,
+                fanoFactor = 0.0,
+                detectedPeriodHours = null,
+                isRecurring = false
+            )
+        }
+
+        val sorted = timestamps.sorted()
+        val intervals = sorted.zipWithNext { a, b -> (b - a).toDouble() / 3600_000.0 }
+        val mean = intervals.average()
+        if (mean <= 0.0) {
+            return PointProcessResult(
+                meanIATHours = 0.0,
+                varianceIATHours = 0.0,
+                fanoFactor = 0.0,
+                detectedPeriodHours = null,
+                isRecurring = false
+            )
+        }
+
+        val variance = intervals.sumOf { (it - mean) * (it - mean) } / intervals.size.toDouble()
+        val fanoFactor = variance / mean
+
+        val detectedPeriod = when {
+            abs(mean - 12.0) <= 2.5 -> 12
+            abs(mean - 24.0) <= 5.0 -> 24
+            abs(mean - 168.0) <= 30.0 -> 168
+            abs(mean - 720.0) <= 72.0 -> 720
+            else -> null
+        }
+
+        val isRecurring = fanoFactor < 0.3 && detectedPeriod != null
+
+        return PointProcessResult(
+            meanIATHours = mean,
+            varianceIATHours = variance,
+            fanoFactor = fanoFactor,
+            detectedPeriodHours = detectedPeriod,
+            isRecurring = isRecurring
+        )
+    }
+
+    /**
+     * Analyzes discrete transaction points for a single merchant/amount group using day-of-week histograms.
      */
     fun analyzePoints(
         points: List<Point>,
@@ -59,7 +123,7 @@ object RecurrenceDetector {
         val relevant = points.filter { it.isDebit && it.timestamp in windowStart..now }
         val count = relevant.size
 
-        // Step 1 — Build 7-element histogram over last 30 days counting occurrences per day of week (Mon through Sun)
+        // Build 7-element histogram over last 30 days counting occurrences per day of week (Mon through Sun)
         val histogram = IntArray(7)
         for (pt in relevant) {
             val local = Instant.fromEpochMilliseconds(pt.timestamp).toLocalDateTime(timeZone)
@@ -67,13 +131,13 @@ object RecurrenceDetector {
             histogram[dayIdx]++
         }
 
-        // Step 2 — Count active days: d_i >= 3. Count inactive days: d_i <= 1.
+        // Count active days: d_i >= 3. Count inactive days: d_i <= 1.
         val activeDays = (0..6).filter { histogram[it] >= 3 }
         val inactiveDays = (0..6).filter { histogram[it] <= 1 }
         val activeDaysCount = activeDays.size
         val inactiveDaysCount = inactiveDays.size
 
-        // Step 3 — Compute CV_active over only the active days
+        // Compute CV_active over only the active days
         val cvActive = if (activeDays.isEmpty()) {
             0.0
         } else {
@@ -88,11 +152,6 @@ object RecurrenceDetector {
             }
         }
 
-        // Pattern description:
-        // - "weekdays" if active days are Mon-Fri
-        // - "weekends" if active days are Sat-Sun
-        // - "daily" if active days are all 7
-        // - "specific days" otherwise (list the active days)
         val activeSet = activeDays.toSet()
         val dayNames = listOf("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun")
         val patternDescription = when {
@@ -103,8 +162,6 @@ object RecurrenceDetector {
             else -> "none"
         }
 
-        // Step 4 — Recurring if:
-        // (count in 30 days >= 4) && (active days >= 3 || weekend pattern) && (CV_active <= 0.30)
         val isWeekend = activeSet == setOf(5, 6)
         val hasEnoughActiveDays = activeDaysCount >= MIN_ACTIVE_DAY_COUNT || isWeekend
         val isRecurring = count >= MIN_TOTAL_COUNT && hasEnoughActiveDays && cvActive <= MAX_CV
@@ -124,11 +181,6 @@ object RecurrenceDetector {
     /**
      * Detects recurring patterns from a list of domain transactions.
      * Only DEBIT transactions are considered (expenses only).
-     *
-     * @param transactions Historical transactions.
-     * @param now Reference timestamp (defaults to latest transaction or system time).
-     * @param timeZone TimeZone used for day-of-week evaluation (defaults to system default).
-     * @return List of identified [RecurringPattern] records.
      */
     fun detect(
         transactions: List<Transaction>,
@@ -168,13 +220,21 @@ object RecurrenceDetector {
 
         for ((key, groupPoints) in groups) {
             val (normMerchant, amountPaise) = key
-            val analysis = analyzePoints(groupPoints, now, timeZone)
+            val sorted = groupPoints.sortedBy { it.timestamp }
+            val timestamps = sorted.map { it.timestamp }
 
-            if (analysis.isRecurring) {
-                val sorted = groupPoints.sortedBy { it.timestamp }
-                val periodHours = if (analysis.patternDescription == "daily") 24 else 168
-                
-                // Calculate actual median interval between consecutive occurrences if available
+            // 1. Point Process IAT Analysis
+            val iatResult = analyzeIAT(timestamps)
+
+            // 2. Histogram Day-of-Week Analysis
+            val histogramAnalysis = analyzePoints(groupPoints, now, timeZone)
+
+            val isRecurring = iatResult.isRecurring || histogramAnalysis.isRecurring
+
+            if (isRecurring) {
+                val periodHours = iatResult.detectedPeriodHours
+                    ?: (if (histogramAnalysis.patternDescription == "daily") 24 else 168)
+
                 val intervals = sorted.zipWithNext { a, b -> (b.timestamp - a.timestamp) / 3600000.0 }
                 val actualMedian = if (intervals.isNotEmpty()) {
                     val sortedIntervals = intervals.sorted()
@@ -187,14 +247,16 @@ object RecurrenceDetector {
                     periodHours.toDouble()
                 }
 
+                val cv = if (iatResult.isRecurring) iatResult.fanoFactor else histogramAnalysis.cvActive
+
                 patterns.add(
                     RecurringPattern(
                         id = 0L,
                         merchantNormalized = normMerchant,
                         amountPaise = amountPaise,
-                        occurrenceCount = analysis.count,
+                        occurrenceCount = sorted.size,
                         medianIntervalHours = actualMedian,
-                        cv = analysis.cvActive,
+                        cv = cv,
                         periodHours = periodHours,
                         autocorrelationPeak = 1.0,
                         firstSeen = sorted.first().timestamp,

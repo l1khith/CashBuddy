@@ -67,8 +67,8 @@ class MessagePipeline(
     private val recentStateRepository: RecentStateRepository? = null,
     private val settingsRepo: SettingsRepository? = null,
     private val budgetAlertScheduler: com.cashbuddy.core.budget.BudgetAlertScheduler? = null,
-    private val fraudDetector: com.cashbuddy.core.FraudDetector = com.cashbuddy.core.FraudDetector(transactionRepo),
     private val recurringPatternRepo: com.cashbuddy.domain.repository.RecurringPatternRepository? = null,
+    private val fraudDetector: com.cashbuddy.core.FraudDetector = com.cashbuddy.core.FraudDetector(transactionRepo, recurringPatternRepo),
     private val anomalyNotifier: com.cashbuddy.core.anomaly.AnomalyNotifier? = null,
     // C1: when provided, tx insert + raw_message audit-link commit in one driver-level transaction.
     // Tests construct the pipeline without it → fallback below replicates the exact old two-step write.
@@ -97,7 +97,14 @@ class MessagePipeline(
             var isRecurringMatch = false
             if (classification.merchant != null && classification.amount != null && classification.amount > 0.0) {
                 val amountPaise = (classification.amount * 100.0).roundToLong()
-                val pattern = recurringPatternRepo?.findByMerchantAndAmount(classification.merchant, amountPaise)
+                val candidatePatterns = recurringPatternRepo?.findByMerchant(classification.merchant) ?: emptyList()
+                val pattern = candidatePatterns.firstOrNull { p ->
+                    if (p.amountPaise == amountPaise) true
+                    else {
+                        val patAmount = p.amountPaise / 100.0
+                        patAmount > 0.0 && (kotlin.math.abs(classification.amount - patAmount) / patAmount) <= 0.10
+                    }
+                }
                 if (pattern != null) {
                     isRecurringMatch = true
                     classification = classification.copy(
@@ -215,7 +222,7 @@ class MessagePipeline(
                                 val isAnomalous = anomaly.isAnomalous
                                 val note = if (isAnomalous) formatAnomalyNote(anomaly.score, anomaly.median, anomaly.mad) else null
 
-                                val finalStatus = if (isPolicyAutoLog && isCategoryKnownOrConfirmed && !isAnomalous) {
+                                val finalStatus = if ((isPolicyAutoLog && (isCategoryKnownOrConfirmed || isRecurringMatch)) && !isAnomalous) {
                                     TransactionStatus.CONFIRMED
                                 } else {
                                     TransactionStatus.PENDING

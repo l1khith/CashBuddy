@@ -17,9 +17,67 @@ data class PacingResult(
     val projectedOverage: Double
 ) {
     val daysRemaining: Int get() = maxOf(0, totalDays - daysElapsed)
+    val isWarning: Boolean get() = projectedOverage > 0.0
+    val warningMessage: String?
+        get() = if (isWarning) "At this rate, you will exceed your budget by ₹${projectedOverage.toInt()}." else null
+
+    fun warningMessageForCategory(category: String): String? =
+        if (isWarning) "At this rate, you will exceed your $category budget by ₹${projectedOverage.toInt()}." else null
 }
 
+data class BudgetWarning(
+    val dailyAverage: Double,
+    val projectedTotal: Double,
+    val budgetLimit: Double,
+    val overage: Double,
+    val isExceeded: Boolean,
+    val warningMessage: String?
+)
+
 object BudgetPacer {
+
+    /**
+     * Calculates the daily average spend so far.
+     */
+    fun calculateDailyAverage(spent: Double, daysElapsed: Int): Double {
+        return if (daysElapsed > 0) spent / daysElapsed.toDouble() else 0.0
+    }
+
+    /**
+     * Projects month-end total spend using linear regression / pacing: dailyAverage * totalDaysInMonth.
+     */
+    fun projectMonthEndTotal(dailyAverage: Double, totalDaysInMonth: Int = 30): Double {
+        return dailyAverage * totalDaysInMonth.toDouble()
+    }
+
+    /**
+     * Evaluates whether projected month-end spend exceeds the budget limit.
+     */
+    fun checkBudgetWarning(
+        spentSoFar: Double,
+        budgetLimit: Double,
+        daysElapsed: Int,
+        totalDaysInMonth: Int = 30,
+        category: String = "budget"
+    ): BudgetWarning {
+        val dailyAvg = calculateDailyAverage(spentSoFar, daysElapsed)
+        val projectedTotal = projectMonthEndTotal(dailyAvg, totalDaysInMonth)
+        val isExceeded = projectedTotal > budgetLimit
+        val overage = maxOf(0.0, projectedTotal - budgetLimit)
+        val warningMessage = if (isExceeded) {
+            "At this rate, you will exceed your $category budget by ₹${overage.toInt()}."
+        } else {
+            null
+        }
+        return BudgetWarning(
+            dailyAverage = dailyAvg,
+            projectedTotal = projectedTotal,
+            budgetLimit = budgetLimit,
+            overage = overage,
+            isExceeded = isExceeded,
+            warningMessage = warningMessage
+        )
+    }
 
     fun calculatePacing(
         spent: Double,

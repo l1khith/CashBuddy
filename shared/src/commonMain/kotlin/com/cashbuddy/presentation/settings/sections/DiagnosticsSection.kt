@@ -3,12 +3,18 @@ package com.cashbuddy.presentation.settings.sections
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -28,14 +34,17 @@ import cashbuddy.shared.generated.resources.diagnostics_notif_access_desc
 import cashbuddy.shared.generated.resources.diagnostics_notif_access_disabled
 import cashbuddy.shared.generated.resources.diagnostics_notif_access_enabled
 import cashbuddy.shared.generated.resources.diagnostics_notif_access_title
+import cashbuddy.shared.generated.resources.diagnostics_refresh_recurrence_patterns
 import cashbuddy.shared.generated.resources.diagnostics_section_title
 import cashbuddy.shared.generated.resources.ic_battery_alert
 import cashbuddy.shared.generated.resources.ic_notifications_active
+import cashbuddy.shared.generated.resources.ic_refresh
 import com.cashbuddy.presentation.settings.components.DailyWrapUpTimePickerRow
 import com.cashbuddy.presentation.settings.components.DiagnosticStatusRow
 import com.cashbuddy.presentation.settings.components.DiagnosticSyncRow
 import com.cashbuddy.presentation.theme.CashBuddyTypography
 import com.cashbuddy.presentation.theme.RadiusLarge
+import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
 
 @Composable
@@ -51,6 +60,7 @@ fun DiagnosticsSection(
     onOpenBatterySettings: () -> Unit,
     onRefreshDiagnostics: () -> Unit,
     onDailyWrapUpTimeSelected: (Int, Int) -> Unit,
+    onRefreshRecurrencePatterns: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     Column(
@@ -140,6 +150,24 @@ fun DiagnosticsSection(
                     minute = dailyWrapUpMinute,
                     onTimeSelected = onDailyWrapUpTimeSelected
                 )
+
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+
+                // Force Refresh Recurring Patterns Button (Silent Intelligence)
+                OutlinedButton(
+                    onClick = onRefreshRecurrencePatterns,
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(10.dp)
+                ) {
+                    Icon(
+                        painter = painterResource(Res.drawable.ic_refresh),
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(stringResource(Res.string.diagnostics_refresh_recurrence_patterns))
+                }
             }
         }
     }

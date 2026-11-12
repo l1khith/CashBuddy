@@ -515,6 +515,9 @@ class BudgetEngineTest {
             override suspend fun upsertAll(patterns: List<com.cashbuddy.domain.model.RecurringPattern>) {}
             override fun getAll(): kotlinx.coroutines.flow.Flow<List<com.cashbuddy.domain.model.RecurringPattern>> =
                 kotlinx.coroutines.flow.flowOf(listOf(pattern))
+            override suspend fun getAllList(): List<com.cashbuddy.domain.model.RecurringPattern> = listOf(pattern)
+            override suspend fun findByMerchant(merchant: String): List<com.cashbuddy.domain.model.RecurringPattern> =
+                listOf(pattern).filter { it.merchantNormalized == merchant.trim().lowercase() }
             override suspend fun findByMerchantAndAmount(merchant: String, amountPaise: Long): com.cashbuddy.domain.model.RecurringPattern? = null
             override suspend fun deleteById(id: Long) {}
             override suspend fun deleteAll() {}

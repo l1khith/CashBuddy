@@ -24,6 +24,8 @@ import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import cashbuddy.shared.generated.resources.Res
+import cashbuddy.shared.generated.resources.recurrence_patterns_refreshed
 
 @Immutable
 data class SettingsUiState(
@@ -77,7 +79,8 @@ class SettingsViewModel(
     // Audit fix P1-C: wipe all data in ONE driver-level transaction instead of four
     // separate repository transactions from the ViewModel.
     private val dataResetStore: com.cashbuddy.domain.repository.DataResetStore? = null,
-    private val diagnosticsProvider: com.cashbuddy.platform.PlatformDiagnosticsProvider? = null
+    private val diagnosticsProvider: com.cashbuddy.platform.PlatformDiagnosticsProvider? = null,
+    private val detectAndStoreRecurrencesUseCase: com.cashbuddy.domain.usecase.DetectAndStoreRecurrencesUseCase? = null
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(SettingsUiState(isOcrAvailable = ocrEngine?.isAvailable ?: false))
@@ -210,6 +213,18 @@ class SettingsViewModel(
     fun setSmartNotificationsEnabled(enabled: Boolean) {
         viewModelScope.launch {
             settingsRepository.setSmartNotificationsEnabled(enabled)
+        }
+    }
+
+    fun forceRefreshRecurrencePatterns() {
+        viewModelScope.launch {
+            try {
+                val patterns = detectAndStoreRecurrencesUseCase?.invoke() ?: emptyList()
+                val msg = org.jetbrains.compose.resources.getString(Res.string.recurrence_patterns_refreshed, patterns.size)
+                _messageEffect.emit(msg)
+            } catch (e: Throwable) {
+                _messageEffect.emit("Failed to update patterns: ${e.message}")
+            }
         }
     }
 

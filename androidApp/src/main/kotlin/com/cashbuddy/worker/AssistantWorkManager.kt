@@ -43,6 +43,9 @@ object AssistantWorkManager {
             weeklyRequest
         )
 
+        // 3. RecurrenceWorker — Runs daily every 24 hours
+        scheduleRecurrenceWorker(context)
+
         // NOTE: TokenPurgeWorker is intentionally NOT scheduled here. The learned-token
         // GC is core data maintenance and must run regardless of notification settings —
         // it is scheduled unconditionally via [scheduleTokenPurge] (audit fix 1.4).
@@ -72,6 +75,22 @@ object AssistantWorkManager {
     fun cancelDailyWrapUp(context: Context) {
         val workManager = WorkManager.getInstance(context)
         workManager.cancelUniqueWork(DailyWrapUpWorker.WORK_NAME)
+    }
+
+    /**
+     * Schedules the 24-hour recurrence pattern analysis. Core intelligence:
+     * analyzes historical transactions to auto-confirm predictable transactions
+     * and silently suppress false anomalies.
+     */
+    fun scheduleRecurrenceWorker(context: Context) {
+        val workManager = WorkManager.getInstance(context)
+        val recurrenceRequest = PeriodicWorkRequestBuilder<RecurrenceWorker>(24, TimeUnit.HOURS)
+            .build()
+        workManager.enqueueUniquePeriodicWork(
+            RecurrenceWorker.WORK_NAME,
+            ExistingPeriodicWorkPolicy.KEEP,
+            recurrenceRequest
+        )
     }
 
     /**

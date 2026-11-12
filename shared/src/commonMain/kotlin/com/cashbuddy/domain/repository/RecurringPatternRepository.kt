@@ -24,6 +24,16 @@ interface RecurringPatternRepository {
     fun getAll(): Flow<List<RecurringPattern>>
 
     /**
+     * Retrieves all active patterns as a list directly.
+     */
+    suspend fun getAllList(): List<RecurringPattern>
+
+    /**
+     * Finds all patterns matching normalized merchant name.
+     */
+    suspend fun findByMerchant(merchant: String): List<RecurringPattern>
+
+    /**
      * Finds a pattern matching normalized merchant name and amount in paise.
      */
     suspend fun findByMerchantAndAmount(merchant: String, amountPaise: Long): RecurringPattern?

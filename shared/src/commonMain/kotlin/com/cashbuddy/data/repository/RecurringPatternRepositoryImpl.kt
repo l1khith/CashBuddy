@@ -88,6 +88,17 @@ class RecurringPatternRepositoryImpl(
             .mapToList(dispatcher)
     }
 
+    override suspend fun getAllList(): List<RecurringPattern> = withContext(dispatcher) {
+        queries.getAll(::mapRow).executeAsList()
+    }
+
+    override suspend fun findByMerchant(merchant: String): List<RecurringPattern> = withContext(dispatcher) {
+        queries.findByMerchant(
+            merchantNormalized = merchant.lowercase().trim(),
+            mapper = ::mapRow
+        ).executeAsList()
+    }
+
     override suspend fun findByMerchantAndAmount(
         merchant: String,
         amountPaise: Long
