@@ -18,16 +18,14 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.ContentCopy
 import cashbuddy.shared.generated.resources.Res
+import cashbuddy.shared.generated.resources.ic_check_circle
 import cashbuddy.shared.generated.resources.ic_download
+import cashbuddy.shared.generated.resources.ic_expand_less
+import cashbuddy.shared.generated.resources.ic_expand_more
+import cashbuddy.shared.generated.resources.ic_merge_type
+import cashbuddy.shared.generated.resources.ic_remove_circle_outline
 import org.jetbrains.compose.resources.painterResource
-import androidx.compose.material.icons.filled.ExpandLess
-import androidx.compose.material.icons.filled.ExpandMore
-import androidx.compose.material.icons.automirrored.filled.MergeType
-import androidx.compose.material.icons.filled.RemoveCircleOutline
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -96,7 +94,7 @@ fun DuplicateReconciliationDialog(
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
-                            imageVector = Icons.AutoMirrored.Filled.MergeType,
+                            painter = painterResource(Res.drawable.ic_merge_type),
                             contentDescription = null,
                             tint = PrimaryIndigo,
                             modifier = Modifier.size(22.dp)
@@ -127,7 +125,7 @@ fun DuplicateReconciliationDialog(
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     Icon(
-                        imageVector = Icons.Default.CheckCircle,
+                        painter = painterResource(Res.drawable.ic_check_circle),
                         contentDescription = null,
                         tint = AccentEmerald,
                         modifier = Modifier.size(48.dp)
@@ -282,7 +280,7 @@ private fun DuplicateGroupCard(
                         fontWeight = FontWeight.SemiBold
                     )
                     Icon(
-                        imageVector = if (isExpanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+                        painter = painterResource(if (isExpanded) Res.drawable.ic_expand_less else Res.drawable.ic_expand_more),
                         contentDescription = null,
                         tint = PrimaryIndigo,
                         modifier = Modifier.size(16.dp)
@@ -344,7 +342,7 @@ private fun TransactionDetailItem(
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(
-                        imageVector = if (isSurvivor) Icons.Default.CheckCircle else Icons.Default.RemoveCircleOutline,
+                        painter = painterResource(if (isSurvivor) Res.drawable.ic_check_circle else Res.drawable.ic_remove_circle_outline),
                         contentDescription = null,
                         tint = if (isSurvivor) AccentEmerald else DangerRed,
                         modifier = Modifier.size(14.dp)
