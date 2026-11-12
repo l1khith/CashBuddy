@@ -47,7 +47,8 @@ data class CategoryStatsItem(
     val categoryId: Long?,
     val comparisonPercent: Int?,
     val barFraction: Float,
-    val percentageInt: Int
+    val percentageInt: Int,
+    val committedSpend: Double = 0.0
 )
 
 @Immutable
@@ -112,7 +113,8 @@ data class StatsUiState(
 class StatsViewModel(
     private val transactionRepository: TransactionRepository,
     private val budgetRepository: BudgetRepository,
-    private val categoryRepository: CategoryRepository
+    private val categoryRepository: CategoryRepository,
+    private val recurringPatternRepository: com.cashbuddy.domain.repository.RecurringPatternRepository? = null
 ) : ViewModel() {
 
     private val _selectedPeriod = MutableStateFlow(TimePeriod.THIS_MONTH)
@@ -124,14 +126,19 @@ class StatsViewModel(
 
     init {
         viewModelScope.launch(ioDispatcher) {
-            combine(
-                _selectedPeriod,
-                _customDateRange,
+            val periodAndRange = combine(_selectedPeriod, _customDateRange) { period, range -> period to range }
+            val metaFlow = combine(
                 budgetRepository.getAll(),
                 categoryRepository.getAll(),
+                recurringPatternRepository?.getAll() ?: kotlinx.coroutines.flow.flowOf(emptyList())
+            ) { budgets, categories, patterns -> Triple(budgets, categories, patterns) }
+
+            combine(
+                periodAndRange,
+                metaFlow,
                 transactionRepository.transactionUpdates.onStart { emit(Unit) }
-            ) { period, customRange, budgets, categories, _ ->
-                PeriodQueryContext(period, customRange, budgets, categories)
+            ) { (period, customRange), (budgets, categories, patterns), _ ->
+                PeriodQueryContext(period, customRange, budgets, categories, patterns)
             }.flatMapLatest { ctx ->
                 val now = currentTimeMillis()
                 val range = DateRangeHelper.calculateDateRange(
@@ -180,6 +187,7 @@ class StatsViewModel(
 
                     val totalSpendingForBreakdowns = breakdowns.sumOf { it.totalAmount }.coerceAtLeast(1.0)
                     val maxCategorySpent = breakdowns.maxOfOrNull { it.totalAmount }?.coerceAtLeast(1.0) ?: 1.0
+                    val recurringMerchants = ctx.recurringPatterns.map { it.merchantNormalized.lowercase().trim() }.toSet()
                     val categoryItems = breakdowns.map { cat ->
                         val prevAmount = prevByCategory[cat.categoryName]?.totalAmount ?: 0.0
                         val comparisonPercent = if (prevAmount > 0.0) {
@@ -190,12 +198,23 @@ class StatsViewModel(
                         val textFraction = (cat.totalAmount / totalSpendingForBreakdowns).toFloat().coerceIn(0f, 1f)
                         val textPctInt = (textFraction * 100).toInt()
                         val barFraction = (cat.totalAmount / maxCategorySpent).toFloat().coerceIn(0f, 1f)
+
+                        // Calculate committedSpend = sum of amounts where merchant matches recurring_pattern
+                        val catTxs = debitTxs.filter { tx ->
+                            val catName = tx.categoryName ?: "Uncategorized"
+                            catName.equals(cat.categoryName, ignoreCase = true)
+                        }
+                        val committedSpend = catTxs.filter { tx ->
+                            recurringMerchants.contains(tx.merchant.lowercase().trim())
+                        }.sumOf { it.amount }
+
                         CategoryStatsItem(
                             breakdown = cat,
                             categoryId = categoryIdByName[cat.categoryName],
                             comparisonPercent = comparisonPercent,
                             barFraction = barFraction,
-                            percentageInt = textPctInt
+                            percentageInt = textPctInt,
+                            committedSpend = committedSpend
                         )
                     }
 
@@ -415,7 +434,8 @@ class StatsViewModel(
         val period: TimePeriod,
         val customRange: DateRange?,
         val budgets: List<Budget>,
-        val categories: List<Category>
+        val categories: List<Category>,
+        val recurringPatterns: List<com.cashbuddy.domain.model.RecurringPattern> = emptyList()
     )
 
     private data class Quad<A, B, C, D>(

@@ -32,15 +32,15 @@ class SettingsRepositoryImpl(
                 customAppName = (map["custom_app_name"] ?: UserSettings.DEFAULT_APP_NAME).take(UserSettings.MAX_APP_NAME_LENGTH),
                 customAppSubtitle = (map["custom_app_subtitle"] ?: UserSettings.DEFAULT_APP_SUBTITLE).take(UserSettings.MAX_APP_SUBTITLE_LENGTH),
                 showAppLogo = map["show_app_logo"]?.toBooleanStrictOrNull() ?: true,
-                navOrder = map["nav_order"]?.takeIf { it.isNotBlank() } ?: UserSettings.DEFAULT_NAV_ORDER
+                navOrder = map["nav_order"]?.takeIf { it.isNotBlank() } ?: UserSettings.DEFAULT_NAV_ORDER,
+                showHealthInTopBar = map["show_health_in_top_bar"]?.toBooleanStrictOrNull() ?: false,
+                lastSyncTimestamp = map["last_sync_timestamp"]?.toLongOrNull() ?: 0L,
+                dailyWrapUpHour = map["daily_wrap_up_hour"]?.toIntOrNull() ?: UserSettings.DEFAULT_WRAP_UP_HOUR,
+                dailyWrapUpMinute = map["daily_wrap_up_minute"]?.toIntOrNull() ?: UserSettings.DEFAULT_WRAP_UP_MINUTE
             )
         }
 
     override suspend fun updateSettings(settings: UserSettings): Unit = withContext(dispatcher) {
-        // Audit fix P1-C: all 10 key writes must land as ONE commit. Previously each
-        // queries.set() was its own transaction — a crash mid-write left a half-updated
-        // settings map (e.g. new nav_order with old thresholds), which getSettings()
-        // silently surfaces as a mixed state.
         val now = com.cashbuddy.platform.currentTimeMillis()
         db.transaction {
             queries.set("autoConfirmThreshold", settings.autoConfirmThreshold.toString(), now)
@@ -53,6 +53,10 @@ class SettingsRepositoryImpl(
             queries.set("custom_app_subtitle", settings.customAppSubtitle, now)
             queries.set("show_app_logo", settings.showAppLogo.toString(), now)
             queries.set("nav_order", settings.navOrder, now)
+            queries.set("show_health_in_top_bar", settings.showHealthInTopBar.toString(), now)
+            queries.set("last_sync_timestamp", settings.lastSyncTimestamp.toString(), now)
+            queries.set("daily_wrap_up_hour", settings.dailyWrapUpHour.toString(), now)
+            queries.set("daily_wrap_up_minute", settings.dailyWrapUpMinute.toString(), now)
         }
     }
 
@@ -188,5 +192,39 @@ class SettingsRepositoryImpl(
 
     override suspend fun setNavOrder(order: String): Unit = withContext(dispatcher) {
         queries.set("nav_order", order, com.cashbuddy.platform.currentTimeMillis())
+    }
+
+    override fun getShowHealthInTopBar(): Flow<Boolean> =
+        queries.get("show_health_in_top_bar").asFlow().mapToOneOrNull(dispatcher).map { record ->
+            record?.value_?.toBooleanStrictOrNull() ?: false
+        }
+
+    override suspend fun setShowHealthInTopBar(show: Boolean): Unit = withContext(dispatcher) {
+        queries.set("show_health_in_top_bar", show.toString(), com.cashbuddy.platform.currentTimeMillis())
+    }
+
+    override fun getLastSyncTimestamp(): Flow<Long> =
+        queries.get("last_sync_timestamp").asFlow().mapToOneOrNull(dispatcher).map { record ->
+            record?.value_?.toLongOrNull() ?: 0L
+        }
+
+    override suspend fun setLastSyncTimestamp(timestamp: Long): Unit = withContext(dispatcher) {
+        queries.set("last_sync_timestamp", timestamp.toString(), com.cashbuddy.platform.currentTimeMillis())
+    }
+
+    override fun getDailyWrapUpTime(): Flow<Pair<Int, Int>> =
+        queries.getAll().asFlow().mapToList(dispatcher).map { list ->
+            val map = list.associate { it.key to it.value_ }
+            val hour = map["daily_wrap_up_hour"]?.toIntOrNull() ?: UserSettings.DEFAULT_WRAP_UP_HOUR
+            val minute = map["daily_wrap_up_minute"]?.toIntOrNull() ?: UserSettings.DEFAULT_WRAP_UP_MINUTE
+            hour to minute
+        }
+
+    override suspend fun setDailyWrapUpTime(hour: Int, minute: Int): Unit = withContext(dispatcher) {
+        val now = com.cashbuddy.platform.currentTimeMillis()
+        db.transaction {
+            queries.set("daily_wrap_up_hour", hour.toString(), now)
+            queries.set("daily_wrap_up_minute", minute.toString(), now)
+        }
     }
 }

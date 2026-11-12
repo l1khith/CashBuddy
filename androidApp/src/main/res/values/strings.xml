@@ -1,3 +1,24 @@
 <resources>
     <string name="app_name">CashBuddy</string>
+
+    <!-- Notification Channels -->
+    <string name="channel_budget_alerts_name">Budget Alerts</string>
+    <string name="channel_budget_alerts_desc">Alerts when spending approaches or exceeds budget limits</string>
+
+    <string name="channel_anomaly_alerts_name">Anomaly Alerts</string>
+    <string name="channel_anomaly_alerts_desc">Real-time alerts for unusually high or irregular transactions</string>
+
+    <string name="channel_weekly_digest_name">Weekly Digest</string>
+    <string name="channel_weekly_digest_desc">Weekly recap of expenses and top spending categories</string>
+
+    <string name="channel_quick_glance_name">Quick Glance</string>
+    <string name="channel_quick_glance_desc">Persistent daily and monthly spending status</string>
+
+    <string name="channel_daily_wrap_up_name">Daily Wrap-Up</string>
+    <string name="channel_daily_wrap_up_desc">Daily reminder to review cash and day transactions</string>
+
+    <!-- Daily Wrap-Up Notifications -->
+    <string name="notification_daily_wrap_up_title">Daily Wrap-Up</string>
+    <string name="notification_daily_wrap_up_spent">You spent %1$s today. Did you miss any cash transactions?</string>
+    <string name="notification_daily_wrap_up_zero">No digital expenses logged today. Did you have any cash spending?</string>
 </resources>

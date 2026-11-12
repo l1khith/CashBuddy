@@ -30,6 +30,7 @@ import cashbuddy.shared.generated.resources.dialog_edit_tx_save_changes
 import cashbuddy.shared.generated.resources.dialog_edit_tx_title
 import cashbuddy.shared.generated.resources.ic_delete_forever
 import cashbuddy.shared.generated.resources.ic_edit
+import cashbuddy.shared.generated.resources.ic_refresh
 import cashbuddy.shared.generated.resources.tx_detail_change_category
 import cashbuddy.shared.generated.resources.tx_detail_credit_label
 import cashbuddy.shared.generated.resources.tx_detail_debit_label
@@ -39,6 +40,7 @@ import cashbuddy.shared.generated.resources.tx_detail_original_notification
 import cashbuddy.shared.generated.resources.tx_detail_source_label
 import cashbuddy.shared.generated.resources.tx_detail_status_label
 import cashbuddy.shared.generated.resources.tx_detail_title
+import cashbuddy.shared.generated.resources.tx_recurring_habit
 import cashbuddy.shared.generated.resources.tx_unknown_merchant
 import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
@@ -211,6 +213,26 @@ fun TransactionDetailScreen(
                     ) {
                         val unknownMerchant = stringResource(Res.string.tx_unknown_merchant)
                         DetailRow(label = stringResource(Res.string.tx_detail_merchant_label), value = tx.merchant.ifBlank { unknownMerchant })
+                        if (state.isRecurringHabit) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                                modifier = Modifier.padding(start = 2.dp)
+                            ) {
+                                Icon(
+                                    painter = painterResource(Res.drawable.ic_refresh),
+                                    contentDescription = null,
+                                    tint = PrimaryIndigo,
+                                    modifier = Modifier.size(14.dp)
+                                )
+                                Text(
+                                    text = stringResource(Res.string.tx_recurring_habit),
+                                    style = CashBuddyTypography.labelMedium,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = PrimaryIndigo
+                                )
+                            }
+                        }
                         DetailRow(label = stringResource(Res.string.tx_detail_status_label), value = tx.status.name)
                         DetailRow(label = stringResource(Res.string.tx_detail_source_label), value = com.cashbuddy.platform.getApplicationLabel(tx.sourceApp))
                     }

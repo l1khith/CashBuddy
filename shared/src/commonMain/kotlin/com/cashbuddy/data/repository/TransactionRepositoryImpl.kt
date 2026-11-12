@@ -95,29 +95,62 @@ class TransactionRepositoryImpl(
         }.asFlow().mapToList(dispatcher)
 
     override suspend fun insert(transaction: Transaction): Long = withContext(dispatcher) {
-        queries.insert(
-            amount = transaction.amount,
-            type = transaction.type.name,
-            currency = transaction.currency,
-            merchant = transaction.merchant,
-            category_id = transaction.categoryId,
-            account_id = transaction.accountId,
-            source_app = transaction.sourceApp,
-            raw_text = transaction.rawText,
-            confidence = transaction.confidence.toDouble(),
-            status = transaction.status.name,
-            notes = transaction.notes,
-            timestamp = transaction.timestamp,
-            created_at = transaction.createdAt,
-            updated_at = transaction.updatedAt,
-            is_merged = if (transaction.isMerged) 1L else 0L,
-            merged_into_id = transaction.mergedIntoId,
-            payment_method = transaction.paymentMethod,
-            is_loan_given = if (transaction.isLoanGiven) 1L else 0L
-        )
-        val id = queries.lastInsertRowId().executeAsOne()
+        val id = db.transactionWithResult {
+            queries.insert(
+                amount = transaction.amount,
+                type = transaction.type.name,
+                currency = transaction.currency,
+                merchant = transaction.merchant,
+                category_id = transaction.categoryId,
+                account_id = transaction.accountId,
+                source_app = transaction.sourceApp,
+                raw_text = transaction.rawText,
+                confidence = transaction.confidence.toDouble(),
+                status = transaction.status.name,
+                notes = transaction.notes,
+                timestamp = transaction.timestamp,
+                created_at = transaction.createdAt,
+                updated_at = transaction.updatedAt,
+                is_merged = if (transaction.isMerged) 1L else 0L,
+                merged_into_id = transaction.mergedIntoId,
+                payment_method = transaction.paymentMethod,
+                is_loan_given = if (transaction.isLoanGiven) 1L else 0L
+            )
+            queries.lastInsertRowId().executeAsOne()
+        }
         _mutationEvents.tryEmit(Unit)
         id
+    }
+
+    override suspend fun insertAll(transactions: List<Transaction>): List<Long> = withContext(dispatcher) {
+        if (transactions.isEmpty()) return@withContext emptyList()
+        val ids = db.transactionWithResult {
+            transactions.map { transaction ->
+                queries.insert(
+                    amount = transaction.amount,
+                    type = transaction.type.name,
+                    currency = transaction.currency,
+                    merchant = transaction.merchant,
+                    category_id = transaction.categoryId,
+                    account_id = transaction.accountId,
+                    source_app = transaction.sourceApp,
+                    raw_text = transaction.rawText,
+                    confidence = transaction.confidence.toDouble(),
+                    status = transaction.status.name,
+                    notes = transaction.notes,
+                    timestamp = transaction.timestamp,
+                    created_at = transaction.createdAt,
+                    updated_at = transaction.updatedAt,
+                    is_merged = if (transaction.isMerged) 1L else 0L,
+                    merged_into_id = transaction.mergedIntoId,
+                    payment_method = transaction.paymentMethod,
+                    is_loan_given = if (transaction.isLoanGiven) 1L else 0L
+                )
+                queries.lastInsertRowId().executeAsOne()
+            }
+        }
+        _mutationEvents.tryEmit(Unit)
+        ids
     }
 
     override suspend fun updateStatus(id: Long, status: TransactionStatus): Unit = withContext(dispatcher) {

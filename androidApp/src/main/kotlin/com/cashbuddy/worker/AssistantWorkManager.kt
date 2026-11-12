@@ -43,6 +43,9 @@ object AssistantWorkManager {
             weeklyRequest
         )
 
+        // 3. RecurrenceWorker — Runs daily every 24 hours
+        scheduleRecurrenceWorker(context)
+
         // NOTE: TokenPurgeWorker is intentionally NOT scheduled here. The learned-token
         // GC is core data maintenance and must run regardless of notification settings —
         // it is scheduled unconditionally via [scheduleTokenPurge] (audit fix 1.4).
@@ -52,7 +55,46 @@ object AssistantWorkManager {
         val workManager = WorkManager.getInstance(context)
         workManager.cancelUniqueWork(BudgetAlertWorker.WORK_NAME)
         workManager.cancelUniqueWork(WeeklyDigestWorker.WORK_NAME)
+        workManager.cancelUniqueWork(DailyWrapUpWorker.WORK_NAME)
         // NOTE: TokenPurgeWorker is never cancelled here (audit fix 1.4) — see scheduleAll.
+    }
+
+    fun scheduleDailyWrapUp(context: Context, hour: Int, minute: Int) {
+        val workManager = WorkManager.getInstance(context)
+        val delay = calculateInitialDelay(targetHour = hour, targetMinute = minute, daysInterval = 1)
+        val wrapUpRequest = androidx.work.OneTimeWorkRequestBuilder<DailyWrapUpWorker>()
+            .setInitialDelay(delay, TimeUnit.MILLISECONDS)
+            .build()
+        workManager.enqueueUniqueWork(
+            DailyWrapUpWorker.WORK_NAME,
+            androidx.work.ExistingWorkPolicy.REPLACE,
+            wrapUpRequest
+        )
+    }
+
+    fun cancelDailyWrapUp(context: Context) {
+        val workManager = WorkManager.getInstance(context)
+        workManager.cancelUniqueWork(DailyWrapUpWorker.WORK_NAME)
+    }
+
+    /**
+     * Schedules the 24-hour recurrence pattern analysis. Core intelligence:
+     * analyzes historical transactions to auto-confirm predictable transactions
+     * and silently suppress false anomalies.
+     */
+    fun scheduleRecurrenceWorker(context: Context) {
+        val workManager = WorkManager.getInstance(context)
+        val constraints = androidx.work.Constraints.Builder()
+            .setRequiresBatteryNotLow(true)
+            .build()
+        val recurrenceRequest = PeriodicWorkRequestBuilder<RecurrenceWorker>(24, TimeUnit.HOURS)
+            .setConstraints(constraints)
+            .build()
+        workManager.enqueueUniquePeriodicWork(
+            RecurrenceWorker.WORK_NAME,
+            ExistingPeriodicWorkPolicy.KEEP,
+            recurrenceRequest
+        )
     }
 
     /**
@@ -66,8 +108,12 @@ object AssistantWorkManager {
             targetHour = 2,
             targetMinute = 0
         )
+        val constraints = androidx.work.Constraints.Builder()
+            .setRequiresBatteryNotLow(true)
+            .build()
         val purgeRequest = PeriodicWorkRequestBuilder<TokenPurgeWorker>(7, TimeUnit.DAYS)
             .setInitialDelay(purgeDelay, TimeUnit.MILLISECONDS)
+            .setConstraints(constraints)
             .build()
 
         workManager.enqueueUniquePeriodicWork(

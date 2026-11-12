@@ -24,6 +24,8 @@ import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import cashbuddy.shared.generated.resources.Res
+import cashbuddy.shared.generated.resources.recurrence_patterns_refreshed
 
 @Immutable
 data class SettingsUiState(
@@ -51,7 +53,12 @@ data class SettingsUiState(
     val customAppSubtitle: String = com.cashbuddy.domain.model.UserSettings.DEFAULT_APP_SUBTITLE,
     val showAppLogo: Boolean = true,
     val navOrder: String = com.cashbuddy.domain.model.UserSettings.DEFAULT_NAV_ORDER,
-    val navOrderList: List<String> = listOf("home", "stats", "history")
+    val navOrderList: List<String> = listOf("home", "stats", "history"),
+    val showHealthInTopBar: Boolean = false,
+    val isNotificationAccessGranted: Boolean = false,
+    val lastSyncTimestamp: Long = 0L,
+    val dailyWrapUpHour: Int = com.cashbuddy.domain.model.UserSettings.DEFAULT_WRAP_UP_HOUR,
+    val dailyWrapUpMinute: Int = com.cashbuddy.domain.model.UserSettings.DEFAULT_WRAP_UP_MINUTE
 )
 
 class SettingsViewModel(
@@ -70,7 +77,9 @@ class SettingsViewModel(
     private val learnedTokenRepository: com.cashbuddy.domain.repository.LearnedTokenRepository? = null,
     // Audit fix P1-C: wipe all data in ONE driver-level transaction instead of four
     // separate repository transactions from the ViewModel.
-    private val dataResetStore: com.cashbuddy.domain.repository.DataResetStore? = null
+    private val dataResetStore: com.cashbuddy.domain.repository.DataResetStore? = null,
+    private val diagnosticsProvider: com.cashbuddy.platform.PlatformDiagnosticsProvider? = null,
+    private val detectAndStoreRecurrencesUseCase: com.cashbuddy.domain.usecase.DetectAndStoreRecurrencesUseCase? = null
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(SettingsUiState(isOcrAvailable = ocrEngine?.isAvailable ?: false))
@@ -157,7 +166,12 @@ class SettingsViewModel(
                     customAppSubtitle = pendingSubtitle ?: settings.customAppSubtitle,
                     showAppLogo = settings.showAppLogo,
                     navOrder = activeOrder.joinToString(","),
-                    navOrderList = activeOrder
+                    navOrderList = activeOrder,
+                    showHealthInTopBar = settings.showHealthInTopBar,
+                    isNotificationAccessGranted = diagnosticsProvider?.checkDiagnostics(settings.lastSyncTimestamp)?.isNotificationAccessGranted ?: false,
+                    lastSyncTimestamp = settings.lastSyncTimestamp,
+                    dailyWrapUpHour = settings.dailyWrapUpHour,
+                    dailyWrapUpMinute = settings.dailyWrapUpMinute
                 )
             }.collect {
                 _uiState.value = it
@@ -197,6 +211,18 @@ class SettingsViewModel(
     fun setSmartNotificationsEnabled(enabled: Boolean) {
         viewModelScope.launch {
             settingsRepository.setSmartNotificationsEnabled(enabled)
+        }
+    }
+
+    fun forceRefreshRecurrencePatterns() {
+        viewModelScope.launch {
+            try {
+                val patterns = detectAndStoreRecurrencesUseCase?.invoke() ?: emptyList()
+                val msg = org.jetbrains.compose.resources.getString(Res.string.recurrence_patterns_refreshed, patterns.size)
+                _messageEffect.emit(msg)
+            } catch (e: Throwable) {
+                _messageEffect.emit("Failed to update patterns: ${e.message}")
+            }
         }
     }
 
@@ -440,6 +466,32 @@ class SettingsViewModel(
             settingsRepository.removeIgnoredPackage(clean)
             _messageEffect.emit("Removed $clean from Ignore List")
         }
+    }
+
+    fun setShowHealthInTopBar(show: Boolean) {
+        viewModelScope.launch {
+            settingsRepository.setShowHealthInTopBar(show)
+        }
+    }
+
+    fun setDailyWrapUpTime(hour: Int, minute: Int) {
+        viewModelScope.launch {
+            settingsRepository.setDailyWrapUpTime(hour, minute)
+        }
+    }
+
+    fun refreshDiagnostics() {
+        val lastSync = _uiState.value.lastSyncTimestamp
+        val diagnostics = diagnosticsProvider?.checkDiagnostics(lastSync)
+        if (diagnostics != null) {
+            _uiState.value = _uiState.value.copy(
+                isNotificationAccessGranted = diagnostics.isNotificationAccessGranted
+            )
+        }
+    }
+
+    fun openNotificationListenerSettings() {
+        diagnosticsProvider?.openNotificationListenerSettings()
     }
 
     fun importCsvData(csvContent: String) {

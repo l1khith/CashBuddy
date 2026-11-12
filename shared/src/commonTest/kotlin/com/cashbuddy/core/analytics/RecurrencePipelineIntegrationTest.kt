@@ -106,6 +106,11 @@ class RecurrencePipelineIntegrationTest {
             patterns.forEach { upsert(it) }
         }
         override fun getAll(): Flow<List<RecurringPattern>> = flowOf(patterns)
+        override suspend fun getAllList(): List<RecurringPattern> = patterns.toList()
+        override suspend fun findByMerchant(merchant: String): List<RecurringPattern> {
+            val norm = merchant.trim().lowercase()
+            return patterns.filter { it.merchantNormalized == norm }
+        }
         override suspend fun findByMerchantAndAmount(merchant: String, amountPaise: Long): RecurringPattern? {
             val norm = merchant.trim().lowercase()
             return patterns.find { it.merchantNormalized == norm && it.amountPaise == amountPaise }

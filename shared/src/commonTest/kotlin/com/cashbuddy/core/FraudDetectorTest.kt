@@ -5,9 +5,11 @@ import com.cashbuddy.domain.model.DateRangeSummary
 import com.cashbuddy.domain.model.Transaction
 import com.cashbuddy.domain.model.TransactionStatus
 import com.cashbuddy.domain.model.TransactionType
+import com.cashbuddy.domain.model.RecurringPattern
 import com.cashbuddy.domain.repository.CategoryBreakdown
 import com.cashbuddy.domain.repository.MergeLogEntry
 import com.cashbuddy.domain.repository.MonthlySummary
+import com.cashbuddy.domain.repository.RecurringPatternRepository
 import com.cashbuddy.domain.repository.TransactionRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.emptyFlow
@@ -123,5 +125,81 @@ class FraudDetectorTest {
         val result = detector.checkAnomaly("BMTC", 19.0, 1727600000000L)
         assertFalse(result.isAnomalous, "₹19 at ₹18 merchant with MAD=0 should not be anomalous")
         assertTrue(result.mad == 0.0)
+    }
+
+    private class FakeRecurringPatternRepo(
+        private val patterns: List<RecurringPattern> = emptyList()
+    ) : RecurringPatternRepository {
+        override suspend fun upsert(pattern: RecurringPattern) {}
+        override suspend fun upsertAll(patterns: List<RecurringPattern>) {}
+        override fun getAll(): Flow<List<RecurringPattern>> = kotlinx.coroutines.flow.flowOf(patterns)
+        override suspend fun getAllList(): List<RecurringPattern> = patterns
+        override suspend fun findByMerchant(merchant: String): List<RecurringPattern> {
+            val norm = merchant.trim().lowercase()
+            return patterns.filter { it.merchantNormalized == norm }
+        }
+        override suspend fun findByMerchantAndAmount(merchant: String, amountPaise: Long): RecurringPattern? {
+            val norm = merchant.trim().lowercase()
+            return patterns.find { it.merchantNormalized == norm && it.amountPaise == amountPaise }
+        }
+        override suspend fun deleteById(id: Long) {}
+        override suspend fun deleteAll() {}
+        override suspend fun deleteStale(staleBefore: Long) {}
+    }
+
+    @Test
+    fun testRecurringPatternSuppressesAnomalyWithinTenPercent() = runBlocking {
+        // 12 samples around ₹300, new ₹3000 would normally be anomalous.
+        // But merchant "BMTC" has a recurring pattern for ₹18 (1800 paise).
+        // Let's test a ₹19.00 bus ride (within ~5.5% of ₹18) against 12 outlier-inducing samples
+        val txRepo = FakeTransactionRepo(
+            listOf(5.0, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0)
+        )
+        val recurringPattern = RecurringPattern(
+            id = 1L,
+            merchantNormalized = "bmtc",
+            amountPaise = 1800L, // ₹18.00
+            occurrenceCount = 10,
+            medianIntervalHours = 24.0,
+            cv = 0.05,
+            periodHours = 24,
+            autocorrelationPeak = 0.9,
+            firstSeen = 1725000000000L,
+            lastSeen = 1727600000000L,
+            lastUpdated = 1727600000000L
+        )
+        val patternRepo = FakeRecurringPatternRepo(listOf(recurringPattern))
+        val detector = FraudDetector(txRepo, patternRepo)
+
+        // ₹19.00 is |19 - 18| / 18 = 0.055 (5.5% deviation <= 10%)
+        // Against historical ₹5, ₹19 would be an extreme outlier (MAD or ratio), but recurring pattern suppresses it!
+        val result = detector.checkAnomaly("BMTC", 19.0, 1727600000000L)
+        assertFalse(result.isAnomalous, "Recurring pattern within 10% must suppress anomaly detection")
+    }
+
+    @Test
+    fun testRecurringPatternDoesNotSuppressAnomalyExceedingTenPercent() = runBlocking {
+        val txRepo = FakeTransactionRepo(
+            List(12) { 18.0 }
+        )
+        val recurringPattern = RecurringPattern(
+            id = 1L,
+            merchantNormalized = "bmtc",
+            amountPaise = 1800L, // ₹18.00
+            occurrenceCount = 10,
+            medianIntervalHours = 24.0,
+            cv = 0.05,
+            periodHours = 24,
+            autocorrelationPeak = 0.9,
+            firstSeen = 1725000000000L,
+            lastSeen = 1727600000000L,
+            lastUpdated = 1727600000000L
+        )
+        val patternRepo = FakeRecurringPatternRepo(listOf(recurringPattern))
+        val detector = FraudDetector(txRepo, patternRepo)
+
+        // ₹2500 is far > 10% deviation, must NOT be suppressed
+        val result = detector.checkAnomaly("BMTC", 2500.0, 1727600000000L)
+        assertTrue(result.isAnomalous, "Large deviation from recurring pattern must not be suppressed")
     }
 }

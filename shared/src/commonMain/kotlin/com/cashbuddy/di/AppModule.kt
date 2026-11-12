@@ -33,6 +33,7 @@ import com.cashbuddy.domain.repository.TransactionRepository
 import com.cashbuddy.domain.usecase.BatchCategorizeUseCase
 import com.cashbuddy.domain.usecase.CalculateBalanceUseCase
 import com.cashbuddy.domain.usecase.ConfirmTransactionUseCase
+import com.cashbuddy.domain.usecase.DetectAndStoreRecurrencesUseCase
 import com.cashbuddy.domain.usecase.ExportDataUseCase
 import com.cashbuddy.domain.usecase.ImportDataUseCase
 import com.cashbuddy.domain.usecase.GetDateRangeSummaryUseCase
@@ -127,6 +128,7 @@ val appModule = module {
     singleOf(::LearnedTokenRepositoryImpl) bind LearnedTokenRepository::class
 
     // Use Cases
+    factoryOf(::DetectAndStoreRecurrencesUseCase)
     factoryOf(::CalculateBalanceUseCase)
     factoryOf(::GetRecentTransactionsUseCase)
     factoryOf(::GetTransactionsByDateRangeWithLimitUseCase)
@@ -173,8 +175,8 @@ val appModule = module {
     viewModelOf(::HomeViewModel)
     viewModelOf(::ReviewViewModel)
     viewModelOf(::TransactionListViewModel)
-    viewModel { (id: Long) -> TransactionDetailViewModel(id, get(), get(), get(), get(), get()) }
-    viewModelOf(::StatsViewModel)
+    viewModel { (id: Long) -> TransactionDetailViewModel(id, get(), get(), get(), get(), getOrNull(), getOrNull()) }
+    viewModel { StatsViewModel(get(), get(), get(), getOrNull()) }
     viewModel {
         BudgetViewModel(
             budgetRepository = get(),
@@ -191,7 +193,9 @@ val appModule = module {
             budgetEngine = get()
         )
     }
-    viewModel { SettingsViewModel(get(), get(), get(), get(), get(), getOrNull(), getOrNull(), getOrNull(), getOrNull(), getOrNull(), getOrNull(), getOrNull()) }
+    single<com.cashbuddy.platform.PlatformDiagnosticsProvider> { com.cashbuddy.platform.PlatformDiagnosticsProvider() }
+
+    viewModel { SettingsViewModel(get(), get(), get(), get(), get(), getOrNull(), getOrNull(), getOrNull(), getOrNull(), getOrNull(), getOrNull(), getOrNull(), getOrNull(), getOrNull()) }
     viewModel { PersonalizationViewModel(get(), get(), get(), get(), getOrNull(), getOrNull()) }
     viewModelOf(::AddTransactionViewModel)
     viewModel { DebugLogViewModel(get(), get(), getOrNull()) }

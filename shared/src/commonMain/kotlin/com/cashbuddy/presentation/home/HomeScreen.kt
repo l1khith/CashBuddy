@@ -293,7 +293,11 @@ fun HomeContent(
                         )
                     }
                 } else {
-                    items(state.recentTransactions, key = { it.id }) { tx ->
+                    items(
+                        items = state.recentTransactions,
+                        key = { it.id },
+                        contentType = { "transaction" }
+                    ) { tx ->
                         TransactionItemCard(
                             transaction = tx,
                             onClick = { onTransactionClick(tx.id) }

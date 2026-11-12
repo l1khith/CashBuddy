@@ -189,6 +189,9 @@ class TransactionNotificationListener : NotificationListenerService(), KoinCompo
                 )
 
                 val outcome = messagePipeline.ingest(rawMessage)
+                if (outcome !is com.cashbuddy.core.prob.PipelineOutcome.Ignored) {
+                    settingsRepository.setLastSyncTimestamp(postTime)
+                }
 
                 // 2. Training Data Pipeline: Record raw notification for banking apps or parsed transactions
                 val source = sourceDetector.detect(packageName, if (effectiveTitle.isNotBlank()) "$effectiveTitle: $text" else text)

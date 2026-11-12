@@ -43,6 +43,7 @@ class CashBuddyApplication : Application() {
         // unconditionally so it can never be cancelled by the notifications toggle
         // (previously disabling smart notifications left learned_token growing unbounded).
         com.cashbuddy.worker.AssistantWorkManager.scheduleTokenPurge(this)
+        com.cashbuddy.worker.AssistantWorkManager.scheduleRecurrenceWorker(this)
 
         // Observe smart notifications setting to schedule or cancel workers & persistent notification
         applicationScope.launch {
@@ -59,6 +60,18 @@ class CashBuddyApplication : Application() {
                 }
             } catch (e: Throwable) {
                 Log.e("CashBuddyApplication", "Failed to initialize Assistant workers", e)
+            }
+        }
+
+        // Observe daily wrap-up reminder time
+        applicationScope.launch {
+            try {
+                val settingsRepository: com.cashbuddy.domain.repository.SettingsRepository = get()
+                settingsRepository.getDailyWrapUpTime().collect { (hour, minute) ->
+                    com.cashbuddy.worker.AssistantWorkManager.scheduleDailyWrapUp(this@CashBuddyApplication, hour, minute)
+                }
+            } catch (e: Throwable) {
+                Log.e("CashBuddyApplication", "Failed to schedule daily wrap-up", e)
             }
         }
 
