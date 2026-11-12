@@ -254,7 +254,11 @@ fun BudgetListContent(
                             SectionHeader(title = stringResource(Res.string.budget_category_budgets_header))
                         }
                     }
-                    items(state.categoryBudgets, key = { it.budget.id }) { item ->
+                    items(
+                        items = state.categoryBudgets,
+                        key = { it.budget.id },
+                        contentType = { "category_budget" }
+                    ) { item ->
                         BudgetCard(
                             status = item,
                             isGlobal = false,

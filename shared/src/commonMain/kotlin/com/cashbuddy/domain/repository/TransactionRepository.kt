@@ -39,6 +39,7 @@ interface TransactionRepository {
     fun getMonthlySummary(): Flow<List<MonthlySummary>>
     fun getCategoryBreakdown(start: Long, end: Long): Flow<List<CategoryBreakdown>>
     suspend fun insert(transaction: Transaction): Long
+    suspend fun insertAll(transactions: List<Transaction>): List<Long> = transactions.map { insert(it) }
     suspend fun updateStatus(id: Long, status: TransactionStatus)
     suspend fun update(transaction: Transaction)
     suspend fun deleteById(id: Long)

@@ -84,7 +84,11 @@ object AssistantWorkManager {
      */
     fun scheduleRecurrenceWorker(context: Context) {
         val workManager = WorkManager.getInstance(context)
+        val constraints = androidx.work.Constraints.Builder()
+            .setRequiresBatteryNotLow(true)
+            .build()
         val recurrenceRequest = PeriodicWorkRequestBuilder<RecurrenceWorker>(24, TimeUnit.HOURS)
+            .setConstraints(constraints)
             .build()
         workManager.enqueueUniquePeriodicWork(
             RecurrenceWorker.WORK_NAME,
@@ -104,8 +108,12 @@ object AssistantWorkManager {
             targetHour = 2,
             targetMinute = 0
         )
+        val constraints = androidx.work.Constraints.Builder()
+            .setRequiresBatteryNotLow(true)
+            .build()
         val purgeRequest = PeriodicWorkRequestBuilder<TokenPurgeWorker>(7, TimeUnit.DAYS)
             .setInitialDelay(purgeDelay, TimeUnit.MILLISECONDS)
+            .setConstraints(constraints)
             .build()
 
         workManager.enqueueUniquePeriodicWork(

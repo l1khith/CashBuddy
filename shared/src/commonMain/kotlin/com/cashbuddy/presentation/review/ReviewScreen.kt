@@ -148,6 +148,30 @@ fun ReviewScreen(
                 }
             }
 
+            val onConfirmTx: (Long) -> Unit = androidx.compose.runtime.remember(viewModel) {
+                { id -> viewModel.processIntent(ReviewIntent.ConfirmTransaction(id)) }
+            }
+            val onRejectTx: (com.cashbuddy.domain.model.Transaction) -> Unit = androidx.compose.runtime.remember(viewModel) {
+                { tx ->
+                    viewModel.processIntent(ReviewIntent.RejectTransaction(tx.id))
+                    if (viewModel.onTransactionDiscarded(tx.sourceApp)) {
+                        packageToIgnorePrompt = tx.sourceApp
+                    }
+                }
+            }
+            val onEditTx: (Long) -> Unit = androidx.compose.runtime.remember {
+                { id -> editingTransactionId = id }
+            }
+            val onCategoryChangeTx: (Long, Long) -> Unit = androidx.compose.runtime.remember(viewModel) {
+                { txId, newCatId -> viewModel.processIntent(ReviewIntent.ModifyCategory(txId, newCatId)) }
+            }
+            val onPaymentMethodChangeTx: (Long, String) -> Unit = androidx.compose.runtime.remember(viewModel) {
+                { txId, method -> viewModel.updatePaymentMethod(txId, method) }
+            }
+            val onLoanStatusChangeTx: (Long, Boolean) -> Unit = androidx.compose.runtime.remember(viewModel) {
+                { txId, isLoan -> viewModel.toggleLoanStatus(txId, isLoan) }
+            }
+
             LazyColumn(
                 modifier = Modifier
                     .fillMaxSize()
@@ -266,27 +290,20 @@ fun ReviewScreen(
                         )
                     }
                 } else {
-                    items(filteredTransactions, key = { it.id }) { tx ->
+                    items(
+                        items = filteredTransactions,
+                        key = { it.id },
+                        contentType = { "pending_review_transaction" }
+                    ) { tx ->
                         PendingReviewCard(
                             transaction = tx,
                             allCategories = state.allCategories,
-                            onConfirm = { viewModel.processIntent(ReviewIntent.ConfirmTransaction(tx.id)) },
-                            onReject = {
-                                viewModel.processIntent(ReviewIntent.RejectTransaction(tx.id))
-                                if (viewModel.onTransactionDiscarded(tx.sourceApp)) {
-                                    packageToIgnorePrompt = tx.sourceApp
-                                }
-                            },
-                            onEdit = { editingTransactionId = tx.id },
-                            onCategoryChange = { newCatId ->
-                                viewModel.processIntent(ReviewIntent.ModifyCategory(tx.id, newCatId))
-                            },
-                            onPaymentMethodChange = { method ->
-                                viewModel.updatePaymentMethod(tx.id, method)
-                            },
-                            onLoanStatusChange = { isLoan ->
-                                viewModel.toggleLoanStatus(tx.id, isLoan)
-                            }
+                            onConfirm = { onConfirmTx(tx.id) },
+                            onReject = { onRejectTx(tx) },
+                            onEdit = { onEditTx(tx.id) },
+                            onCategoryChange = { newCatId -> onCategoryChangeTx(tx.id, newCatId) },
+                            onPaymentMethodChange = { method -> onPaymentMethodChangeTx(tx.id, method) },
+                            onLoanStatusChange = { isLoan -> onLoanStatusChangeTx(tx.id, isLoan) }
                         )
                     }
                 }

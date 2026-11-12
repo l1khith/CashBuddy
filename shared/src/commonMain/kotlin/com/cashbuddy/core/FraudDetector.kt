@@ -39,11 +39,11 @@ class FraudDetector(
         // suppress false anomalies immediately so routine habits are never flagged.
         if (recurringPatternRepository != null) {
             val patterns = recurringPatternRepository.findByMerchant(merchant)
+            val amountPaise = kotlin.math.round(amount * 100.0).toLong()
             val matchesRecurring = patterns.any { pattern ->
-                val patternAmount = pattern.amountPaise / 100.0
-                if (patternAmount > 0.0) {
-                    val diff = abs(amount - patternAmount)
-                    (diff / patternAmount) <= 0.10
+                if (pattern.amountPaise > 0L) {
+                    val diffPaise = abs(amountPaise - pattern.amountPaise)
+                    (diffPaise * 10L) <= pattern.amountPaise
                 } else {
                     false
                 }
@@ -99,10 +99,12 @@ class FraudDetector(
         val deviations = historicalAmounts.map { abs(it - median) }
         val mad = computeMedian(deviations)
 
-        if (mad == 0.0) {
+        if (mad < 1e-4) {
             val isAnomalous = if (median > 0.0 && amount != median) {
                 val ratio = abs(amount - median) / median
                 ratio >= 0.5
+            } else if (median == 0.0 && amount > 0.0) {
+                true
             } else {
                 false
             }
@@ -164,7 +166,8 @@ class FraudDetector(
     fun computePercentile(sortedValues: List<Double>, p: Double): Double {
         if (sortedValues.isEmpty()) return 0.0
         if (sortedValues.size == 1) return sortedValues[0]
-        val rank = (p / 100.0) * (sortedValues.size - 1)
+        val clampedP = p.coerceIn(0.0, 100.0)
+        val rank = (clampedP / 100.0) * (sortedValues.size - 1)
         val lower = rank.toInt()
         val upper = minOf(lower + 1, sortedValues.size - 1)
         val fraction = rank - lower

@@ -275,7 +275,11 @@ fun StatsContent(
                         )
                     }
                 } else {
-                    items(state.categoryBreakdowns, key = { it.breakdown.categoryName }) { catItem ->
+                    items(
+                        items = state.categoryBreakdowns,
+                        key = { it.breakdown.categoryName },
+                        contentType = { "category_breakdown" }
+                    ) { catItem ->
                         CategorySpendingRow(
                             catItem = catItem,
                             selectedPeriod = state.selectedPeriod,

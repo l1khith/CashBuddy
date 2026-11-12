@@ -5,19 +5,25 @@ import com.cashbuddy.domain.model.RecurringPattern
 import com.cashbuddy.domain.repository.RecurringPatternRepository
 import com.cashbuddy.domain.repository.TransactionRepository
 import com.cashbuddy.platform.currentTimeMillis
+import com.cashbuddy.platform.ioDispatcher
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.firstOrNull
+import kotlinx.coroutines.withContext
 
 class DetectAndStoreRecurrencesUseCase(
     private val transactionRepository: TransactionRepository,
     private val recurringPatternRepository: RecurringPatternRepository
 ) {
-    suspend operator fun invoke(now: Long = currentTimeMillis()): List<RecurringPattern> {
-        val thirtyDaysAgo = now - RecurrenceDetector.WINDOW_MS
-        val transactions = transactionRepository.getByDateRange(thirtyDaysAgo, now).firstOrNull() ?: emptyList()
-        val patterns = RecurrenceDetector.detect(transactions, now)
-        if (patterns.isNotEmpty()) {
-            recurringPatternRepository.upsertAll(patterns)
+    suspend operator fun invoke(now: Long = currentTimeMillis()): List<RecurringPattern> =
+        withContext(ioDispatcher) {
+            val windowStart = now - RecurrenceDetector.WINDOW_MS
+            val transactions = transactionRepository.getByDateRange(windowStart, now).firstOrNull() ?: emptyList()
+            val patterns = withContext(Dispatchers.Default) {
+                RecurrenceDetector.detect(transactions, now)
+            }
+            if (patterns.isNotEmpty()) {
+                recurringPatternRepository.upsertAll(patterns)
+            }
+            patterns
         }
-        return patterns
-    }
 }

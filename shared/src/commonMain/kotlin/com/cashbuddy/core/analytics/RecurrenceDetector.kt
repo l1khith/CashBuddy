@@ -22,7 +22,7 @@ import kotlin.math.sqrt
  */
 object RecurrenceDetector {
 
-    const val WINDOW_DAYS: Int = 30
+    const val WINDOW_DAYS: Int = 90
     const val WINDOW_MS: Long = WINDOW_DAYS * 24L * 3600_000L
 
     const val MIN_TOTAL_COUNT: Int = 4
@@ -91,6 +91,7 @@ object RecurrenceDetector {
 
         val variance = intervals.sumOf { (it - mean) * (it - mean) } / intervals.size.toDouble()
         val fanoFactor = variance / mean
+        val cv = sqrt(variance) / mean
 
         val detectedPeriod = when {
             abs(mean - 12.0) <= 2.5 -> 12
@@ -100,7 +101,7 @@ object RecurrenceDetector {
             else -> null
         }
 
-        val isRecurring = fanoFactor < 0.3 && detectedPeriod != null
+        val isRecurring = (cv <= MAX_CV || fanoFactor < 0.3) && detectedPeriod != null
 
         return PointProcessResult(
             meanIATHours = mean,
