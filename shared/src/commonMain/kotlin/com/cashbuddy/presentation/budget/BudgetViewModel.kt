@@ -74,9 +74,9 @@ class BudgetViewModel(
         try {
             val now = com.cashbuddy.platform.currentTimeMillis()
             val activeBudgets = budgetRepository.getActive()
-            val statuses = activeBudgets.map { budget ->
-                budgetEngine.statusFor(budget, now)
-            }
+            // Audit fix P2: batched computation — one period-range query per DISTINCT
+            // period instead of ~4 queries per budget.
+            val statuses = budgetEngine.statusesFor(activeBudgets, now)
             val global = statuses.firstOrNull { it.budget.category == BudgetCategories.GLOBAL }
             val categoriesOnly = statuses.filter { it.budget.category != BudgetCategories.GLOBAL }
             val unbudgeted = if (global == null) 0.0 else global.spent - categoriesOnly.sumOf { it.spent }

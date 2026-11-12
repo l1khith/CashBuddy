@@ -12,8 +12,17 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import cashbuddy.shared.generated.resources.Res
 import cashbuddy.shared.generated.resources.ic_add
+import cashbuddy.shared.generated.resources.budget_add_action
+import cashbuddy.shared.generated.resources.budget_category_budgets_header
+import cashbuddy.shared.generated.resources.budget_empty_subtitle
+import cashbuddy.shared.generated.resources.budget_empty_title
+import cashbuddy.shared.generated.resources.budget_set_first_action
+import cashbuddy.shared.generated.resources.budget_unbudgeted_desc
+import cashbuddy.shared.generated.resources.budget_unbudgeted_header
+import cashbuddy.shared.generated.resources.budget_unbudgeted_title
 import cashbuddy.shared.generated.resources.ic_pie_chart
 import org.jetbrains.compose.resources.painterResource
+import org.jetbrains.compose.resources.stringResource
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -148,13 +157,13 @@ fun UnbudgetedCard(
         ) {
             Column {
                 Text(
-                    text = "Unbudgeted",
+                    text = stringResource(Res.string.budget_unbudgeted_title),
                     style = CashBuddyTypography.titleMedium,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onSurface
                 )
                 Text(
-                    text = "Spending outside tracked categories",
+                    text = stringResource(Res.string.budget_unbudgeted_desc),
                     style = CashBuddyTypography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -177,6 +186,7 @@ fun BudgetListContent(
     onAddBudgetClick: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
+    val addBudgetDesc = stringResource(Res.string.budget_add_action)
     Scaffold(
         modifier = modifier.fillMaxSize(),
         floatingActionButton = {
@@ -187,7 +197,7 @@ fun BudgetListContent(
             ) {
                 Icon(
                     painter = painterResource(Res.drawable.ic_add),
-                    contentDescription = "Add Budget",
+                    contentDescription = addBudgetDesc,
                     tint = Color.White
                 )
             }
@@ -211,9 +221,9 @@ fun BudgetListContent(
             ) {
                 EmptyStateView(
                     painter = painterResource(Res.drawable.ic_pie_chart),
-                    title = "No Budgets Yet",
-                    subtitle = "Set spending limits for categories to stay in control of your monthly expenses.",
-                    actionButtonText = "Set First Budget",
+                    title = stringResource(Res.string.budget_empty_title),
+                    subtitle = stringResource(Res.string.budget_empty_subtitle),
+                    actionButtonText = stringResource(Res.string.budget_set_first_action),
                     onActionClick = onAddBudgetClick
                 )
             }
@@ -241,7 +251,7 @@ fun BudgetListContent(
                 if (state.categoryBudgets.isNotEmpty()) {
                     if (state.globalBudget != null) {
                         item(key = "header_categories") {
-                            SectionHeader(title = "Category Budgets")
+                            SectionHeader(title = stringResource(Res.string.budget_category_budgets_header))
                         }
                     }
                     items(state.categoryBudgets, key = { it.budget.id }) { item ->
@@ -257,7 +267,7 @@ fun BudgetListContent(
                 // 3. Unbudgeted Spending section (shown only when both global and category budgets exist)
                 if (state.globalBudget != null && state.categoryBudgets.isNotEmpty()) {
                     item(key = "header_unbudgeted") {
-                        SectionHeader(title = "Unbudgeted Spending")
+                        SectionHeader(title = stringResource(Res.string.budget_unbudgeted_header))
                     }
                     item(key = "unbudgeted_card") {
                         UnbudgetedCard(unbudgetedSpent = state.unbudgetedSpent)

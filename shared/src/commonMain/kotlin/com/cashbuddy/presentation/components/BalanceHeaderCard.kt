@@ -15,12 +15,18 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import cashbuddy.shared.generated.resources.Res
+import cashbuddy.shared.generated.resources.balance_action_hide
+import cashbuddy.shared.generated.resources.balance_action_show
+import cashbuddy.shared.generated.resources.balance_period_in
+import cashbuddy.shared.generated.resources.balance_period_out
+import cashbuddy.shared.generated.resources.balance_total_active
 import cashbuddy.shared.generated.resources.ic_trending_down
 import cashbuddy.shared.generated.resources.ic_trending_up
 import cashbuddy.shared.generated.resources.ic_visibility
 import cashbuddy.shared.generated.resources.ic_visibility_off
 import org.jetbrains.compose.resources.DrawableResource
 import org.jetbrains.compose.resources.painterResource
+import org.jetbrains.compose.resources.stringResource
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
@@ -99,7 +105,7 @@ fun BalanceHeader(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        text = "Total Active Balance",
+                        text = stringResource(Res.string.balance_total_active),
                         style = CashBuddyTypography.titleMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -111,15 +117,16 @@ fun BalanceHeader(
                             .clickable { isBalanceVisible = !isBalanceVisible }
                             .padding(horizontal = 8.dp, vertical = 6.dp)
                     ) {
+                        val visibilityDesc = stringResource(if (isBalanceVisible) Res.string.balance_action_hide else Res.string.balance_action_show)
                         Icon(
                             painter = painterResource(if (isBalanceVisible) Res.drawable.ic_visibility_off else Res.drawable.ic_visibility),
-                            contentDescription = if (isBalanceVisible) "Hide" else "Show",
+                            contentDescription = visibilityDesc,
                             tint = MaterialTheme.colorScheme.primary,
                             modifier = Modifier.size(16.dp)
                         )
                         Spacer(modifier = Modifier.width(4.dp))
                         Text(
-                            text = if (isBalanceVisible) "Hide" else "Show",
+                            text = visibilityDesc,
                             style = CashBuddyTypography.labelMedium,
                             color = MaterialTheme.colorScheme.primary
                         )
@@ -142,7 +149,7 @@ fun BalanceHeader(
                 ) {
                     // Income Metric Card
                     BalanceMetricCard(
-                        label = "${selectedPeriod.displayName} In",
+                        label = stringResource(Res.string.balance_period_in, selectedPeriod.displayName),
                         amount = monthlyIncome,
                         icon = Res.drawable.ic_trending_up,
                         accentColor = AccentEmerald,
@@ -151,7 +158,7 @@ fun BalanceHeader(
 
                     // Expense Metric Card
                     BalanceMetricCard(
-                        label = "${selectedPeriod.displayName} Out",
+                        label = stringResource(Res.string.balance_period_out, selectedPeriod.displayName),
                         amount = monthlyExpense,
                         icon = Res.drawable.ic_trending_down,
                         accentColor = DangerRed,

@@ -26,9 +26,46 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import cashbuddy.shared.generated.resources.Res
+import cashbuddy.shared.generated.resources.action_cancel
+import cashbuddy.shared.generated.resources.action_clear_search
+import cashbuddy.shared.generated.resources.action_reset_all
+import cashbuddy.shared.generated.resources.action_search
+import cashbuddy.shared.generated.resources.date_range_apply
+import cashbuddy.shared.generated.resources.date_range_from
+import cashbuddy.shared.generated.resources.date_range_or_specific
+import cashbuddy.shared.generated.resources.date_range_preset_30d
+import cashbuddy.shared.generated.resources.date_range_preset_6m
+import cashbuddy.shared.generated.resources.date_range_preset_7d
+import cashbuddy.shared.generated.resources.date_range_preset_90d
+import cashbuddy.shared.generated.resources.date_range_presets
+import cashbuddy.shared.generated.resources.date_range_title
+import cashbuddy.shared.generated.resources.date_range_to
+import cashbuddy.shared.generated.resources.dialog_edit_tx_category_label
+import cashbuddy.shared.generated.resources.dialog_edit_tx_save_changes
+import cashbuddy.shared.generated.resources.dialog_edit_tx_title
+import cashbuddy.shared.generated.resources.dialog_ok
 import cashbuddy.shared.generated.resources.ic_calendar_today
+import cashbuddy.shared.generated.resources.ic_filter_list
 import cashbuddy.shared.generated.resources.ic_search
+import cashbuddy.shared.generated.resources.tx_filter_all_categories
+import cashbuddy.shared.generated.resources.tx_filter_amount_range
+import cashbuddy.shared.generated.resources.tx_filter_apply
+import cashbuddy.shared.generated.resources.tx_filter_max_amount
+import cashbuddy.shared.generated.resources.tx_filter_min_amount
+import cashbuddy.shared.generated.resources.tx_filter_title
+import cashbuddy.shared.generated.resources.tx_general_category
+import cashbuddy.shared.generated.resources.tx_list_empty_subtitle
+import cashbuddy.shared.generated.resources.tx_list_empty_title
+import cashbuddy.shared.generated.resources.tx_list_filter_all_types
+import cashbuddy.shared.generated.resources.tx_list_filter_expenses
+import cashbuddy.shared.generated.resources.tx_list_filter_income
+import cashbuddy.shared.generated.resources.tx_list_search_placeholder
+import cashbuddy.shared.generated.resources.tx_list_title
+import cashbuddy.shared.generated.resources.tx_list_total_count
+import cashbuddy.shared.generated.resources.tx_list_total_received
+import cashbuddy.shared.generated.resources.tx_list_total_spent
 import org.jetbrains.compose.resources.painterResource
+import org.jetbrains.compose.resources.stringResource
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
@@ -66,6 +103,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.cashbuddy.domain.model.DateRangeHelper
 import com.cashbuddy.domain.model.TimePeriod
 import com.cashbuddy.domain.model.TransactionType
 import com.cashbuddy.platform.currentTimeMillis
@@ -134,7 +172,7 @@ fun TransactionListScreen(
                     verticalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
                     Text(
-                        text = "Transactions",
+                        text = stringResource(Res.string.tx_list_title),
                         style = CashBuddyTypography.headlineMedium,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onBackground
@@ -150,11 +188,11 @@ fun TransactionListScreen(
                             value = state.searchQuery,
                             onValueChange = { viewModel.onSearchQueryChanged(it) },
                             modifier = Modifier.weight(1f),
-                            placeholder = { Text("Search merchant, note, or raw text...", style = CashBuddyTypography.bodyMedium) },
+                            placeholder = { Text(stringResource(Res.string.tx_list_search_placeholder), style = CashBuddyTypography.bodyMedium) },
                             leadingIcon = {
                                 Icon(
                                     painter = painterResource(Res.drawable.ic_search),
-                                    contentDescription = "Search",
+                                    contentDescription = stringResource(Res.string.action_search),
                                     tint = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                             },
@@ -163,7 +201,7 @@ fun TransactionListScreen(
                                     IconButton(onClick = { viewModel.onSearchQueryChanged("") }) {
                                         Icon(
                                             imageVector = Icons.Default.Close,
-                                            contentDescription = "Clear search",
+                                            contentDescription = stringResource(Res.string.action_clear_search),
                                             tint = MaterialTheme.colorScheme.onSurfaceVariant
                                         )
                                     }
@@ -186,7 +224,7 @@ fun TransactionListScreen(
                         ) {
                             Icon(
                                 painter = painterResource(Res.drawable.ic_filter_list),
-                                contentDescription = "Advanced Filters",
+                                contentDescription = stringResource(Res.string.tx_filter_title),
                                 tint = if (hasActiveFilters) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
@@ -214,7 +252,7 @@ fun TransactionListScreen(
                                     {
                                         Icon(
                                             painter = painterResource(Res.drawable.ic_calendar_today),
-                                            contentDescription = "Custom Date Range",
+                                            contentDescription = stringResource(Res.string.date_range_title),
                                             modifier = Modifier.size(14.dp),
                                             tint = if (isSelected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.primary
                                         )
@@ -232,17 +270,17 @@ fun TransactionListScreen(
                         PaisaPalFilterChip(
                             selected = state.selectedType == null,
                             onClick = { viewModel.onTypeSelected(null) },
-                            label = "All Types"
+                            label = stringResource(Res.string.tx_list_filter_all_types)
                         )
                         PaisaPalFilterChip(
                             selected = state.selectedType == TransactionType.DEBIT,
                             onClick = { viewModel.onTypeSelected(TransactionType.DEBIT) },
-                            label = "Expenses (Debits)"
+                            label = stringResource(Res.string.tx_list_filter_expenses)
                         )
                         PaisaPalFilterChip(
                             selected = state.selectedType == TransactionType.CREDIT,
                             onClick = { viewModel.onTypeSelected(TransactionType.CREDIT) },
-                            label = "Income (Credits)"
+                            label = stringResource(Res.string.tx_list_filter_income)
                         )
                     }
 
@@ -265,7 +303,7 @@ fun TransactionListScreen(
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Text(
-                                text = "${state.totalCount} transactions",
+                                text = stringResource(Res.string.tx_list_total_count, state.totalCount),
                                 style = CashBuddyTypography.labelMedium,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -273,7 +311,7 @@ fun TransactionListScreen(
                             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                                 if (state.totalDebit > 0) {
                                     Text(
-                                        text = "Spent: ₹${formatCurrency(state.totalDebit)}",
+                                        text = stringResource(Res.string.tx_list_total_spent, formatCurrency(state.totalDebit)),
                                         style = CashBuddyTypography.labelMedium,
                                         fontWeight = FontWeight.SemiBold,
                                         color = DangerRed
@@ -281,7 +319,7 @@ fun TransactionListScreen(
                                 }
                                 if (state.totalCredit > 0) {
                                     Text(
-                                        text = "Income: ₹${formatCurrency(state.totalCredit)}",
+                                        text = stringResource(Res.string.tx_list_total_received, formatCurrency(state.totalCredit)),
                                         style = CashBuddyTypography.labelMedium,
                                         fontWeight = FontWeight.SemiBold,
                                         color = AccentEmerald
@@ -302,11 +340,12 @@ fun TransactionListScreen(
                     ) {
                         EmptyStateView(
                             painter = painterResource(Res.drawable.ic_search),
-                            title = "No matching transactions",
-                            subtitle = "Try adjusting your search query, type filter, or selected time period."
+                            title = stringResource(Res.string.tx_list_empty_title),
+                            subtitle = stringResource(Res.string.tx_list_empty_subtitle)
                         )
                     }
                 } else {
+                    val generalCat = stringResource(Res.string.tx_general_category)
                     LazyColumn(
                         state = listState,
                         modifier = Modifier.fillMaxSize(),
@@ -320,7 +359,7 @@ fun TransactionListScreen(
                         ) { tx ->
                             TransactionCard(
                                 transaction = tx,
-                                categoryName = tx.categoryName ?: "General",
+                                categoryName = tx.categoryName ?: generalCat,
                                 onClick = { onNavigateToDetail(tx.id) },
                                 onLongClick = { viewModel.onStartEditTransaction(tx) }
                             )
@@ -356,8 +395,8 @@ fun TransactionListScreen(
             initialMerchant = txToEdit.merchant,
             initialCategoryId = txToEdit.categoryId,
             categories = state.categories,
-            title = "Edit Transaction",
-            confirmButtonText = "Save Changes",
+            title = stringResource(Res.string.dialog_edit_tx_title),
+            confirmButtonText = stringResource(Res.string.dialog_edit_tx_save_changes),
             onDismiss = { viewModel.onDismissEditTransaction() },
             onConfirm = { amount, type, merchant, categoryId ->
                 viewModel.updateTransaction(
@@ -394,7 +433,7 @@ fun TransactionListScreen(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        text = "Filter Transactions",
+                        text = stringResource(Res.string.tx_filter_title),
                         style = CashBuddyTypography.titleLarge,
                         fontWeight = FontWeight.Bold
                     )
@@ -406,12 +445,12 @@ fun TransactionListScreen(
                             maxAmtText = ""
                         }
                     ) {
-                        Text("Reset All")
+                        Text(stringResource(Res.string.action_reset_all))
                     }
                 }
 
                 Text(
-                    text = "Amount Range (₹)",
+                    text = stringResource(Res.string.tx_filter_amount_range),
                     style = CashBuddyTypography.labelMedium,
                     fontWeight = FontWeight.SemiBold,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -425,7 +464,7 @@ fun TransactionListScreen(
                         value = minAmtText,
                         onValueChange = { minAmtText = it.filter { ch -> ch.isDigit() || ch == '.' } },
                         modifier = Modifier.weight(1f),
-                        label = { Text("Min Amount") },
+                        label = { Text(stringResource(Res.string.tx_filter_min_amount)) },
                         placeholder = { Text("0") },
                         singleLine = true,
                         shape = RadiusMedium
@@ -434,7 +473,7 @@ fun TransactionListScreen(
                         value = maxAmtText,
                         onValueChange = { maxAmtText = it.filter { ch -> ch.isDigit() || ch == '.' } },
                         modifier = Modifier.weight(1f),
-                        label = { Text("Max Amount") },
+                        label = { Text(stringResource(Res.string.tx_filter_max_amount)) },
                         placeholder = { Text("No limit") },
                         singleLine = true,
                         shape = RadiusMedium
@@ -442,7 +481,7 @@ fun TransactionListScreen(
                 }
 
                 Text(
-                    text = "Category",
+                    text = stringResource(Res.string.dialog_edit_tx_category_label),
                     style = CashBuddyTypography.labelMedium,
                     fontWeight = FontWeight.SemiBold,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -457,7 +496,7 @@ fun TransactionListScreen(
                     FilterChip(
                         selected = state.selectedCategoryId == null,
                         onClick = { viewModel.onCategorySelected(null) },
-                        label = { Text("All Categories") }
+                        label = { Text(stringResource(Res.string.tx_filter_all_categories)) }
                     )
                     state.categories.forEach { cat ->
                         FilterChip(
@@ -487,7 +526,7 @@ fun TransactionListScreen(
                     modifier = Modifier.fillMaxWidth(),
                     shape = RadiusMedium
                 ) {
-                    Text("Apply Filters")
+                    Text(stringResource(Res.string.tx_filter_apply))
                 }
                 Spacer(modifier = Modifier.height(16.dp))
             }
@@ -525,7 +564,7 @@ private fun CustomDateRangeDialog(
         onDismissRequest = onDismiss,
         title = {
             Text(
-                text = "Select Custom Date Range",
+                text = stringResource(Res.string.date_range_title),
                 style = CashBuddyTypography.titleLarge,
                 fontWeight = FontWeight.Bold
             )
@@ -537,7 +576,7 @@ private fun CustomDateRangeDialog(
             ) {
                 // Quick Presets
                 Text(
-                    text = "Quick Presets",
+                    text = stringResource(Res.string.date_range_presets),
                     style = CashBuddyTypography.labelMedium,
                     fontWeight = FontWeight.SemiBold,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -551,13 +590,13 @@ private fun CustomDateRangeDialog(
                         onClick = { onRangeSelected(now - (7L * oneDayMs), now) },
                         modifier = Modifier.weight(1f)
                     ) {
-                        Text("Last 7 Days", fontSize = 12.sp)
+                        Text(stringResource(Res.string.date_range_preset_7d), fontSize = 12.sp)
                     }
                     OutlinedButton(
                         onClick = { onRangeSelected(now - (30L * oneDayMs), now) },
                         modifier = Modifier.weight(1f)
                     ) {
-                        Text("Last 30 Days", fontSize = 12.sp)
+                        Text(stringResource(Res.string.date_range_preset_30d), fontSize = 12.sp)
                     }
                 }
 
@@ -569,13 +608,13 @@ private fun CustomDateRangeDialog(
                         onClick = { onRangeSelected(now - (90L * oneDayMs), now) },
                         modifier = Modifier.weight(1f)
                     ) {
-                        Text("Last 90 Days", fontSize = 12.sp)
+                        Text(stringResource(Res.string.date_range_preset_90d), fontSize = 12.sp)
                     }
                     OutlinedButton(
                         onClick = { onRangeSelected(now - (180L * oneDayMs), now) },
                         modifier = Modifier.weight(1f)
                     ) {
-                        Text("Last 6 Months", fontSize = 12.sp)
+                        Text(stringResource(Res.string.date_range_preset_6m), fontSize = 12.sp)
                     }
                 }
 
@@ -583,7 +622,7 @@ private fun CustomDateRangeDialog(
 
                 // Specific Date Range Picker Section
                 Text(
-                    text = "Or Specific Dates",
+                    text = stringResource(Res.string.date_range_or_specific),
                     style = CashBuddyTypography.labelMedium,
                     fontWeight = FontWeight.SemiBold,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -594,6 +633,7 @@ private fun CustomDateRangeDialog(
                     horizontalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
                     // Start Date Selector
+                    val fromDateLabel = stringResource(Res.string.date_range_from)
                     OutlinedCard(
                         onClick = { isPickingStartDate = true },
                         modifier = Modifier.weight(1f),
@@ -601,7 +641,7 @@ private fun CustomDateRangeDialog(
                     ) {
                         Column(modifier = Modifier.padding(10.dp)) {
                             Text(
-                                text = "From Date",
+                                text = fromDateLabel,
                                 style = CashBuddyTypography.labelSmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -609,7 +649,7 @@ private fun CustomDateRangeDialog(
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Icon(
                                     painter = painterResource(Res.drawable.ic_calendar_today),
-                                    contentDescription = "From Date",
+                                    contentDescription = fromDateLabel,
                                     modifier = Modifier.size(14.dp),
                                     tint = MaterialTheme.colorScheme.primary
                                 )
@@ -624,6 +664,7 @@ private fun CustomDateRangeDialog(
                     }
 
                     // End Date Selector
+                    val toDateLabel = stringResource(Res.string.date_range_to)
                     OutlinedCard(
                         onClick = { isPickingEndDate = true },
                         modifier = Modifier.weight(1f),
@@ -631,7 +672,7 @@ private fun CustomDateRangeDialog(
                     ) {
                         Column(modifier = Modifier.padding(10.dp)) {
                             Text(
-                                text = "To Date",
+                                text = toDateLabel,
                                 style = CashBuddyTypography.labelSmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -639,7 +680,7 @@ private fun CustomDateRangeDialog(
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Icon(
                                     painter = painterResource(Res.drawable.ic_calendar_today),
-                                    contentDescription = "To Date",
+                                    contentDescription = toDateLabel,
                                     modifier = Modifier.size(14.dp),
                                     tint = MaterialTheme.colorScheme.primary
                                 )
@@ -656,21 +697,26 @@ private fun CustomDateRangeDialog(
 
                 Button(
                     onClick = {
-                        val start = minOf(startDateMillis, endDateMillis)
-                        val end = maxOf(startDateMillis, endDateMillis) + (oneDayMs - 1)
-                        onRangeSelected(start, end)
+                        // Audit fix 1.2: Material3's DatePicker yields UTC-midnight millis; using
+                        // them raw skewed the queried window by the local UTC offset (e.g. IST
+                        // excluded the first 05:30 of the start day and included 05:30 of the day
+                        // after the end day). Query bounds are now true LOCAL day bounds of the
+                        // picked calendar days (DST-safe, derived from the calendar date).
+                        val startRange = DateRangeHelper.localDayBounds(minOf(startDateMillis, endDateMillis))
+                        val endRange = DateRangeHelper.localDayBounds(maxOf(startDateMillis, endDateMillis))
+                        onRangeSelected(startRange.startTimestamp, endRange.endTimestamp)
                     },
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(8.dp)
                 ) {
-                    Text("Apply Range")
+                    Text(stringResource(Res.string.date_range_apply))
                 }
             }
         },
         confirmButton = {},
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("Cancel")
+                Text(stringResource(Res.string.action_cancel))
             }
         }
     )
@@ -678,7 +724,7 @@ private fun CustomDateRangeDialog(
     // Start Date Picker Modal
     if (isPickingStartDate) {
         val datePickerState = rememberDatePickerState(
-            initialSelectedDateMillis = startDateMillis
+            initialSelectedDateMillis = DateRangeHelper.localMillisToUtcPickerMillis(startDateMillis)
         )
         DatePickerDialog(
             onDismissRequest = { isPickingStartDate = false },
@@ -686,17 +732,19 @@ private fun CustomDateRangeDialog(
                 TextButton(
                     onClick = {
                         datePickerState.selectedDateMillis?.let {
-                            startDateMillis = it
+                            // Store LOCAL midnight of the picked day so the chip label
+                            // (formatted in local time) matches the queried window.
+                            startDateMillis = DateRangeHelper.utcPickerMillisToLocalStartOfDay(it)
                         }
                         isPickingStartDate = false
                     }
                 ) {
-                    Text("OK")
+                    Text(stringResource(Res.string.dialog_ok))
                 }
             },
             dismissButton = {
                 TextButton(onClick = { isPickingStartDate = false }) {
-                    Text("Cancel")
+                    Text(stringResource(Res.string.action_cancel))
                 }
             }
         ) {
@@ -707,7 +755,7 @@ private fun CustomDateRangeDialog(
     // End Date Picker Modal
     if (isPickingEndDate) {
         val datePickerState = rememberDatePickerState(
-            initialSelectedDateMillis = endDateMillis
+            initialSelectedDateMillis = DateRangeHelper.localMillisToUtcPickerMillis(endDateMillis)
         )
         DatePickerDialog(
             onDismissRequest = { isPickingEndDate = false },
@@ -715,17 +763,17 @@ private fun CustomDateRangeDialog(
                 TextButton(
                     onClick = {
                         datePickerState.selectedDateMillis?.let {
-                            endDateMillis = it
+                            endDateMillis = DateRangeHelper.utcPickerMillisToLocalStartOfDay(it)
                         }
                         isPickingEndDate = false
                     }
                 ) {
-                    Text("OK")
+                    Text(stringResource(Res.string.dialog_ok))
                 }
             },
             dismissButton = {
                 TextButton(onClick = { isPickingEndDate = false }) {
-                    Text("Cancel")
+                    Text(stringResource(Res.string.action_cancel))
                 }
             }
         ) {

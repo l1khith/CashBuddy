@@ -22,11 +22,22 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import cashbuddy.shared.generated.resources.Res
+import cashbuddy.shared.generated.resources.action_see_all
+import cashbuddy.shared.generated.resources.home_action_review
+import cashbuddy.shared.generated.resources.home_add_first_tx
+import cashbuddy.shared.generated.resources.home_budgets_desc
+import cashbuddy.shared.generated.resources.home_budgets_title
+import cashbuddy.shared.generated.resources.home_empty_subtitle
+import cashbuddy.shared.generated.resources.home_empty_title
+import cashbuddy.shared.generated.resources.home_pending_review_desc
+import cashbuddy.shared.generated.resources.home_pending_review_title
+import cashbuddy.shared.generated.resources.home_recent_transactions
 import cashbuddy.shared.generated.resources.ic_cashbuddy_logo
 import cashbuddy.shared.generated.resources.ic_pie_chart
 import cashbuddy.shared.generated.resources.ic_receipt_long
 import cashbuddy.shared.generated.resources.ic_warning
 import org.jetbrains.compose.resources.painterResource
+import org.jetbrains.compose.resources.stringResource
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -174,13 +185,13 @@ fun HomeContent(
                                 Spacer(modifier = Modifier.width(12.dp))
                                 Column {
                                     Text(
-                                        text = "Budgets",
+                                        text = stringResource(Res.string.home_budgets_title),
                                         style = MaterialTheme.typography.titleMedium,
                                         fontWeight = FontWeight.Bold,
                                         color = MaterialTheme.colorScheme.onSurface
                                     )
                                     Text(
-                                        text = "Track and control category spending limits",
+                                        text = stringResource(Res.string.home_budgets_desc),
                                         style = MaterialTheme.typography.bodySmall,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant
                                     )
@@ -228,13 +239,13 @@ fun HomeContent(
                                     Spacer(modifier = Modifier.width(12.dp))
                                     Column {
                                         Text(
-                                            text = "${state.unreviewedCount} Pending Review",
+                                            text = stringResource(Res.string.home_pending_review_title, state.unreviewedCount),
                                             style = MaterialTheme.typography.titleMedium,
                                             fontWeight = FontWeight.Bold,
                                             color = MaterialTheme.colorScheme.onSurface
                                         )
                                         Text(
-                                            text = "Tap to verify categorized transactions",
+                                            text = stringResource(Res.string.home_pending_review_desc),
                                             style = MaterialTheme.typography.bodySmall,
                                             color = MaterialTheme.colorScheme.onSurfaceVariant
                                         )
@@ -243,7 +254,7 @@ fun HomeContent(
 
                                 Row(verticalAlignment = Alignment.CenterVertically) {
                                     Text(
-                                        text = "Review",
+                                        text = stringResource(Res.string.home_action_review),
                                         style = MaterialTheme.typography.labelLarge,
                                         fontWeight = FontWeight.Bold,
                                         color = WarningAmber
@@ -264,8 +275,8 @@ fun HomeContent(
                 // Recent Activity Header
                 item {
                     PaisaPalSectionHeader(
-                        title = "Recent Transactions",
-                        actionText = "See All",
+                        title = stringResource(Res.string.home_recent_transactions),
+                        actionText = stringResource(Res.string.action_see_all),
                         onActionClick = onNavigateToAllTransactions
                     )
                 }
@@ -275,9 +286,9 @@ fun HomeContent(
                     item {
                         EmptyStateView(
                             painter = painterResource(Res.drawable.ic_receipt_long),
-                            title = "No activity for ${state.selectedPeriod.displayName.lowercase()}",
-                            subtitle = "Transactions from bank and UPI notifications will appear here automatically.",
-                            actionButtonText = "Add First Transaction",
+                            title = stringResource(Res.string.home_empty_title, state.selectedPeriod.displayName.lowercase()),
+                            subtitle = stringResource(Res.string.home_empty_subtitle),
+                            actionButtonText = stringResource(Res.string.home_add_first_tx),
                             onActionClick = onAddTransactionClick
                         )
                     }

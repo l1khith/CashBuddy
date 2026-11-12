@@ -50,3 +50,23 @@
 - **Context**: The Rust/UniFFI/JNA hybrid architecture resulted in `UnsatisfiedLinkError` on Android OEM ROMs (ColorOS/Oppo/Xiaomi), slow multi-architecture builds, heavy `.so` binary bloat, and fragile JNI crossings. Furthermore, the Rust code was only performing regex matching and map lookups, which Kotlin executes just as fast without any JNI overhead.
 - **Decision**: Completely strip out Rust, UniFFI, and JNA. Implement `NotificationParser`, `CategoryEngine`, `ScreenshotParserEngine`, `DedupEngine`, and `FraudDetector` in `shared/commonMain` in 100% pure Kotlin.
 - **Outcome**: 100% crash-free runtime across all devices, zero NDK compilation overhead, instant builds, and a clean, maintainable KMP architecture.
+
+### ADR-009: Atomic Multi-Table Write Clusters via Dedicated Stores (2026-11 Production Audit)
+- **Context**: The 2026-11 production-readiness audit found that multi-table write flows (duplicate merge, survivor delete, clear-all, ingest+audit-link) ran as separate SQLDelight transactions from repositories/ViewModels. A crash mid-flow left half-committed states: ghost merged rows, orphaned merge_log entries, half-reset user data, wrong `last_insert_rowid()` under concurrency.
+- **Decision**: Cross-table write flows live in dedicated atomic stores that execute the WHOLE flow in one driver-level SQLDelight transaction: `TransactionIngestStore`, `SqlDelightMergeStore` (`MergeTransactionStore`), `SqlDelightDataResetStore` (`DataResetStore`). Transaction bodies MUST stay free of suspend calls and dispatcher hops (SQLDelight transactions are thread-bound). Repositories become pure orchestration; ViewModels never sequence multi-repo writes for destructive flows.
+- **Consequence**: Any future multi-table write must follow this pattern; single-table writes may stay in their repository.
+
+### ADR-010: Batched Budget Status Computation (2026-11 Production Audit)
+- **Context**: `BudgetEngine.statusFor` issued ~4 queries per budget; `BudgetViewModel` re-ran it for every budget on every `transactionUpdates` emission (N+1).
+- **Decision**: `BudgetEngine.statusesFor(budgets, now)` fetches the period's transactions ONCE per DISTINCT period and derives every budget from the shared list via a single `computeStatus` core whose filters exactly mirror `sumAll`/`sumByCategory`/`getByDateRange` SQL semantics. Single-budget `statusFor` shares the same core.
+- **Consequence**: Test fakes for `TransactionRepository` used with BudgetEngine MUST implement `getByDateRange` faithfully (timestamp range + `is_merged = 0`), not return empty lists.
+
+---
+
+## 4. Open Decisions Deferred to Product Owner (2026-11 Audit Follow-up)
+
+1. **Full `.sqm` migration collapse** — schema v4 columns (`is_merged`, `merged_into_id`, `payment_method`, `is_loan_given`, `merge_log`) are currently created by the guarded runtime patcher in `DatabaseDriverFactory.runMigrations` because NO `4.sqm` exists; users upgrading from v≤3 depend on the patcher. Collapsing into `4.sqm` would crash existing v4 installs (duplicate-column ALTER) unless versioned carefully. Needs install-base handling decision.
+2. **`Tokenizer.MAX_TOKEN_CHARS = 24`** — conservative default; adjustable (longest common English words ~15 chars, medical jargon ~22).
+3. **iOS SQLCipher encryption** — Android path is encrypted; iOS driver is plaintext SQLite. Priority + approach (SQLCipher for iOS vs platform Keychain-based file encryption) undecided.
+4. **Biometric opt-in default** — currently opt-in (`biometricEnabled` default false); ADR-006 mandates BIOMETRIC_STRONG when enabled.
+5. **Clipboard dedup window** — `DedupEngine` clipboard-source dedup window size N not finalized.

@@ -428,4 +428,28 @@ class TransactionListViewModel(
         _minAmount.value = null
         _maxAmount.value = null
     }
+
+    fun applyInitialFilters(
+        categoryId: Long?,
+        typeName: String?,
+        periodName: String?,
+        startMillis: Long?,
+        endMillis: Long?
+    ) {
+        _searchQuery.value = ""
+        _minAmount.value = null
+        _maxAmount.value = null
+        _selectedCategoryId.value = categoryId
+        _selectedType.value = typeName?.let { runCatching { TransactionType.valueOf(it) }.getOrNull() }
+        val period = periodName?.let { runCatching { TimePeriod.valueOf(it) }.getOrNull() } ?: TimePeriod.ALL_TIME
+        if (period == TimePeriod.CUSTOM && startMillis != null && endMillis != null) {
+            val normalizedStart = minOf(startMillis, endMillis)
+            val normalizedEnd = maxOf(startMillis, endMillis)
+            _customDateRange.value = DateRange(normalizedStart, normalizedEnd)
+            _selectedPeriod.value = TimePeriod.CUSTOM
+        } else {
+            _customDateRange.value = null
+            _selectedPeriod.value = period
+        }
+    }
 }

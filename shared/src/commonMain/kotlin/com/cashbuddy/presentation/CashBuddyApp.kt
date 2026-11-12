@@ -27,6 +27,10 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.toRoute
+import cashbuddy.shared.generated.resources.Res
+import cashbuddy.shared.generated.resources.action_log_it
+import cashbuddy.shared.generated.resources.upi_ref_detected
+import org.jetbrains.compose.resources.getString
 import com.cashbuddy.domain.model.UserSettings
 import com.cashbuddy.domain.repository.SettingsRepository
 import com.cashbuddy.presentation.addtransaction.AddTransactionScreen
@@ -92,7 +96,7 @@ fun CashBuddyApp(
             val target = when (initialRoute.trim().lowercase()) {
                 "add", "add_transaction" -> ScreenRoute.AddTransaction()
                 "review", "review_inbox" -> ScreenRoute.ReviewInbox
-                "transact", "transactions", "screenshot", "processing_screenshot" -> ScreenRoute.Transactions
+                "transact", "transactions", "screenshot", "processing_screenshot" -> ScreenRoute.Transactions()
                 "stat", "stats" -> ScreenRoute.Stats
                 "setting", "settings" -> ScreenRoute.Settings
                 "budget", "budgets" -> ScreenRoute.Budgets
@@ -111,9 +115,11 @@ fun CashBuddyApp(
         if (!clipboardUtr.isNullOrBlank()) {
             val utr = clipboardUtr
             onConsumeClipboardUtr()
+            val msg = getString(Res.string.upi_ref_detected, utr)
+            val action = getString(Res.string.action_log_it)
             val result = snackbarHostState.showSnackbar(
-                message = "UPI Ref $utr detected.",
-                actionLabel = "Log it",
+                message = msg,
+                actionLabel = action,
                 duration = SnackbarDuration.Short
             )
             if (result == SnackbarResult.ActionPerformed) {
@@ -163,7 +169,7 @@ fun CashBuddyApp(
                     navOrder = userSettings.navOrder,
                     onNavigateToHome = { navigateTopLevel(ScreenRoute.Home) },
                     onNavigateToStats = { navigateTopLevel(ScreenRoute.Stats) },
-                    onNavigateToTransactions = { navigateTopLevel(ScreenRoute.Transactions) },
+                    onNavigateToTransactions = { navigateTopLevel(ScreenRoute.Transactions()) },
                     onAddClick = {
                         navController.navigate(ScreenRoute.AddTransaction()) {
                             launchSingleTop = true
@@ -195,7 +201,7 @@ fun CashBuddyApp(
                         navController.navigate(ScreenRoute.AddTransaction()) { launchSingleTop = true }
                     },
                     onNavigateToAllTransactions = {
-                        navController.navigate(ScreenRoute.Transactions) {
+                        navController.navigate(ScreenRoute.Transactions()) {
                             popUpTo(ScreenRoute.Home) { saveState = true }
                             launchSingleTop = true
                             restoreState = true
@@ -215,8 +221,25 @@ fun CashBuddyApp(
                 )
             }
 
-            composable<ScreenRoute.Transactions> {
+            composable<ScreenRoute.Transactions> { backStackEntry ->
+                val route: ScreenRoute.Transactions = backStackEntry.toRoute()
                 val listViewModel: TransactionListViewModel = koinViewModel()
+                LaunchedEffect(route) {
+                    if (route.initialCategoryId != null ||
+                        route.initialType != null ||
+                        route.initialPeriod != null ||
+                        route.initialStartMillis != null ||
+                        route.initialEndMillis != null
+                    ) {
+                        listViewModel.applyInitialFilters(
+                            categoryId = route.initialCategoryId,
+                            typeName = route.initialType,
+                            periodName = route.initialPeriod,
+                            startMillis = route.initialStartMillis,
+                            endMillis = route.initialEndMillis
+                        )
+                    }
+                }
                 TransactionListScreen(
                     viewModel = listViewModel,
                     onNavigateToDetail = { id ->
@@ -239,7 +262,25 @@ fun CashBuddyApp(
 
             composable<ScreenRoute.Stats> {
                 val statsViewModel: StatsViewModel = koinViewModel()
-                StatsScreen(viewModel = statsViewModel)
+                StatsScreen(
+                    viewModel = statsViewModel,
+                    onNavigateToHistory = { categoryId, type, period, startMillis, endMillis ->
+                        navController.navigate(
+                            ScreenRoute.Transactions(
+                                initialCategoryId = categoryId,
+                                initialType = type,
+                                initialPeriod = period,
+                                initialStartMillis = startMillis,
+                                initialEndMillis = endMillis
+                            )
+                        ) {
+                            launchSingleTop = true
+                        }
+                    },
+                    onNavigateToBudgets = {
+                        navController.navigate(ScreenRoute.Budgets) { launchSingleTop = true }
+                    }
+                )
             }
 
             composable<ScreenRoute.Budgets> {
