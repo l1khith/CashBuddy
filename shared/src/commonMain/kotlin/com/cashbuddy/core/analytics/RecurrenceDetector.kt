@@ -40,6 +40,7 @@ object RecurrenceDetector {
         val meanIATHours: Double,
         val varianceIATHours: Double,
         val fanoFactor: Double,
+        val cv: Double = 0.0,
         val detectedPeriodHours: Int?, // 12, 24, 168, 720
         val isRecurring: Boolean
     )
@@ -101,12 +102,13 @@ object RecurrenceDetector {
             else -> null
         }
 
-        val isRecurring = (cv <= MAX_CV || fanoFactor < 0.3) && detectedPeriod != null
+        val isRecurring = cv <= MAX_CV && detectedPeriod != null
 
         return PointProcessResult(
             meanIATHours = mean,
             varianceIATHours = variance,
             fanoFactor = fanoFactor,
+            cv = cv,
             detectedPeriodHours = detectedPeriod,
             isRecurring = isRecurring
         )
@@ -248,7 +250,7 @@ object RecurrenceDetector {
                     periodHours.toDouble()
                 }
 
-                val cv = if (iatResult.isRecurring) iatResult.fanoFactor else histogramAnalysis.cvActive
+                val cv = if (iatResult.isRecurring) iatResult.cv else histogramAnalysis.cvActive
 
                 patterns.add(
                     RecurringPattern(

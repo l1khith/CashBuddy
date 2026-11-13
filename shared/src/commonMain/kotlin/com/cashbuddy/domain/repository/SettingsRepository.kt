@@ -14,11 +14,9 @@ interface SettingsRepository {
     suspend fun setMinConfidenceThreshold(confidence: Float)
     fun getBiometricEnabled(): Flow<Boolean>
     suspend fun setBiometricEnabled(enabled: Boolean)
-    fun getDeveloperMode(): Flow<Boolean>
     suspend fun setDeveloperMode(enabled: Boolean)
     fun getDebugLogEnabled(): Flow<Boolean>
     suspend fun setDebugLogEnabled(enabled: Boolean)
-    fun getPreferredCurrency(): Flow<String>
     suspend fun setPreferredCurrency(currencyCode: String)
     fun getIgnoredPackages(): Flow<List<String>>
     suspend fun isPackageIgnored(packageName: String): Boolean
@@ -26,15 +24,12 @@ interface SettingsRepository {
     suspend fun removeIgnoredPackage(packageName: String)
     fun getSmartNotificationsEnabled(): Flow<Boolean>
     suspend fun setSmartNotificationsEnabled(enabled: Boolean)
-    fun getCustomAppName(): Flow<String>
     suspend fun setCustomAppName(name: String)
     fun getCustomAppSubtitle(): Flow<String>
     suspend fun setCustomAppSubtitle(subtitle: String)
     fun getShowAppLogo(): Flow<Boolean>
     suspend fun setShowAppLogo(show: Boolean)
-    fun getNavOrder(): Flow<String>
     suspend fun setNavOrder(order: String)
-    fun getShowHealthInTopBar(): Flow<Boolean>
     suspend fun setShowHealthInTopBar(show: Boolean)
     fun getLastSyncTimestamp(): Flow<Long>
     suspend fun setLastSyncTimestamp(timestamp: Long)

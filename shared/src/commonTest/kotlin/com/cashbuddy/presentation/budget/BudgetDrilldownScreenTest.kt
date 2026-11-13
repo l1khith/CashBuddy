@@ -9,7 +9,6 @@ import com.cashbuddy.domain.model.TransactionStatus
 import com.cashbuddy.domain.model.TransactionType
 import com.cashbuddy.domain.repository.CategoryBreakdown
 import com.cashbuddy.domain.repository.MergeLogEntry
-import com.cashbuddy.domain.repository.MonthlySummary
 import com.cashbuddy.domain.repository.TransactionRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flowOf
@@ -25,14 +24,6 @@ class BudgetDrilldownScreenTest {
 
     private class FakeTxRepo : TransactionRepository {
         val txs = mutableListOf<Transaction>()
-
-        override suspend fun sumByCategory(category: String, startTime: Long, endTime: Long): Double =
-            txs.filter {
-                (it.categoryName == category || it.categoryId.toString() == category) &&
-                it.type == TransactionType.DEBIT &&
-                it.timestamp in startTime..endTime &&
-                !it.isMerged
-            }.sumOf { it.amount }
 
         override fun getByCategoryAndPeriod(category: String, startTime: Long, endTime: Long): Flow<List<Transaction>> =
             flowOf(txs.filter {
@@ -50,22 +41,17 @@ class BudgetDrilldownScreenTest {
         override fun getByDateRangeWithLimit(start: Long, end: Long, limit: Long): Flow<List<Transaction>> = flowOf(emptyList())
         override fun getSummaryByDateRange(start: Long, end: Long): Flow<DateRangeSummary> =
             flowOf(DateRangeSummary(0.0, 0.0, 0L))
-        override fun getByCategory(categoryId: Long): Flow<List<Transaction>> = flowOf(emptyList())
-        override fun getMonthlySummary(): Flow<List<MonthlySummary>> = flowOf(emptyList())
         override fun getCategoryBreakdown(start: Long, end: Long): Flow<List<CategoryBreakdown>> = flowOf(emptyList())
         override suspend fun insert(transaction: Transaction): Long = 1L
         override suspend fun update(transaction: Transaction) {}
         override suspend fun updateStatus(id: Long, status: TransactionStatus) {}
         override suspend fun deleteById(id: Long) {}
         override fun getBalance(): Flow<Double> = flowOf(0.0)
-        override fun getAverageAmount(): Flow<Double> = flowOf(0.0)
         override fun getCount(): Flow<Long> = flowOf(0L)
         override suspend fun findDuplicateCandidates(): List<Transaction> = emptyList()
         override suspend fun markMerged(id: Long, survivorId: Long) {}
         override suspend fun unmarkMerged(id: Long) {}
-        override suspend fun insertMergeLog(survivorId: Long, mergedId: Long, timestamp: Long) {}
         override suspend fun getMergedTransactions(survivorId: Long): List<Transaction> = emptyList()
-        override suspend fun deleteMergeLog(survivorId: Long) {}
         override suspend fun getRecentMergeLogs(): List<MergeLogEntry> = emptyList()
         override suspend fun getMergeLogCount(): Long = 0L
     }

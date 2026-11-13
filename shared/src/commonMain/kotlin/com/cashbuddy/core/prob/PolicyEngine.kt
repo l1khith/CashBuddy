@@ -4,11 +4,15 @@ package com.cashbuddy.core.prob
 class PolicyEngine {
     enum class Action { AUTO_LOG, LOG_AND_FLAG, ASK_USER, IGNORE }
 
+    companion object {
+        const val HUMAN_IN_THE_LOOP_MAX_AMOUNT: Double = 10000.0
+    }
+
     fun action(
         p: Double,
         hasAccount: Boolean = true,
         amount: Double = 0.0,
-        maxAutoConfirmAmount: Double = 10000.0
+        maxAutoConfirmAmount: Double = HUMAN_IN_THE_LOOP_MAX_AMOUNT
     ): Action = when {
         p >= 0.90 && hasAccount && amount < maxAutoConfirmAmount -> Action.AUTO_LOG
         p >= 0.65 -> Action.LOG_AND_FLAG

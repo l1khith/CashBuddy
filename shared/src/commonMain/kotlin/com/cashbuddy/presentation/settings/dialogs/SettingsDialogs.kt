@@ -35,6 +35,27 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import cashbuddy.shared.generated.resources.Res
+import cashbuddy.shared.generated.resources.action_cancel
+import cashbuddy.shared.generated.resources.settings_clear_all_dialog_title
+import cashbuddy.shared.generated.resources.settings_clear_all_dialog_msg
+import cashbuddy.shared.generated.resources.settings_clear_all_confirm
+import cashbuddy.shared.generated.resources.settings_clear_training_dialog_title
+import cashbuddy.shared.generated.resources.settings_clear_training_dialog_msg
+import cashbuddy.shared.generated.resources.settings_clear_training_confirm
+import cashbuddy.shared.generated.resources.settings_ignored_apps_title
+import cashbuddy.shared.generated.resources.settings_ignored_apps_desc
+import cashbuddy.shared.generated.resources.settings_ignored_apps_empty
+import cashbuddy.shared.generated.resources.settings_action_add
+import cashbuddy.shared.generated.resources.settings_action_remove
+import cashbuddy.shared.generated.resources.settings_import_csv_title
+import cashbuddy.shared.generated.resources.settings_import_csv_desc
+import cashbuddy.shared.generated.resources.settings_select_csv_file
+import cashbuddy.shared.generated.resources.settings_change_file
+import cashbuddy.shared.generated.resources.settings_loaded_csv_rows
+import cashbuddy.shared.generated.resources.settings_csv_preview_label
+import cashbuddy.shared.generated.resources.settings_action_import
+import cashbuddy.shared.generated.resources.settings_action_importing
+import org.jetbrains.compose.resources.stringResource
 import cashbuddy.shared.generated.resources.ic_file_download
 import com.cashbuddy.platform.rememberFilePicker
 import com.cashbuddy.presentation.theme.AccentEmerald
@@ -56,14 +77,6 @@ class SettingsDialogState {
     var showDuplicateDialog by mutableStateOf(false)
     var showIgnoreDialog by mutableStateOf(false)
     var showImportDialog by mutableStateOf(false)
-
-    fun dismissAll() {
-        showClearDialog = false
-        showClearTrainingDialog = false
-        showDuplicateDialog = false
-        showIgnoreDialog = false
-        showImportDialog = false
-    }
 }
 
 @Composable
@@ -141,18 +154,18 @@ fun ClearDataDialog(
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Delete All Transactions?") },
-        text = { Text("This will permanently remove all stored transactions from the local encrypted database. This action cannot be undone.") },
+        title = { Text(stringResource(Res.string.settings_clear_all_dialog_title)) },
+        text = { Text(stringResource(Res.string.settings_clear_all_dialog_msg)) },
         confirmButton = {
             Button(
                 onClick = onConfirm,
                 colors = ButtonDefaults.buttonColors(containerColor = ExpenseCrimson)
             ) {
-                Text("Delete Everything")
+                Text(stringResource(Res.string.settings_clear_all_confirm))
             }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) { Text("Cancel") }
+            TextButton(onClick = onDismiss) { Text(stringResource(Res.string.action_cancel)) }
         }
     )
 }
@@ -164,18 +177,18 @@ fun ClearTrainingDialog(
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Reset Training Data & Corrections?") },
-        text = { Text("This will permanently delete all captured raw notification logs and user corrections used for local fine-tuning. Learned merchant rules will also be cleared. This action cannot be undone.") },
+        title = { Text(stringResource(Res.string.settings_clear_training_dialog_title)) },
+        text = { Text(stringResource(Res.string.settings_clear_training_dialog_msg)) },
         confirmButton = {
             Button(
                 onClick = onConfirm,
                 colors = ButtonDefaults.buttonColors(containerColor = DangerRed)
             ) {
-                Text("Reset Dataset")
+                Text(stringResource(Res.string.settings_clear_training_confirm))
             }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) { Text("Cancel") }
+            TextButton(onClick = onDismiss) { Text(stringResource(Res.string.action_cancel)) }
         }
     )
 }
@@ -192,7 +205,7 @@ fun IgnoredAppsDialog(
         onDismissRequest = onDismiss,
         title = {
             Text(
-                text = "Ignored Apps",
+                text = stringResource(Res.string.settings_ignored_apps_title),
                 style = CashBuddyTypography.titleLarge,
                 fontWeight = FontWeight.Bold
             )
@@ -203,7 +216,7 @@ fun IgnoredAppsDialog(
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 Text(
-                    text = "Notifications from these packages will be silently dropped and ignored by the parser.",
+                    text = stringResource(Res.string.settings_ignored_apps_desc),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -230,13 +243,13 @@ fun IgnoredAppsDialog(
                         },
                         shape = RadiusSmall
                     ) {
-                        Text("Add")
+                        Text(stringResource(Res.string.settings_action_add))
                     }
                 }
 
                 if (ignoredPackages.isEmpty()) {
                     Text(
-                        text = "No packages currently ignored.",
+                        text = stringResource(Res.string.settings_ignored_apps_empty),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.padding(vertical = 8.dp)
@@ -269,7 +282,7 @@ fun IgnoredAppsDialog(
                                 TextButton(
                                     onClick = { onRemovePackage(pkg) }
                                 ) {
-                                    Text("Remove", color = DangerRed, style = CashBuddyTypography.labelSmall)
+                                    Text(stringResource(Res.string.settings_action_remove), color = DangerRed, style = CashBuddyTypography.labelSmall)
                                 }
                             }
                         }
@@ -309,7 +322,7 @@ fun ImportCsvDialog(
         onDismissRequest = onDismiss,
         title = {
             Text(
-                text = "Import Transactions (CSV)",
+                text = stringResource(Res.string.settings_import_csv_title),
                 style = CashBuddyTypography.titleLarge,
                 fontWeight = FontWeight.Bold
             )
@@ -320,7 +333,7 @@ fun ImportCsvDialog(
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 Text(
-                    text = "Choose a CSV file from your device storage, or paste CSV text manually below.",
+                    text = stringResource(Res.string.settings_import_csv_desc),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -338,7 +351,11 @@ fun ImportCsvDialog(
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
-                        text = if (selectedFileName != null) "Change File ($selectedFileName)" else "Select CSV File from Device",
+                        text = if (selectedFileName != null) {
+                            stringResource(Res.string.settings_change_file, selectedFileName!!)
+                        } else {
+                            stringResource(Res.string.settings_select_csv_file)
+                        },
                         style = MaterialTheme.typography.labelLarge
                     )
                 }
@@ -352,7 +369,7 @@ fun ImportCsvDialog(
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         Text(
-                            text = "Loaded $selectedFileName ($lineCount rows)",
+                            text = stringResource(Res.string.settings_loaded_csv_rows, selectedFileName!!, lineCount),
                             style = MaterialTheme.typography.bodySmall,
                             color = AccentEmerald,
                             fontWeight = FontWeight.SemiBold,
@@ -362,7 +379,7 @@ fun ImportCsvDialog(
                 }
 
                 Text(
-                    text = "CSV Preview / Manual Paste:",
+                    text = stringResource(Res.string.settings_csv_preview_label),
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -390,12 +407,15 @@ fun ImportCsvDialog(
                 },
                 enabled = csvText.isNotBlank() && !isImporting
             ) {
-                Text(if (isImporting) "Importing..." else "Import")
+                Text(
+                    if (isImporting) stringResource(Res.string.settings_action_importing)
+                    else stringResource(Res.string.settings_action_import)
+                )
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("Cancel")
+                Text(stringResource(Res.string.action_cancel))
             }
         }
     )

@@ -26,8 +26,16 @@ import cashbuddy.shared.generated.resources.ic_download
 import cashbuddy.shared.generated.resources.ic_file_download
 import cashbuddy.shared.generated.resources.ic_merge_type
 import cashbuddy.shared.generated.resources.ic_undo
+import cashbuddy.shared.generated.resources.settings_section_data_mgmt
+import cashbuddy.shared.generated.resources.settings_export_csv_btn
+import cashbuddy.shared.generated.resources.settings_import_csv_btn
+import cashbuddy.shared.generated.resources.settings_clean_duplicates_btn
+import cashbuddy.shared.generated.resources.settings_scanning_duplicates
+import cashbuddy.shared.generated.resources.settings_undo_merge_btn
+import cashbuddy.shared.generated.resources.settings_clear_all_data_btn
 import com.cashbuddy.presentation.theme.ExpenseCrimson
 import org.jetbrains.compose.resources.painterResource
+import org.jetbrains.compose.resources.stringResource
 
 @Composable
 fun DataManagementSection(
@@ -45,7 +53,7 @@ fun DataManagementSection(
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         Text(
-            text = "Data Management",
+            text = stringResource(Res.string.settings_section_data_mgmt),
             style = MaterialTheme.typography.titleLarge,
             fontWeight = FontWeight.Bold
         )
@@ -65,12 +73,12 @@ fun DataManagementSection(
                 ) {
                     Icon(
                         painter = painterResource(Res.drawable.ic_download),
-                        contentDescription = "Export Transactions",
+                        contentDescription = stringResource(Res.string.settings_export_csv_btn),
                         tint = MaterialTheme.colorScheme.primary,
                         modifier = Modifier.size(18.dp)
                     )
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text("Export All Transactions (CSV)")
+                    Text(stringResource(Res.string.settings_export_csv_btn))
                 }
 
                 OutlinedButton(
@@ -80,12 +88,12 @@ fun DataManagementSection(
                 ) {
                     Icon(
                         painter = painterResource(Res.drawable.ic_file_download),
-                        contentDescription = "Import Transactions",
+                        contentDescription = stringResource(Res.string.settings_import_csv_btn),
                         tint = MaterialTheme.colorScheme.primary,
                         modifier = Modifier.size(18.dp)
                     )
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text("Import Transactions (CSV)")
+                    Text(stringResource(Res.string.settings_import_csv_btn))
                 }
 
                 OutlinedButton(
@@ -100,8 +108,8 @@ fun DataManagementSection(
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
-                        if (isScanningDuplicates) "Scanning Duplicates..."
-                        else "Clean Up Duplicates"
+                        if (isScanningDuplicates) stringResource(Res.string.settings_scanning_duplicates)
+                        else stringResource(Res.string.settings_clean_duplicates_btn)
                     )
                 }
 
@@ -117,7 +125,7 @@ fun DataManagementSection(
                             modifier = Modifier.size(18.dp)
                         )
                         Spacer(modifier = Modifier.width(8.dp))
-                        Text("Undo Last Duplicate Merge")
+                        Text(stringResource(Res.string.settings_undo_merge_btn))
                     }
                 }
 
@@ -129,12 +137,12 @@ fun DataManagementSection(
                 ) {
                     Icon(
                         painter = painterResource(Res.drawable.ic_delete_forever),
-                        contentDescription = "Clear All Data",
+                        contentDescription = stringResource(Res.string.settings_clear_all_data_btn),
                         tint = Color.White,
                         modifier = Modifier.size(18.dp)
                     )
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text("Clear All Data", color = Color.White)
+                    Text(stringResource(Res.string.settings_clear_all_data_btn), color = Color.White)
                 }
             }
         }

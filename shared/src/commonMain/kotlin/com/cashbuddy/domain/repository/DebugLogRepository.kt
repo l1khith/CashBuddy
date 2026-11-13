@@ -23,12 +23,13 @@ interface DebugLogRepository {
         mergeTargetId: String? = null,
         errorMessage: String?
     )
-    suspend fun updateRawText(id: String, rawText: String)
-    suspend fun getById(id: String): DebugLogEntry?
-    suspend fun countWithFilter(filter: DebugLogFilter): Long
-    suspend fun distinctPackages(): List<String>
-    suspend fun query(filter: DebugLogFilter): List<DebugLogEntry>
-    suspend fun recent(limit: Int): List<DebugLogEntry>
+
+    /**
+     * Calibrator feedback hook: returns the debug-log entry that produced the
+     * transaction with the given id, so user confirm/reject decisions can be
+     * attributed back to the classification's per-signal contributions.
+     */
+    suspend fun getByResultingTxId(txId: String): DebugLogEntry?
     suspend fun clearAll()
     suspend fun count(): Long
     suspend fun filterLogsPage(

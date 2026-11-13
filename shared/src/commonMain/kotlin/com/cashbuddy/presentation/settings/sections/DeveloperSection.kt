@@ -29,11 +29,19 @@ import androidx.compose.ui.unit.dp
 import cashbuddy.shared.generated.resources.Res
 import cashbuddy.shared.generated.resources.ic_bug_report
 import cashbuddy.shared.generated.resources.ic_visibility
+import cashbuddy.shared.generated.resources.settings_section_dev
+import cashbuddy.shared.generated.resources.settings_debug_viewer_title
+import cashbuddy.shared.generated.resources.settings_debug_active_status
+import cashbuddy.shared.generated.resources.settings_debug_disabled_status
+import cashbuddy.shared.generated.resources.settings_debug_desc
+import cashbuddy.shared.generated.resources.settings_open_log_viewer_btn
+import cashbuddy.shared.generated.resources.settings_debug_toggle_hint
 import com.cashbuddy.presentation.theme.AccentEmerald
 import com.cashbuddy.presentation.theme.CashBuddyTypography
 import com.cashbuddy.presentation.theme.PrimaryIndigo
 import com.cashbuddy.presentation.theme.RadiusLarge
 import org.jetbrains.compose.resources.painterResource
+import org.jetbrains.compose.resources.stringResource
 
 @Composable
 fun DeveloperSection(
@@ -47,7 +55,7 @@ fun DeveloperSection(
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         Text(
-            text = "Developer & Diagnostics",
+            text = stringResource(Res.string.settings_section_dev),
             style = CashBuddyTypography.titleLarge,
             fontWeight = FontWeight.Bold
         )
@@ -86,7 +94,7 @@ fun DeveloperSection(
                         ) {
                             Icon(
                                 painter = painterResource(Res.drawable.ic_bug_report),
-                                contentDescription = "Debug Log",
+                                contentDescription = stringResource(Res.string.settings_debug_viewer_title),
                                 tint = if (isDebugLogEnabled) PrimaryIndigo else MaterialTheme.colorScheme.onSurfaceVariant,
                                 modifier = Modifier.size(24.dp)
                             )
@@ -94,15 +102,15 @@ fun DeveloperSection(
                         Spacer(modifier = Modifier.width(14.dp))
                         Column {
                             Text(
-                                text = "Debug Log Viewer",
+                                text = stringResource(Res.string.settings_debug_viewer_title),
                                 style = CashBuddyTypography.titleMedium,
                                 fontWeight = FontWeight.Bold
                             )
                             Text(
                                 text = if (isDebugLogEnabled) {
-                                    "Active • Capturing pipeline logs"
+                                    stringResource(Res.string.settings_debug_active_status)
                                 } else {
-                                    "Disabled • Zero logs captured"
+                                    stringResource(Res.string.settings_debug_disabled_status)
                                 },
                                 style = MaterialTheme.typography.bodySmall,
                                 color = if (isDebugLogEnabled) {
@@ -124,7 +132,7 @@ fun DeveloperSection(
                 if (isDebugLogEnabled) {
                     Spacer(modifier = Modifier.height(14.dp))
                     Text(
-                        text = "Inspect on-device parser decisions, regex extractions, and classification confidence scores. All data stays 100% on-device.",
+                        text = stringResource(Res.string.settings_debug_desc),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -137,17 +145,17 @@ fun DeveloperSection(
                     ) {
                         Icon(
                             painter = painterResource(Res.drawable.ic_visibility),
-                            contentDescription = "Open Log Viewer",
+                            contentDescription = stringResource(Res.string.settings_open_log_viewer_btn),
                             tint = MaterialTheme.colorScheme.onPrimary,
                             modifier = Modifier.size(18.dp)
                         )
                         Spacer(modifier = Modifier.width(8.dp))
-                        Text("Open Log Viewer")
+                        Text(stringResource(Res.string.settings_open_log_viewer_btn))
                     }
                 } else {
                     Spacer(modifier = Modifier.height(8.dp))
                     Text(
-                        text = "Toggle ON to enable recording and view debug logs. When turned off, no logs are taken.",
+                        text = stringResource(Res.string.settings_debug_toggle_hint),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f)
                     )

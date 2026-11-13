@@ -43,6 +43,9 @@ sealed interface ScreenRoute {
     data object PersonalizationDashboard : ScreenRoute
 
     @Serializable
+    data object ManageCategories : ScreenRoute
+
+    @Serializable
     data object DataView : ScreenRoute
 
     @Serializable

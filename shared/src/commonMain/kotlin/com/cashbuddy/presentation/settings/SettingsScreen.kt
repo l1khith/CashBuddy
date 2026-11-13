@@ -47,6 +47,7 @@ fun SettingsScreen(
     viewModel: SettingsViewModel,
     onNavigateBack: (() -> Unit)? = null,
     onNavigateToPersonalization: () -> Unit = {},
+    onNavigateToManageCategories: () -> Unit = {},
     onNavigateToDebugLog: () -> Unit = {},
     onOpenNotificationSettings: () -> Unit = {},
     modifier: Modifier = Modifier
@@ -137,7 +138,8 @@ fun SettingsScreen(
                         onAppSubtitleChange = viewModel::setCustomAppSubtitle,
                         onShowLogoChange = viewModel::setShowAppLogo,
                         onNavOrderChange = viewModel::commitNavOrder,
-                        onResetCustomization = viewModel::resetAppCustomization
+                        onResetCustomization = viewModel::resetAppCustomization,
+                        onNavigateToManageCategories = onNavigateToManageCategories
                     )
                 }
 

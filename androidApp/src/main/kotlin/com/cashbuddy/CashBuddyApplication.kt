@@ -28,6 +28,10 @@ class CashBuddyApplication : Application() {
             single<com.cashbuddy.core.anomaly.AnomalyNotifier> {
                 com.cashbuddy.notification.AndroidAnomalyNotifier(get(), get())
             }
+            // Bound so BudgetAlertScheduler (AppModule getOrNull) can actually deliver alerts
+            single<com.cashbuddy.core.budget.BudgetNotifier> {
+                com.cashbuddy.notification.AndroidBudgetNotifier(get())
+            }
         }
 
         // Initialize Koin Dependency Injection

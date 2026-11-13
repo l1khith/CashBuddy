@@ -29,6 +29,10 @@ class CategoryEngine {
 
     fun learnCorrection(merchant: String, category: String) = learn(merchant, category)
 
+    fun invalidateCache() {
+        cache.clear()
+    }
+
     fun getCategory(
         rawMerchant: String?,
         timestamp: Long = 0L,

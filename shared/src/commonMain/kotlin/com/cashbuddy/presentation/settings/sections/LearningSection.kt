@@ -25,6 +25,13 @@ import cashbuddy.shared.generated.resources.Res
 import cashbuddy.shared.generated.resources.ic_delete_forever
 import cashbuddy.shared.generated.resources.ic_file_download
 import cashbuddy.shared.generated.resources.ic_tune
+import cashbuddy.shared.generated.resources.settings_section_learning
+import cashbuddy.shared.generated.resources.settings_learning_desc
+import cashbuddy.shared.generated.resources.settings_raw_samples
+import cashbuddy.shared.generated.resources.settings_user_corrections
+import cashbuddy.shared.generated.resources.settings_personalization_dashboard_btn
+import cashbuddy.shared.generated.resources.settings_export_dataset_btn
+import cashbuddy.shared.generated.resources.settings_reset_dataset_btn
 import com.cashbuddy.presentation.theme.AccentEmerald
 import com.cashbuddy.presentation.theme.CashBuddyTypography
 import com.cashbuddy.presentation.theme.DangerRed
@@ -32,6 +39,7 @@ import com.cashbuddy.presentation.theme.PrimaryIndigo
 import com.cashbuddy.presentation.theme.RadiusLarge
 import com.cashbuddy.presentation.theme.RadiusMedium
 import org.jetbrains.compose.resources.painterResource
+import org.jetbrains.compose.resources.stringResource
 
 @Composable
 fun LearningSection(
@@ -47,7 +55,7 @@ fun LearningSection(
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         Text(
-            text = "On-Device Learning & Training Data",
+            text = stringResource(Res.string.settings_section_learning),
             style = CashBuddyTypography.titleLarge,
             fontWeight = FontWeight.Bold
         )
@@ -62,7 +70,7 @@ fun LearningSection(
                 verticalArrangement = Arrangement.spacedBy(14.dp)
             ) {
                 Text(
-                    text = "Personalize categorization by correcting categories. Correcting a transaction saves a merchant rule for future transactions.",
+                    text = stringResource(Res.string.settings_learning_desc),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -87,7 +95,7 @@ fun LearningSection(
                                 color = PrimaryIndigo
                             )
                             Text(
-                                text = "Raw Samples",
+                                text = stringResource(Res.string.settings_raw_samples),
                                 style = MaterialTheme.typography.labelSmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -109,7 +117,7 @@ fun LearningSection(
                                 color = AccentEmerald
                             )
                             Text(
-                                text = "User Corrections",
+                                text = stringResource(Res.string.settings_user_corrections),
                                 style = MaterialTheme.typography.labelSmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -126,12 +134,12 @@ fun LearningSection(
                 ) {
                     Icon(
                         painter = painterResource(Res.drawable.ic_tune),
-                        contentDescription = "Personalization Dashboard",
+                        contentDescription = stringResource(Res.string.settings_personalization_dashboard_btn),
                         tint = Color.White,
                         modifier = Modifier.size(18.dp)
                     )
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text("Personalization Dashboard")
+                    Text(stringResource(Res.string.settings_personalization_dashboard_btn))
                 }
 
                 OutlinedButton(
@@ -141,12 +149,12 @@ fun LearningSection(
                 ) {
                     Icon(
                         painter = painterResource(Res.drawable.ic_file_download),
-                        contentDescription = "Export Dataset",
+                        contentDescription = stringResource(Res.string.settings_export_dataset_btn),
                         tint = MaterialTheme.colorScheme.primary,
                         modifier = Modifier.size(18.dp)
                     )
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text("Export Training Dataset (JSONL)")
+                    Text(stringResource(Res.string.settings_export_dataset_btn))
                 }
 
                 OutlinedButton(
@@ -157,12 +165,12 @@ fun LearningSection(
                 ) {
                     Icon(
                         painter = painterResource(Res.drawable.ic_delete_forever),
-                        contentDescription = "Reset Training Data",
+                        contentDescription = stringResource(Res.string.settings_reset_dataset_btn),
                         tint = DangerRed,
                         modifier = Modifier.size(18.dp)
                     )
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text("Reset Training Data & Corrections")
+                    Text(stringResource(Res.string.settings_reset_dataset_btn))
                 }
             }
         }

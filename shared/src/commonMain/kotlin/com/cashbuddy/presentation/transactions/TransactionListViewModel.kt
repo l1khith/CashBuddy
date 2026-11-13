@@ -412,23 +412,6 @@ class TransactionListViewModel(
         }
     }
 
-    fun deleteTransaction(id: Long) {
-        viewModelScope.launch(ioDispatcher) {
-            transactionRepository.deleteById(id)
-            com.cashbuddy.platform.notifyTransactionsUpdated()
-        }
-    }
-
-    fun clearFilters() {
-        _searchQuery.value = ""
-        _selectedType.value = null
-        _selectedCategoryId.value = null
-        _selectedPeriod.value = TimePeriod.ALL_TIME
-        _customDateRange.value = null
-        _minAmount.value = null
-        _maxAmount.value = null
-    }
-
     fun applyInitialFilters(
         categoryId: Long?,
         typeName: String?,

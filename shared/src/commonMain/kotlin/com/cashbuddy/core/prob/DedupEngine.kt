@@ -5,7 +5,6 @@ import kotlin.math.abs
 
 object DedupEngine {
     const val WINDOW_MS = 5 * 60 * 1000L
-    const val AMOUNT_EPS = 0.01
 
     sealed interface Decision {
         object Insert : Decision
@@ -59,12 +58,21 @@ object DedupEngine {
         if (candidates.isEmpty()) return Decision.Insert
 
         val sameMerchant = candidates.firstOrNull {
-            it.merchant != null && newTx.merchant != null &&
-            (it.merchant.equals(newTx.merchant, ignoreCase = true) ||
-             it.merchant.contains(newTx.merchant, ignoreCase = true) ||
-             newTx.merchant.contains(it.merchant, ignoreCase = true))
+            val existingM = it.merchant?.trim()
+            val newM = newTx.merchant?.trim()
+            when {
+                // If either merchant is unknown/blank, merge only if accounts are compatible
+                existingM.isNullOrBlank() || newM.isNullOrBlank() -> {
+                    it.accountLast4 == null || newTx.accountLast4 == null || it.accountLast4 == newTx.accountLast4
+                }
+                existingM.equals(newM, ignoreCase = true) ||
+                existingM.contains(newM, ignoreCase = true) ||
+                newM.contains(existingM, ignoreCase = true) -> true
+                JaroWinkler.similarity(existingM, newM) >= 0.70 -> true
+                else -> false
+            }
         }
-        val target = sameMerchant ?: candidates.first()
+        val target = sameMerchant ?: return Decision.Insert
 
         return buildMergeDecision(newTx, target)
     }
@@ -81,7 +89,9 @@ object DedupEngine {
                 accountLast4 = chosenAccount,
                 merchant = chosenMerchant,
                 pTransaction = maxP,
-                clearReview = maxP >= 0.90 && newTx.amount < 10000.0 && target.amount < 10000.0
+                clearReview = maxP >= 0.90 &&
+                    newTx.amount < PolicyEngine.HUMAN_IN_THE_LOOP_MAX_AMOUNT &&
+                    target.amount < PolicyEngine.HUMAN_IN_THE_LOOP_MAX_AMOUNT
             )
         )
     }

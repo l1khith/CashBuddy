@@ -24,7 +24,8 @@ class ScreenshotHandler(private val context: Context) : KoinComponent {
     private val trainingDataRepository: TrainingDataRepository by inject()
     private val pipeline: com.cashbuddy.core.prob.MessagePipeline by inject()
     private val ocrEngine: com.cashbuddy.ocr.OcrEngine by inject()
-    private val parser by lazy { ScreenshotParser(ocrEngine) }
+    private val screenshotParserEngine: com.cashbuddy.core.ScreenshotParserEngine by inject()
+    private val parser by lazy { ScreenshotParser(ocrEngine, screenshotParserEngine) }
 
     companion object {
         private const val TAG = "ScreenshotHandler"

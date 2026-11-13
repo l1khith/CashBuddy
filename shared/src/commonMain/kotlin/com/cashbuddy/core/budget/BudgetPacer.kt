@@ -95,20 +95,6 @@ object BudgetPacer {
 
     fun calculatePacing(
         spent: Double,
-        budget: Double,
-        period: String,
-        nowEpochMs: Long,
-        timeZone: TimeZone = TimeZone.currentSystemDefault()
-    ): PacingResult = calculatePacing(
-        spent = spent,
-        budget = budget,
-        period = period,
-        now = Instant.fromEpochMilliseconds(nowEpochMs),
-        timeZone = timeZone
-    )
-
-    fun calculatePacing(
-        spent: Double,
         budgetAmount: Double,
         period: BudgetPeriod,
         now: Instant,
@@ -152,27 +138,6 @@ object BudgetPacer {
             actualPercent = actualPercent,
             projectedSpend = projectedSpend,
             projectedOverage = projectedOverage
-        )
-    }
-
-    fun calculatePacing(
-        spent: Double,
-        budget: Double,
-        period: String,
-        now: Instant,
-        timeZone: TimeZone = TimeZone.currentSystemDefault()
-    ): PacingResult {
-        val budgetPeriod = when (period.uppercase()) {
-            "WEEKLY" -> BudgetPeriod.WEEKLY
-            "YEARLY" -> BudgetPeriod.YEARLY
-            else -> BudgetPeriod.MONTHLY
-        }
-        return calculatePacing(
-            spent = spent,
-            budgetAmount = budget,
-            period = budgetPeriod,
-            now = now,
-            timeZone = timeZone
         )
     }
 }

@@ -36,20 +36,42 @@ INSERT INTO categories (name, type, icon, color, is_default, sort_order, created
 ('Uncategorized', 'EXPENSE', 'help_outline', '#9E9E9E', 1, 15, ?);
 
 getAll:
-SELECT * FROM categories ORDER BY type, sort_order;
+SELECT * FROM categories ORDER BY type, sort_order, name ASC;
 
 getByType:
-SELECT * FROM categories WHERE type = ? ORDER BY sort_order;
+SELECT * FROM categories WHERE type = ? ORDER BY sort_order, name ASC;
 
 getById:
 SELECT * FROM categories WHERE id = ?;
+
+getByName:
+SELECT * FROM categories WHERE LOWER(name) = LOWER(?) LIMIT 1;
+
+getUncategorizedFallbackId:
+SELECT id FROM categories WHERE LOWER(name) = 'uncategorized' AND is_default = 1 LIMIT 1;
+
+getFirstDefaultId:
+SELECT id FROM categories WHERE is_default = 1 ORDER BY id ASC LIMIT 1;
+
+countByNameCaseInsensitive:
+SELECT COUNT(*) FROM categories WHERE LOWER(name) = LOWER(:name);
+
+countByNameCaseInsensitiveExcludingId:
+SELECT COUNT(*) FROM categories WHERE LOWER(name) = LOWER(:name) AND id != :id;
 
 insert:
 INSERT INTO categories (name, type, icon, color, is_default, sort_order, parent_id, created_at)
 VALUES (?, ?, ?, ?, ?, ?, ?, ?);
 
+insertCustom:
+INSERT INTO categories (name, type, icon, color, is_default, sort_order, parent_id, created_at)
+VALUES (?, ?, ?, ?, 0, ?, NULL, ?);
+
 update:
 UPDATE categories SET name = ?, type = ?, icon = ?, color = ?, sort_order = ?, parent_id = ? WHERE id = ?;
+
+updateCustom:
+UPDATE categories SET name = ?, type = ?, icon = ?, color = ? WHERE id = ? AND is_default = 0;
 
 deleteById:
 DELETE FROM categories WHERE id = ? AND is_default = 0;

@@ -55,25 +55,14 @@ SET policy_action = COALESCE(?, policy_action),
     error_message = ?
 WHERE id = ?;
 
-updateRawText:
-UPDATE debug_log
-SET raw_text = ?
-WHERE id = ?;
-
-getById:
+getByResultingTxId:
 SELECT * FROM debug_log
-WHERE id = ?;
+WHERE resulting_tx_id = ?
+ORDER BY timestamp DESC
+LIMIT 1;
 
 count:
 SELECT COUNT(*) FROM debug_log;
-
-countWithFilter:
-SELECT COUNT(*) FROM debug_log
-WHERE (:sourceType IS NULL OR source_type = :sourceType)
-  AND (:policyAction IS NULL OR policy_action = :policyAction)
-  AND (:packageName IS NULL OR package_name LIKE ('%' || :packageName || '%'))
-  AND (:startTime IS NULL OR timestamp >= :startTime)
-  AND (:endTime IS NULL OR timestamp <= :endTime);
 
 deleteOldest:
 DELETE FROM debug_log
@@ -82,24 +71,6 @@ WHERE id IN (
     ORDER BY timestamp ASC
     LIMIT ?
 );
-
-recent:
-SELECT * FROM debug_log
-ORDER BY timestamp DESC
-LIMIT ?;
-
-queryAll:
-SELECT * FROM debug_log
-ORDER BY timestamp DESC;
-
-filterLogs:
-SELECT * FROM debug_log
-WHERE (:sourceType IS NULL OR source_type = :sourceType)
-  AND (:policyAction IS NULL OR policy_action = :policyAction)
-  AND (:packageName IS NULL OR package_name LIKE ('%' || :packageName || '%'))
-  AND (:startTime IS NULL OR timestamp >= :startTime)
-  AND (:endTime IS NULL OR timestamp <= :endTime)
-ORDER BY timestamp DESC;
 
 filterLogsPage:
 SELECT * FROM debug_log
@@ -111,11 +82,6 @@ WHERE (:sourceType IS NULL OR source_type = :sourceType)
   AND (:cursorTimestamp IS NULL OR :cursorId IS NULL OR timestamp < :cursorTimestamp OR (timestamp = :cursorTimestamp AND id < :cursorId))
 ORDER BY timestamp DESC, id DESC
 LIMIT :limit;
-
-distinctPackages:
-SELECT DISTINCT package_name FROM debug_log
-WHERE package_name IS NOT NULL
-ORDER BY package_name ASC;
 
 clearAll:
 DELETE FROM debug_log;

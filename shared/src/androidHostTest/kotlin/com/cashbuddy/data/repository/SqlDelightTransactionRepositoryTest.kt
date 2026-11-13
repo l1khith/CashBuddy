@@ -133,13 +133,21 @@ class SqlDelightTransactionRepositoryTest {
         repository.markMerged(mergedId, survivorId = 1L)
 
         // Sum should only be 150.0 + 250.0 = 400.0
-        val total = repository.sumAll(start, end, TransactionType.DEBIT)
+        val total = database.transactionsQueries.sumAll(
+            type = TransactionType.DEBIT.name,
+            startTime = start,
+            endTime = end
+        ).executeAsOne()
         assertEquals(400.0, total)
     }
 
     @Test
     fun testSumAllReturnsZeroWhenEmpty() = runBlocking {
-        val total = repository.sumAll(1_000L, 5_000L, TransactionType.DEBIT)
+        val total = database.transactionsQueries.sumAll(
+            type = TransactionType.DEBIT.name,
+            startTime = 1_000L,
+            endTime = 5_000L
+        ).executeAsOne()
         assertEquals(0.0, total)
     }
 
@@ -440,7 +448,7 @@ class SqlDelightTransactionRepositoryTest {
 
         // Merge dup into survivor (reconciler/store semantics: balance revert +18)
         repository.markMerged(id = dupId, survivorId = survivorId)
-        repository.insertMergeLog(survivorId = survivorId, mergedId = dupId, timestamp = 20_000L)
+        database.transactionsQueries.insertMergeLog(survivor_id = survivorId, merged_id = dupId, merged_at = 20_000L)
         database.accountsQueries.applyBalanceDelta(delta = 18.0, updatedAt = 20_000L, id = 1L)
         assertEquals(4900.0, database.accountsQueries.getById(1L).executeAsOne().balance, 0.001)
 

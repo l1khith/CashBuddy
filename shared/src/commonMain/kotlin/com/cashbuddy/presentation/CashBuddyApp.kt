@@ -40,6 +40,8 @@ import com.cashbuddy.presentation.budget.BudgetDrilldownScreen
 import com.cashbuddy.presentation.budget.BudgetDrilldownViewModel
 import com.cashbuddy.presentation.budget.BudgetListScreen
 import com.cashbuddy.presentation.budget.BudgetViewModel
+import com.cashbuddy.presentation.categories.ManageCategoriesScreen
+import com.cashbuddy.presentation.categories.ManageCategoriesViewModel
 import com.cashbuddy.presentation.components.CashBuddyBottomBar
 import com.cashbuddy.presentation.components.CashBuddyTopBar
 import com.cashbuddy.presentation.home.HomeScreen
@@ -333,10 +335,21 @@ fun CashBuddyApp(
                     onNavigateToPersonalization = {
                         navController.navigate(ScreenRoute.PersonalizationDashboard) { launchSingleTop = true }
                     },
+                    onNavigateToManageCategories = {
+                        navController.navigate(ScreenRoute.ManageCategories) { launchSingleTop = true }
+                    },
                     onNavigateToDebugLog = {
                         navController.navigate(ScreenRoute.DebugLog) { launchSingleTop = true }
                     },
                     onOpenNotificationSettings = onOpenNotificationSettings
+                )
+            }
+
+            composable<ScreenRoute.ManageCategories> {
+                val manageCategoriesViewModel: ManageCategoriesViewModel = koinViewModel()
+                ManageCategoriesScreen(
+                    viewModel = manageCategoriesViewModel,
+                    onNavigateBack = { navController.popBackStack() }
                 )
             }
 

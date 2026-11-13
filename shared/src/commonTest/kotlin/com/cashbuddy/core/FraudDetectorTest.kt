@@ -8,7 +8,6 @@ import com.cashbuddy.domain.model.TransactionType
 import com.cashbuddy.domain.model.RecurringPattern
 import com.cashbuddy.domain.repository.CategoryBreakdown
 import com.cashbuddy.domain.repository.MergeLogEntry
-import com.cashbuddy.domain.repository.MonthlySummary
 import com.cashbuddy.domain.repository.RecurringPatternRepository
 import com.cashbuddy.domain.repository.TransactionRepository
 import kotlinx.coroutines.flow.Flow
@@ -28,27 +27,20 @@ class FraudDetectorTest {
         override fun getByDateRange(start: Long, end: Long): Flow<List<Transaction>> = emptyFlow()
         override fun getByDateRangeWithLimit(start: Long, end: Long, limit: Long): Flow<List<Transaction>> = emptyFlow()
         override fun getSummaryByDateRange(start: Long, end: Long): Flow<DateRangeSummary> = emptyFlow()
-        override fun getByCategory(categoryId: Long): Flow<List<Transaction>> = emptyFlow()
-        override fun getMonthlySummary(): Flow<List<MonthlySummary>> = emptyFlow()
         override fun getCategoryBreakdown(start: Long, end: Long): Flow<List<CategoryBreakdown>> = emptyFlow()
         override suspend fun insert(transaction: Transaction): Long = 1L
         override suspend fun updateStatus(id: Long, status: TransactionStatus) {}
         override suspend fun update(transaction: Transaction) {}
         override suspend fun deleteById(id: Long) {}
         override fun getBalance(): Flow<Double> = emptyFlow()
-        override fun getAverageAmount(): Flow<Double> = emptyFlow()
         override fun getCount(): Flow<Long> = emptyFlow()
         override suspend fun findDuplicateCandidates(): List<Transaction> = emptyList()
         override suspend fun markMerged(id: Long, survivorId: Long) {}
         override suspend fun unmarkMerged(id: Long) {}
-        override suspend fun insertMergeLog(survivorId: Long, mergedId: Long, timestamp: Long) {}
         override suspend fun getMergedTransactions(survivorId: Long): List<Transaction> = emptyList()
-        override suspend fun deleteMergeLog(survivorId: Long) {}
         override suspend fun getRecentMergeLogs(): List<MergeLogEntry> = emptyList()
         override suspend fun getMergeLogCount(): Long = 0L
-        override suspend fun sumByCategory(category: String, startTime: Long, endTime: Long): Double = 0.0
         override fun getByCategoryAndPeriod(category: String, startTime: Long, endTime: Long): Flow<List<Transaction>> = emptyFlow()
-        override suspend fun sumAll(startTime: Long, endTime: Long, type: TransactionType): Double = 0.0
 
         override suspend fun getAmountsAtMerchant(
             merchant: String,
@@ -130,7 +122,6 @@ class FraudDetectorTest {
     private class FakeRecurringPatternRepo(
         private val patterns: List<RecurringPattern> = emptyList()
     ) : RecurringPatternRepository {
-        override suspend fun upsert(pattern: RecurringPattern) {}
         override suspend fun upsertAll(patterns: List<RecurringPattern>) {}
         override fun getAll(): Flow<List<RecurringPattern>> = kotlinx.coroutines.flow.flowOf(patterns)
         override suspend fun getAllList(): List<RecurringPattern> = patterns
@@ -144,7 +135,6 @@ class FraudDetectorTest {
         }
         override suspend fun deleteById(id: Long) {}
         override suspend fun deleteAll() {}
-        override suspend fun deleteStale(staleBefore: Long) {}
     }
 
     @Test
