@@ -60,7 +60,3 @@ WHERE id = :id;
 
 deleteAll:
 DELETE FROM recurring_pattern;
-
-deleteStale:
-DELETE FROM recurring_pattern
-WHERE last_updated < :staleBefore;

@@ -15,6 +15,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import org.jetbrains.compose.resources.stringResource
+import cashbuddy.shared.generated.resources.Res
+import cashbuddy.shared.generated.resources.settings_section_security
+import cashbuddy.shared.generated.resources.settings_biometric_lock_title
+import cashbuddy.shared.generated.resources.settings_biometric_lock_desc
 
 @Composable
 fun SecuritySection(
@@ -27,7 +32,7 @@ fun SecuritySection(
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         Text(
-            text = "Security & Biometrics",
+            text = stringResource(Res.string.settings_section_security),
             style = MaterialTheme.typography.titleLarge,
             fontWeight = FontWeight.Bold
         )
@@ -45,12 +50,12 @@ fun SecuritySection(
             ) {
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = "Biometric Lock",
+                        text = stringResource(Res.string.settings_biometric_lock_title),
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.SemiBold
                     )
                     Text(
-                        text = "Require fingerprint / face unlock on launch",
+                        text = stringResource(Res.string.settings_biometric_lock_desc),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )

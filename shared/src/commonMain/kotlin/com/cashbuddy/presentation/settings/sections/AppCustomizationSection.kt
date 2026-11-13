@@ -1,6 +1,9 @@
 package com.cashbuddy.presentation.settings.sections
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -8,6 +11,9 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
@@ -25,14 +31,18 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import cashbuddy.shared.generated.resources.Res
+import cashbuddy.shared.generated.resources.ic_category
 import cashbuddy.shared.generated.resources.ic_refresh
 import cashbuddy.shared.generated.resources.settings_app_name_label
 import cashbuddy.shared.generated.resources.settings_app_subtitle_label
 import cashbuddy.shared.generated.resources.settings_char_count
+import cashbuddy.shared.generated.resources.settings_manage_categories
+import cashbuddy.shared.generated.resources.settings_manage_categories_desc
 import cashbuddy.shared.generated.resources.settings_nav_order_hint
 import cashbuddy.shared.generated.resources.settings_nav_order_label
 import cashbuddy.shared.generated.resources.settings_reset_customization
@@ -42,6 +52,7 @@ import cashbuddy.shared.generated.resources.settings_show_app_logo_desc
 import com.cashbuddy.domain.model.UserSettings
 import com.cashbuddy.presentation.settings.components.ReorderableNavOrderList
 import com.cashbuddy.presentation.theme.CashBuddyTypography
+import com.cashbuddy.presentation.theme.PrimaryIndigo
 import com.cashbuddy.presentation.theme.RadiusLarge
 import com.cashbuddy.presentation.theme.RadiusMedium
 import org.jetbrains.compose.resources.painterResource
@@ -58,6 +69,7 @@ fun AppCustomizationSection(
     onShowLogoChange: (Boolean) -> Unit,
     onNavOrderChange: (List<String>) -> Unit,
     onResetCustomization: () -> Unit,
+    onNavigateToManageCategories: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     val isCustomized = remember(customAppName, customAppSubtitle, showAppLogo, navOrderList) {
@@ -206,6 +218,65 @@ fun AppCustomizationSection(
                     ReorderableNavOrderList(
                         navItems = navOrderList,
                         onOrderChanged = onNavOrderChange
+                    )
+                }
+            }
+        }
+
+        if (onNavigateToManageCategories != null) {
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RadiusLarge)
+                    .clickable(onClick = onNavigateToManageCategories),
+                shape = RadiusLarge,
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(40.dp)
+                                .clip(CircleShape)
+                                .background(PrimaryIndigo.copy(alpha = 0.12f)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                painter = painterResource(Res.drawable.ic_category),
+                                contentDescription = null,
+                                tint = PrimaryIndigo,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+                        Spacer(modifier = Modifier.width(14.dp))
+                        Column {
+                            Text(
+                                text = stringResource(Res.string.settings_manage_categories),
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                            Text(
+                                text = stringResource(Res.string.settings_manage_categories_desc),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.ArrowForward,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.size(20.dp)
                     )
                 }
             }

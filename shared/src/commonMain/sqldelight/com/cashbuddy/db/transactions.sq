@@ -286,7 +286,7 @@ sumByCategory:
 SELECT COALESCE(SUM(t.amount), 0.0)
 FROM transactions t
 LEFT JOIN categories c ON t.category_id = c.id
-WHERE (c.name = :category OR CAST(t.category_id AS TEXT) = :category)
+WHERE (LOWER(c.name) = LOWER(:category) OR CAST(t.category_id AS TEXT) = :category)
   AND t.type = 'DEBIT'
   AND t.status IN ('CONFIRMED', 'MODIFIED')
   AND t.timestamp >= :startTime
@@ -299,7 +299,7 @@ SELECT t.*, c.name AS category_name, c.color AS category_color, c.icon AS catego
 FROM transactions t
 LEFT JOIN categories c ON t.category_id = c.id
 LEFT JOIN accounts a ON t.account_id = a.id
-WHERE (c.name = :category OR CAST(t.category_id AS TEXT) = :category)
+WHERE (LOWER(c.name) = LOWER(:category) OR CAST(t.category_id AS TEXT) = :category)
   AND t.type = 'DEBIT'
   AND t.status IN ('CONFIRMED', 'MODIFIED')
   AND t.timestamp >= :startTime
@@ -404,6 +404,10 @@ WHERE is_merged = 0;
 
 deleteAll:
 DELETE FROM transactions WHERE 1 = 1;
+
+reassignCategory:
+UPDATE transactions SET category_id = :fallbackId WHERE category_id = :targetId;
+
 
 
 

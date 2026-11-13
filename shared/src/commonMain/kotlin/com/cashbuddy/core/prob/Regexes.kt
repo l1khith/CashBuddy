@@ -20,6 +20,5 @@ object Regexes {
     val OTP = Regex("""(?i)\b(otp|one time password|verification code|secret code|do not share)\b""")
     val PROMO = Regex("""(?i)\b(congratulations|pre-approved|win cash|apply now|apply for|apply|earn|special offer|voucher)\b""")
     val OFFER = Regex("""(?i)\b(offer|discount|deal|cashback up to)\b""")
-    val TX_VERB = Regex("""(?i)\b(payment|transaction|debited|credited|paid|sent|transferred|spent|received)\b""")
     val SUCCESS = Regex("""(?i)\b(successful|completed|success|confirmed|done)\b""")
 }

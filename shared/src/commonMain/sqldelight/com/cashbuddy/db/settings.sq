@@ -13,9 +13,6 @@ SELECT * FROM settings;
 set:
 INSERT OR REPLACE INTO settings (key, value, updated_at) VALUES (?, ?, ?);
 
-deleteByKey:
-DELETE FROM settings WHERE key = ?;
-
 CREATE TABLE ignored_packages (
     package_name TEXT PRIMARY KEY NOT NULL
 );

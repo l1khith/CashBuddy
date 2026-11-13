@@ -11,7 +11,6 @@ import com.cashbuddy.domain.model.Transaction
 import com.cashbuddy.domain.model.TransactionStatus
 import com.cashbuddy.domain.model.TransactionType
 import com.cashbuddy.domain.repository.CategoryBreakdown
-import com.cashbuddy.domain.repository.MonthlySummary
 import com.cashbuddy.domain.repository.TransactionRepository
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
@@ -68,19 +67,6 @@ class TransactionRepositoryImpl(
                 transactionCount = count
             )
         }.asFlow().mapToOne(dispatcher).distinctUntilChanged()
-
-    override fun getByCategory(categoryId: Long): Flow<List<Transaction>> =
-        queries.getByCategory(categoryId, ::mapTransaction).asFlow().mapToList(dispatcher).distinctUntilChanged()
-
-    override fun getMonthlySummary(): Flow<List<MonthlySummary>> =
-        queries.getMonthlySummary { month, totalDebit, totalCredit, transactionCount ->
-            MonthlySummary(
-                month = month,
-                totalDebit = totalDebit ?: 0.0,
-                totalCredit = totalCredit ?: 0.0,
-                transactionCount = transactionCount
-            )
-        }.asFlow().mapToList(dispatcher)
 
     override fun getCategoryBreakdown(start: Long, end: Long): Flow<List<CategoryBreakdown>> =
         queries.getCategoryBreakdown(startTime = start, endTime = end) { categoryName, categoryColor, categoryIcon, totalAmount, transactionCount, averageAmount ->
@@ -241,9 +227,6 @@ class TransactionRepositoryImpl(
     override fun getCount(): Flow<Long> =
         queries.getCount().asFlow().mapToOne(dispatcher).distinctUntilChanged()
 
-    override fun getAverageAmount(): Flow<Double> =
-        queries.getAverageAmount().asFlow().mapToOne(dispatcher).distinctUntilChanged()
-
     override suspend fun findDuplicateCandidates(): List<Transaction> = withContext(dispatcher) {
         queries.findDuplicateCandidates(::mapTransaction).executeAsList()
     }
@@ -258,16 +241,8 @@ class TransactionRepositoryImpl(
         _mutationEvents.tryEmit(Unit)
     }
 
-    override suspend fun insertMergeLog(survivorId: Long, mergedId: Long, timestamp: Long): Unit = withContext(dispatcher) {
-        queries.insertMergeLog(survivor_id = survivorId, merged_id = mergedId, merged_at = timestamp)
-    }
-
     override suspend fun getMergedTransactions(survivorId: Long): List<Transaction> = withContext(dispatcher) {
         queries.getMergedRecordsForSurvivor(survivorId, ::mapTransaction).executeAsList()
-    }
-
-    override suspend fun deleteMergeLog(survivorId: Long): Unit = withContext(dispatcher) {
-        queries.deleteMergeLogForSurvivor(survivorId)
     }
 
     override suspend fun getRecentMergeLogs(): List<com.cashbuddy.domain.repository.MergeLogEntry> = withContext(dispatcher) {
@@ -283,22 +258,6 @@ class TransactionRepositoryImpl(
 
     override suspend fun getMergeLogCount(): Long = withContext(dispatcher) {
         queries.getMergeLogCount().executeAsOne()
-    }
-
-    override suspend fun sumByCategory(category: String, startTime: Long, endTime: Long): Double = withContext(dispatcher) {
-        queries.sumByCategory(
-            category = category,
-            startTime = startTime,
-            endTime = endTime
-        ).executeAsOne()
-    }
-
-    override suspend fun sumAll(startTime: Long, endTime: Long, type: TransactionType): Double = withContext(dispatcher) {
-        queries.sumAll(
-            type = type.name,
-            startTime = startTime,
-            endTime = endTime
-        ).executeAsOne()
     }
 
     override suspend fun sumActualSpent(startTime: Long, endTime: Long): Double = withContext(dispatcher) {
@@ -343,12 +302,6 @@ class TransactionRepositoryImpl(
             fromTimestamp = fromTimestamp,
             toTimestamp = toTimestamp
         ).executeAsList()
-    }
-
-    override suspend fun updateNotes(id: Long, notes: String): Unit = withContext(dispatcher) {
-        val now = com.cashbuddy.platform.currentTimeMillis()
-        queries.updateNotes(notes = notes, updatedAt = now, id = id)
-        _mutationEvents.tryEmit(Unit)
     }
 
     override suspend fun getHistoryPage(

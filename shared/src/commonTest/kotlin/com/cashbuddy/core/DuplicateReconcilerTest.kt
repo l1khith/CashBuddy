@@ -35,8 +35,6 @@ class DuplicateReconcilerTest {
             flowOf(txs.filter { it.timestamp in start..end && !it.isMerged }.take(limit.toInt()))
         override fun getSummaryByDateRange(start: Long, end: Long): Flow<com.cashbuddy.domain.model.DateRangeSummary> =
             flowOf(com.cashbuddy.domain.model.DateRangeSummary(0.0, 0.0, 0L))
-        override fun getByCategory(categoryId: Long): Flow<List<Transaction>> = flowOf(txs.filter { it.categoryId == categoryId && !it.isMerged })
-        override fun getMonthlySummary(): Flow<List<com.cashbuddy.domain.repository.MonthlySummary>> = flowOf(emptyList())
         override fun getCategoryBreakdown(start: Long, end: Long): Flow<List<com.cashbuddy.domain.repository.CategoryBreakdown>> = flowOf(emptyList())
         override suspend fun insert(transaction: Transaction): Long {
             val id = (txs.size + 1).toLong()
@@ -47,7 +45,6 @@ class DuplicateReconcilerTest {
         override suspend fun updateStatus(id: Long, status: TransactionStatus) {}
         override suspend fun deleteById(id: Long) {}
         override fun getBalance(): Flow<Double> = flowOf(0.0)
-        override fun getAverageAmount(): Flow<Double> = flowOf(0.0)
         override fun getCount(): Flow<Long> = flowOf(txs.count { !it.isMerged }.toLong())
 
         override suspend fun findDuplicateCandidates(): List<Transaction> = txs.filter { !it.isMerged }
@@ -59,22 +56,9 @@ class DuplicateReconcilerTest {
             val idx = txs.indexOfFirst { it.id == id }
             if (idx != -1) txs[idx] = txs[idx].copy(isMerged = false, mergedIntoId = null)
         }
-        override suspend fun insertMergeLog(survivorId: Long, mergedId: Long, timestamp: Long) {
-            mergeLogs.add(MergeLogEntry(id = (mergeLogs.size + 1).toLong(), survivorId = survivorId, mergedId = mergedId, mergedAt = timestamp))
-        }
         override suspend fun getMergedTransactions(survivorId: Long): List<Transaction> = txs.filter { it.mergedIntoId == survivorId }
-        override suspend fun deleteMergeLog(survivorId: Long) {
-            mergeLogs.removeAll { it.survivorId == survivorId }
-        }
         override suspend fun getRecentMergeLogs(): List<MergeLogEntry> = mergeLogs.sortedByDescending { it.mergedAt }
         override suspend fun getMergeLogCount(): Long = mergeLogs.size.toLong()
-        override suspend fun sumByCategory(category: String, startTime: Long, endTime: Long): Double =
-            txs.filter {
-                (it.categoryName == category || it.categoryId.toString() == category) &&
-                it.type == TransactionType.DEBIT &&
-                it.timestamp in startTime..endTime &&
-                !it.isMerged
-            }.sumOf { it.amount }
         override fun getByCategoryAndPeriod(category: String, startTime: Long, endTime: Long): Flow<List<Transaction>> =
             flowOf(txs.filter {
                 (it.categoryName == category || it.categoryId.toString() == category) &&
@@ -121,7 +105,14 @@ class DuplicateReconcilerTest {
         override suspend fun applyMerges(operations: List<MergeOperation>, mergedAt: Long) {
             for (op in operations) {
                 txRepo.markMerged(op.duplicateId, op.survivorId)
-                txRepo.insertMergeLog(op.survivorId, op.duplicateId, mergedAt)
+                txRepo.mergeLogs.add(
+                    MergeLogEntry(
+                        id = (txRepo.mergeLogs.size + 1).toLong(),
+                        survivorId = op.survivorId,
+                        mergedId = op.duplicateId,
+                        mergedAt = mergedAt
+                    )
+                )
                 if (op.balanceAccountId != null && op.balanceDelta != 0.0) {
                     accRepo.applyBalanceDelta(op.balanceAccountId, op.balanceDelta)
                 }
@@ -140,7 +131,7 @@ class DuplicateReconcilerTest {
                 }
             }
             for (survivorId in survivorIds) {
-                txRepo.deleteMergeLog(survivorId)
+                txRepo.mergeLogs.removeAll { it.survivorId == survivorId }
             }
         }
     }

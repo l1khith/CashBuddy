@@ -9,11 +9,6 @@ import kotlinx.coroutines.flow.Flow
  */
 interface RecurringPatternRepository {
     /**
-     * Upserts a single pattern into the cache table.
-     */
-    suspend fun upsert(pattern: RecurringPattern)
-
-    /**
      * Upserts a collection of patterns into the cache table.
      */
     suspend fun upsertAll(patterns: List<RecurringPattern>)
@@ -47,9 +42,4 @@ interface RecurringPatternRepository {
      * Clears all recurring patterns (e.g. on full data reset).
      */
     suspend fun deleteAll()
-
-    /**
-     * Removes stale patterns not seen or updated before [staleBefore] timestamp.
-     */
-    suspend fun deleteStale(staleBefore: Long)
 }

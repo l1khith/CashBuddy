@@ -41,7 +41,4 @@ data class Transaction(
     val accountName: String? = null,
     val accountType: String? = null,
     val utr: String? = null
-) {
-    val amountPaise: Paise
-        get() = Paise.fromRupees(amount)
-}
+)

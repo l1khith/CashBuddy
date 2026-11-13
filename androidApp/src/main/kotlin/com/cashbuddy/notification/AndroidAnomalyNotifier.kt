@@ -31,7 +31,8 @@ class AndroidAnomalyNotifier(
                 val smartEnabled = settingsRepository.getSmartNotificationsEnabled().firstOrNull() ?: true
                 if (!smartEnabled) return@launch
 
-                val notificationId = (30000 + (transactionId % 10000)).toInt()
+                // Stable non-colliding notification ID bounded within positive Int range for request codes (* 2, * 2 + 1)
+                val notificationId = ((transactionId and 0x1FFFFFFF).toInt()) + 100000
 
                 // 1. "It's mine" action -> BroadcastReceiver dismisses and marks CONFIRMED
                 val itsMineIntent = Intent(context, AnomalyActionReceiver::class.java).apply {
