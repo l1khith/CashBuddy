@@ -137,7 +137,24 @@ object CategoryRegistry {
     val defaultCategories: List<CategoryConfig> = json.decodeFromString(CATEGORIES_JSON)
 
     private val nameToConfig: Map<String, CategoryConfig> = defaultCategories.associateBy { it.name.lowercase() }
-    private val colorCache: MutableMap<String, Color> = mutableMapOf()
+    private val dynamicCategories = com.cashbuddy.core.prob.ConcurrentHashMap<String, CategoryConfig>()
+    private val colorCache: MutableMap<String, Color> = com.cashbuddy.core.prob.ConcurrentHashMap()
+
+    fun registerCategories(categories: List<Category>) {
+        colorCache.clear()
+        dynamicCategories.clear()
+        categories.forEach { cat ->
+            val key = cat.name.trim().lowercase()
+            dynamicCategories[key] = CategoryConfig(
+                id = cat.id,
+                name = cat.name,
+                type = cat.type.name,
+                colorHex = cat.color,
+                icon = cat.icon
+            )
+            colorCache[key] = parseHexColor(cat.color)
+        }
+    }
 
     fun parseHexColor(hex: String?, fallback: Color = Color(0xFF9CA3AF)): Color {
         if (hex.isNullOrBlank()) return fallback
@@ -165,14 +182,21 @@ object CategoryRegistry {
         colorCache[key]?.let { return it }
 
         val lower = key.lowercase()
-        // 1. Direct name lookup
+        // 1. Dynamic user categories lookup
+        dynamicCategories[lower]?.let {
+            val c = parseHexColor(it.colorHex)
+            colorCache[key] = c
+            return c
+        }
+
+        // 2. Direct name lookup from defaults
         nameToConfig[lower]?.let {
             val c = parseHexColor(it.colorHex)
             colorCache[key] = c
             return c
         }
 
-        // 2. Keyword sub-match
+        // 3. Keyword sub-match
         for (cat in defaultCategories) {
             if (lower.contains(cat.name.lowercase()) || cat.keywords.any { lower.contains(it) }) {
                 val c = parseHexColor(cat.colorHex)
@@ -189,6 +213,7 @@ object CategoryRegistry {
     fun getIcon(categoryName: String?): String {
         if (categoryName.isNullOrBlank()) return "help_outline"
         val lower = categoryName.lowercase().trim()
+        dynamicCategories[lower]?.let { return it.icon }
         nameToConfig[lower]?.let { return it.icon }
 
         for (cat in defaultCategories) {

@@ -155,8 +155,10 @@ class BudgetEngine(
      * Mirrors `sumByCategory`'s `(c.name = :category OR CAST(t.category_id AS TEXT) = :category)`
      * match using the mapped row's categoryName/categoryId fields.
      */
-    private fun com.cashbuddy.domain.model.Transaction.matchesBudgetCategory(category: String): Boolean =
-        categoryName == category || categoryId.toString() == category
+    private fun com.cashbuddy.domain.model.Transaction.matchesBudgetCategory(category: String): Boolean {
+        val target = category.trim()
+        return categoryName?.trim().equals(target, ignoreCase = true) || categoryId.toString() == target
+    }
 
     fun periodRange(period: BudgetPeriod, now: Long): LongRange {
         val instant = Instant.fromEpochMilliseconds(now)

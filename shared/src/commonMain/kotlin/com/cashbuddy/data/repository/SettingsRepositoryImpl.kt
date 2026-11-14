@@ -96,11 +96,6 @@ class SettingsRepositoryImpl(
         queries.set("biometricEnabled", enabled.toString(), com.cashbuddy.platform.currentTimeMillis())
     }
 
-    override fun getDeveloperMode(): Flow<Boolean> =
-        queries.get("developer_mode").asFlow().mapToOneOrNull(dispatcher).map { record ->
-            record?.value_?.toBooleanStrictOrNull() ?: false
-        }
-
     override suspend fun setDeveloperMode(enabled: Boolean): Unit = withContext(dispatcher) {
         // Dual key must flip atomically (audit fix P1-C) — a partial write desyncs
         // developer_mode from debug_log_viewer_enabled.
@@ -124,11 +119,6 @@ class SettingsRepositoryImpl(
             queries.set("developer_mode", enabled.toString(), now)
         }
     }
-
-    override fun getPreferredCurrency(): Flow<String> =
-        queries.get("preferredCurrency").asFlow().mapToOneOrNull(dispatcher).map { record ->
-            record?.value_ ?: "INR"
-        }
 
     override suspend fun setPreferredCurrency(currencyCode: String): Unit = withContext(dispatcher) {
         queries.set("preferredCurrency", currencyCode, com.cashbuddy.platform.currentTimeMillis())
@@ -158,11 +148,6 @@ class SettingsRepositoryImpl(
         queries.set("smartNotificationsEnabled", enabled.toString(), com.cashbuddy.platform.currentTimeMillis())
     }
 
-    override fun getCustomAppName(): Flow<String> =
-        queries.get("custom_app_name").asFlow().mapToOneOrNull(dispatcher).map { record ->
-            (record?.value_ ?: UserSettings.DEFAULT_APP_NAME).take(UserSettings.MAX_APP_NAME_LENGTH)
-        }
-
     override suspend fun setCustomAppName(name: String): Unit = withContext(dispatcher) {
         queries.set("custom_app_name", name.take(UserSettings.MAX_APP_NAME_LENGTH), com.cashbuddy.platform.currentTimeMillis())
     }
@@ -185,19 +170,9 @@ class SettingsRepositoryImpl(
         queries.set("show_app_logo", show.toString(), com.cashbuddy.platform.currentTimeMillis())
     }
 
-    override fun getNavOrder(): Flow<String> =
-        queries.get("nav_order").asFlow().mapToOneOrNull(dispatcher).map { record ->
-            record?.value_?.takeIf { it.isNotBlank() } ?: UserSettings.DEFAULT_NAV_ORDER
-        }
-
     override suspend fun setNavOrder(order: String): Unit = withContext(dispatcher) {
         queries.set("nav_order", order, com.cashbuddy.platform.currentTimeMillis())
     }
-
-    override fun getShowHealthInTopBar(): Flow<Boolean> =
-        queries.get("show_health_in_top_bar").asFlow().mapToOneOrNull(dispatcher).map { record ->
-            record?.value_?.toBooleanStrictOrNull() ?: false
-        }
 
     override suspend fun setShowHealthInTopBar(show: Boolean): Unit = withContext(dispatcher) {
         queries.set("show_health_in_top_bar", show.toString(), com.cashbuddy.platform.currentTimeMillis())

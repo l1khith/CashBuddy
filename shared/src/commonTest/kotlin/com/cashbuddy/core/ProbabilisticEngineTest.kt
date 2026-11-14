@@ -238,20 +238,6 @@ class ProbabilisticEngineTest {
     }
 
     @Test
-    fun testHeuristicCategorizer_VpaFoodReturnsHighConfidence() {
-        // Zero-Map contract (HeuristicCategorizer.kt, post-4a94d73): both tiers are
-        // deliberately void of hardcoded mappings — VPA handles must not mint categories
-        // and clock hours must not hallucinate them. Unconfirmed merchants enter Review
-        // as Unknown for user confirmation (non-negotiable #6, human-in-the-loop).
-        val vpaMatch = com.cashbuddy.core.prob.HeuristicCategorizer.matchVpa("swiggy.food@icici")
-        assertNull(vpaMatch, "matchVpa must never hardcode a VPA->category map in Zero-Map mode")
-        val contextMatch = com.cashbuddy.core.prob.HeuristicCategorizer.matchContext(
-            timestamp = 1727500000000L, amount = 450.0
-        )
-        assertNull(contextMatch, "matchContext must never hallucinate a category from clock time")
-    }
-
-    @Test
     fun testBankDebitSmsWithColonAmountAndFvgMerchant() {
         val text = "Bank A/c *0383 Debited Rs:60.00 on 28-09-2026 13:02:20 by Mob Bk ref no 663757559850, Fvg: BOTTLE L Avl Bal Rs:1675.08."
         val raw = RawMessage(

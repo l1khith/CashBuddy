@@ -35,6 +35,7 @@ import cashbuddy.shared.generated.resources.ic_payments
 import cashbuddy.shared.generated.resources.ic_receipt_long
 import cashbuddy.shared.generated.resources.ic_refresh
 import cashbuddy.shared.generated.resources.ic_restaurant
+import cashbuddy.shared.generated.resources.ic_shield
 import cashbuddy.shared.generated.resources.ic_shopping_bag
 import cashbuddy.shared.generated.resources.ic_trending_down
 import cashbuddy.shared.generated.resources.ic_trending_up
@@ -216,25 +217,8 @@ fun TransactionItemCard(
     )
 }
 
-fun getCategoryDrawable(categoryName: String, isDebit: Boolean = true): DrawableResource {
-    val lower = categoryName.lowercase()
-    return when {
-        lower.contains("food") || lower.contains("dining") || lower.contains("restaurant") -> Res.drawable.ic_restaurant
-        lower.contains("two wheeler") || lower.contains("bike") || lower.contains("motorcycle") -> Res.drawable.ic_two_wheeler
-        lower.contains("transport") || lower.contains("bus") || lower.contains("travel") || lower.contains("cab") || lower.contains("fuel") || lower.contains("auto") || lower.contains("car") -> Res.drawable.ic_directions_bus
-        lower.contains("shopping") || lower.contains("groceries") || lower.contains("retail") || lower.contains("store") -> Res.drawable.ic_shopping_bag
-        lower.contains("bill") || lower.contains("utilit") || lower.contains("recharge") -> Res.drawable.ic_receipt_long
-        lower.contains("housing") || lower.contains("rent") -> Res.drawable.ic_home
-        lower.contains("invest") || lower.contains("stock") || lower.contains("mutual") -> Res.drawable.ic_trending_up
-        lower.contains("salary") || lower.contains("account") || lower.contains("wallet") -> Res.drawable.ic_account_balance_wallet
-        lower.contains("refund") -> Res.drawable.ic_refresh
-        lower.contains("payment") || lower.contains("upi") -> Res.drawable.ic_payments
-        lower.contains("cash") || lower.contains("money") -> Res.drawable.ic_attach_money
-        categoryName.isNotBlank() && categoryName != "Unknown" -> Res.drawable.ic_category
-        isDebit -> Res.drawable.ic_trending_down
-        else -> Res.drawable.ic_trending_up
-    }
-}
+fun getCategoryDrawable(categoryName: String, isDebit: Boolean = true): DrawableResource =
+    com.cashbuddy.presentation.theme.CategoryVisuals.getDrawable(categoryName, isDebit)
 
 fun formatCurrency(
     amount: Double,
@@ -254,17 +238,5 @@ fun formatTimestampResource(timestamp: Long): String {
         diff < 86400_000 -> stringResource(Res.string.time_hours_ago, (diff / 3600_000).toInt())
         diff < 172800_000 -> stringResource(Res.string.time_yesterday)
         else -> stringResource(Res.string.time_days_ago, (diff / 86400_000).toInt())
-    }
-}
-
-fun formatTimestamp(timestamp: Long): String {
-    val now = com.cashbuddy.platform.currentTimeMillis()
-    val diff = now - timestamp
-    return when {
-        diff < 60_000 -> "Just now"
-        diff < 3600_000 -> "${diff / 60_000}m ago"
-        diff < 86400_000 -> "${diff / 3600_000}h ago"
-        diff < 172800_000 -> "Yesterday"
-        else -> "${diff / 86400_000}d ago"
     }
 }

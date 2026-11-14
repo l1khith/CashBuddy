@@ -46,6 +46,7 @@ import com.cashbuddy.domain.usecase.RejectTransactionUseCase
 import com.cashbuddy.presentation.review.ReviewReducer
 import com.cashbuddy.presentation.addtransaction.AddTransactionViewModel
 import com.cashbuddy.presentation.budget.BudgetViewModel
+import com.cashbuddy.presentation.categories.ManageCategoriesViewModel
 import com.cashbuddy.presentation.home.HomeViewModel
 import com.cashbuddy.presentation.personalization.PersonalizationViewModel
 import com.cashbuddy.presentation.review.ReviewViewModel
@@ -113,6 +114,7 @@ val appModule = module {
             budgetAlertScheduler = getOrNull(),
             recurringPatternRepo = getOrNull(),
             anomalyNotifier = getOrNull(),
+            calibrator = getOrNull(),
             ingestStore = com.cashbuddy.data.repository.TransactionIngestStore(database = get(), dispatcher = get())
         )
     }
@@ -148,13 +150,17 @@ val appModule = module {
             repository = get(),
             merchantRuleRepository = get(),
             categoryEngine = get(),
-            learnedTokenRepository = get()
+            learnedTokenRepository = get(),
+            debugLogRepository = getOrNull(),
+            calibrator = getOrNull()
         )
     }
     factory {
         RejectTransactionUseCase(
             repository = get(),
-            learnedTokenRepository = get()
+            learnedTokenRepository = get(),
+            debugLogRepository = getOrNull(),
+            calibrator = getOrNull()
         )
     }
     factory {
@@ -197,6 +203,7 @@ val appModule = module {
 
     viewModel { SettingsViewModel(get(), get(), get(), get(), get(), getOrNull(), getOrNull(), getOrNull(), getOrNull(), getOrNull(), getOrNull(), getOrNull(), getOrNull(), getOrNull()) }
     viewModel { PersonalizationViewModel(get(), get(), get(), get(), getOrNull(), getOrNull()) }
+    viewModelOf(::ManageCategoriesViewModel)
     viewModelOf(::AddTransactionViewModel)
     viewModel { DebugLogViewModel(get(), get(), getOrNull()) }
 }

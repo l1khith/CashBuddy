@@ -94,46 +94,8 @@ class DebugLogRepositoryImpl(
         )
     }
 
-    override suspend fun updateRawText(id: String, rawText: String): Unit = withContext(dispatcher) {
-        queries.updateRawText(raw_text = rawText, id = id)
-    }
-
-    override suspend fun getById(id: String): DebugLogEntry? = withContext(dispatcher) {
-        queries.getById(id).executeAsOneOrNull()?.toEntry()
-    }
-
-    override suspend fun countWithFilter(filter: DebugLogFilter): Long = withContext(dispatcher) {
-        queries.countWithFilter(
-            sourceType = filter.sourceType,
-            policyAction = filter.policyAction,
-            packageName = filter.packageName,
-            startTime = filter.startTime,
-            endTime = filter.endTime
-        ).executeAsOne()
-    }
-
-    override suspend fun distinctPackages(): List<String> = withContext(dispatcher) {
-        queries.distinctPackages().executeAsList()
-    }
-
-    override suspend fun query(filter: DebugLogFilter): List<DebugLogEntry> = withContext(dispatcher) {
-        val list = queries.filterLogs(
-            sourceType = filter.sourceType,
-            policyAction = filter.policyAction,
-            packageName = filter.packageName,
-            startTime = filter.startTime,
-            endTime = filter.endTime
-        ).executeAsList().map { it.toEntry() }
-
-        if (filter.outcome != null) {
-            list.filter { it.pipelineOutcome.equals(filter.outcome, ignoreCase = true) }
-        } else {
-            list
-        }
-    }
-
-    override suspend fun recent(limit: Int): List<DebugLogEntry> = withContext(dispatcher) {
-        queries.recent(value_ = limit.toLong()).executeAsList().map { it.toEntry() }
+    override suspend fun getByResultingTxId(txId: String): DebugLogEntry? = withContext(dispatcher) {
+        queries.getByResultingTxId(txId).executeAsOneOrNull()?.toEntry()
     }
 
     override suspend fun clearAll(): Unit = withContext(dispatcher) {

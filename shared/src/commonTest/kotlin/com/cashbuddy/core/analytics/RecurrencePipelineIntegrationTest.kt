@@ -25,7 +25,6 @@ import com.cashbuddy.domain.model.TransactionType
 import com.cashbuddy.domain.repository.AccountRepository
 import com.cashbuddy.domain.repository.CategoryBreakdown
 import com.cashbuddy.domain.repository.CategoryRepository
-import com.cashbuddy.domain.repository.MonthlySummary
 import com.cashbuddy.domain.repository.RawMessageRepository
 import com.cashbuddy.domain.repository.RecurringPatternRepository
 import com.cashbuddy.domain.repository.TransactionRepository
@@ -57,8 +56,6 @@ class RecurrencePipelineIntegrationTest {
         override fun getByDateRangeWithLimit(start: Long, end: Long, limit: Long): Flow<List<Transaction>> =
             flowOf(txs.filter { it.timestamp in start..end }.take(limit.toInt()))
         override fun getSummaryByDateRange(start: Long, end: Long): Flow<DateRangeSummary> = flowOf(DateRangeSummary(0.0, 0.0, 0L))
-        override fun getByCategory(categoryId: Long): Flow<List<Transaction>> = flowOf(txs.filter { it.categoryId == categoryId })
-        override fun getMonthlySummary(): Flow<List<MonthlySummary>> = flowOf(emptyList())
         override fun getCategoryBreakdown(start: Long, end: Long): Flow<List<CategoryBreakdown>> = flowOf(emptyList())
         override suspend fun insert(transaction: Transaction): Long {
             val id = (txs.size + 1).toLong()
@@ -72,17 +69,13 @@ class RecurrencePipelineIntegrationTest {
         }
         override suspend fun deleteById(id: Long) {}
         override fun getBalance(): Flow<Double> = flowOf(0.0)
-        override fun getAverageAmount(): Flow<Double> = flowOf(0.0)
         override fun getCount(): Flow<Long> = flowOf(txs.size.toLong())
         override suspend fun findDuplicateCandidates(): List<Transaction> = emptyList()
         override suspend fun markMerged(id: Long, survivorId: Long) {}
         override suspend fun unmarkMerged(id: Long) {}
-        override suspend fun insertMergeLog(survivorId: Long, mergedId: Long, timestamp: Long) {}
         override suspend fun getMergedTransactions(survivorId: Long): List<Transaction> = emptyList()
-        override suspend fun deleteMergeLog(survivorId: Long) {}
         override suspend fun getRecentMergeLogs(): List<com.cashbuddy.domain.repository.MergeLogEntry> = emptyList()
         override suspend fun getMergeLogCount(): Long = 0L
-        override suspend fun sumByCategory(category: String, startTime: Long, endTime: Long): Double = 0.0
         override fun getByCategoryAndPeriod(category: String, startTime: Long, endTime: Long): Flow<List<Transaction>> = flowOf(emptyList())
         override suspend fun getAmountsAtMerchant(merchant: String, fromTimestamp: Long, toTimestamp: Long): List<Double> {
             return txs.filter {
@@ -90,20 +83,15 @@ class RecurrencePipelineIntegrationTest {
                 it.timestamp in fromTimestamp..toTimestamp
             }.map { it.amount }
         }
-        override suspend fun updateNotes(id: Long, notes: String) {
-            val idx = txs.indexOfFirst { it.id == id }
-            if (idx != -1) txs[idx] = txs[idx].copy(notes = notes)
-        }
     }
 
     private class InMemoryRecurringPatternRepository : RecurringPatternRepository {
         val patterns = mutableListOf<RecurringPattern>()
-        override suspend fun upsert(pattern: RecurringPattern) {
-            patterns.removeAll { it.merchantNormalized == pattern.merchantNormalized && it.amountPaise == pattern.amountPaise }
-            patterns.add(pattern)
-        }
         override suspend fun upsertAll(patterns: List<RecurringPattern>) {
-            patterns.forEach { upsert(it) }
+            patterns.forEach { p ->
+                this.patterns.removeAll { it.merchantNormalized == p.merchantNormalized && it.amountPaise == p.amountPaise }
+                this.patterns.add(p)
+            }
         }
         override fun getAll(): Flow<List<RecurringPattern>> = flowOf(patterns)
         override suspend fun getAllList(): List<RecurringPattern> = patterns.toList()
@@ -117,7 +105,6 @@ class RecurrencePipelineIntegrationTest {
         }
         override suspend fun deleteById(id: Long) { patterns.removeAll { it.id == id } }
         override suspend fun deleteAll() { patterns.clear() }
-        override suspend fun deleteStale(staleBefore: Long) { patterns.removeAll { it.lastUpdated < staleBefore } }
     }
 
     private class InMemoryRawMessageRepository : RawMessageRepository {

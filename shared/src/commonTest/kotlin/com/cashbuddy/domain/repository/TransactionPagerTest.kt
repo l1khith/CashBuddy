@@ -41,8 +41,6 @@ class TransactionPagerTest {
         override fun getByDateRange(start: Long, end: Long): Flow<List<Transaction>> = emptyFlow()
         override fun getByDateRangeWithLimit(start: Long, end: Long, limit: Long): Flow<List<Transaction>> = emptyFlow()
         override fun getSummaryByDateRange(start: Long, end: Long) = emptyFlow<com.cashbuddy.domain.model.DateRangeSummary>()
-        override fun getByCategory(categoryId: Long): Flow<List<Transaction>> = emptyFlow()
-        override fun getMonthlySummary(): Flow<List<MonthlySummary>> = emptyFlow()
         override fun getCategoryBreakdown(start: Long, end: Long): Flow<List<CategoryBreakdown>> = emptyFlow()
         override suspend fun insert(transaction: Transaction): Long = 0L
         override suspend fun updateStatus(id: Long, status: TransactionStatus) {}
@@ -51,17 +49,13 @@ class TransactionPagerTest {
             allTxs.removeAll { it.id == id }
         }
         override fun getBalance(): Flow<Double> = emptyFlow()
-        override fun getAverageAmount(): Flow<Double> = emptyFlow()
         override fun getCount(): Flow<Long> = emptyFlow()
         override suspend fun findDuplicateCandidates(): List<Transaction> = emptyList()
         override suspend fun markMerged(id: Long, survivorId: Long) {}
         override suspend fun unmarkMerged(id: Long) {}
-        override suspend fun insertMergeLog(survivorId: Long, mergedId: Long, timestamp: Long) {}
         override suspend fun getMergedTransactions(survivorId: Long): List<Transaction> = emptyList()
-        override suspend fun deleteMergeLog(survivorId: Long) {}
         override suspend fun getRecentMergeLogs(): List<MergeLogEntry> = emptyList()
         override suspend fun getMergeLogCount(): Long = 0L
-        override suspend fun sumByCategory(category: String, startTime: Long, endTime: Long): Double = 0.0
         override fun getByCategoryAndPeriod(category: String, startTime: Long, endTime: Long): Flow<List<Transaction>> = emptyFlow()
 
         override suspend fun getHistoryPage(

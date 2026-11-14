@@ -29,8 +29,13 @@ WHERE id = :id;
 
 findByCategory:
 SELECT * FROM budgets
-WHERE category = :category AND period = :period AND is_active = 1
+WHERE LOWER(category) = LOWER(:category) AND period = :period AND is_active = 1
 LIMIT 1;
+
+reassignCategory:
+UPDATE budgets
+SET category = :newCategory, updated_at = :updatedAt
+WHERE LOWER(category) = LOWER(:oldCategory);
 
 insert:
 INSERT INTO budgets (id, category, amount, period, start_date, is_active, last_alert_state, last_alert_at, created_at, updated_at)

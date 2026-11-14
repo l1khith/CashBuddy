@@ -33,12 +33,6 @@ data class Evidence(
     // Learned token Naive Bayes log-odds
     val tokenLogOdds: Double = 0.0
 ) {
-    val hasDebit: Boolean get() = amountAndDebitSameSentence
-    val hasCredit: Boolean get() = amountAndCreditSameSentence
-    val hasTransactionVerb: Boolean get() = amountInTransactionContext
-    val recentSameAmount: Boolean get() = recentSimilarAmount
-    val velocityHigh: Boolean get() = burstDetected
-
     fun toJson(): String = jsonInstance.encodeToString(this)
 
     companion object {

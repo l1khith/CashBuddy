@@ -264,14 +264,6 @@ class SettingsViewModel(
         }
     }
 
-    fun moveNavItem(fromIndex: Int, toIndex: Int) {
-        val current = (_pendingNavOrder.value ?: _uiState.value.navOrderList).toMutableList()
-        if (fromIndex !in current.indices || toIndex !in current.indices || fromIndex == toIndex) return
-        val moved = current.removeAt(fromIndex)
-        current.add(toIndex, moved)
-        _pendingNavOrder.value = current
-    }
-
     fun commitNavOrder(newOrder: List<String>) {
         val serialized = newOrder.joinToString(",")
         _pendingNavOrder.value = newOrder
@@ -433,21 +425,6 @@ class SettingsViewModel(
             }
             onComplete(undone)
         }
-    }
-
-    fun exportDuplicatePreviewCsv(): String {
-        val groups = _uiState.value.duplicateGroups
-        val sb = StringBuilder()
-        sb.append("Group,Role,TransactionId,Amount,Merchant,Confidence,Status,Timestamp,SourceApp,RawText\n")
-        groups.forEachIndexed { groupIndex, group ->
-            val gNum = groupIndex + 1
-            val survivor = group.survivor
-            sb.append("$gNum,SURVIVOR,${survivor.id},${survivor.amount},\"${survivor.merchant}\",${survivor.confidence},${survivor.status},${survivor.timestamp},\"${survivor.sourceApp}\",\"${survivor.rawText.replace("\"", "\"\"")}\"\n")
-            group.duplicates.forEach { dup ->
-                sb.append("$gNum,DUPLICATE_TO_MERGE,${dup.id},${dup.amount},\"${dup.merchant}\",${dup.confidence},${dup.status},${dup.timestamp},\"${dup.sourceApp}\",\"${dup.rawText.replace("\"", "\"\"")}\"\n")
-            }
-        }
-        return sb.toString()
     }
 
     fun addIgnoredPackage(packageName: String) {

@@ -41,11 +41,6 @@ class RecentStateRepository(private val maxEntries: Int = 20) {
 
     fun all(): List<RecentTx> = entries.values.toList().sortedByDescending { it.timestamp }
 
-    fun clear() {
-        entries.clear()
-        rawTimestamps.clear()
-    }
-
     /**
      * Checks if a similar amount (within ₹1.0) was logged recently (default 5 min).
      * Conditionally requires EITHER the merchant to match OR the source package to match,

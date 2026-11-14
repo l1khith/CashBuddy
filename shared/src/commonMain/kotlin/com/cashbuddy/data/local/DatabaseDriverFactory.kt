@@ -159,22 +159,6 @@ fun ensureSchema(driver: SqlDriver) {
         )
         """.trimIndent(),
         """
-        CREATE TABLE IF NOT EXISTS goals (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            name TEXT NOT NULL,
-            target_amount REAL NOT NULL,
-            current_amount REAL NOT NULL DEFAULT 0.0,
-            deadline INTEGER,
-            category_id INTEGER,
-            icon TEXT NOT NULL DEFAULT 'flag',
-            color TEXT NOT NULL DEFAULT '#2ECC71',
-            status TEXT NOT NULL DEFAULT 'ACTIVE' CHECK(status IN ('ACTIVE', 'COMPLETED', 'CANCELLED')),
-            created_at INTEGER NOT NULL,
-            updated_at INTEGER NOT NULL,
-            FOREIGN KEY (category_id) REFERENCES categories(id)
-        )
-        """.trimIndent(),
-        """
         CREATE TABLE IF NOT EXISTS merchant_rules (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             pattern TEXT NOT NULL,
@@ -516,6 +500,9 @@ private fun runMigrations(driver: SqlDriver) {
             package_name TEXT PRIMARY KEY NOT NULL
         );
     """.trimIndent())
+
+    // Audit fix: Drop orphaned goals table
+    executeDdl(driver, "DROP TABLE IF EXISTS goals;")
 }
 
 /**

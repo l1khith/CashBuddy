@@ -25,11 +25,19 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import cashbuddy.shared.generated.resources.Res
 import cashbuddy.shared.generated.resources.ic_cashbuddy_logo
+import cashbuddy.shared.generated.resources.settings_section_legal
+import cashbuddy.shared.generated.resources.settings_legal_desc
+import cashbuddy.shared.generated.resources.settings_privacy_policy_btn
+import cashbuddy.shared.generated.resources.settings_terms_btn
+import cashbuddy.shared.generated.resources.settings_about_website_btn
+import cashbuddy.shared.generated.resources.settings_github_repo_btn
+import cashbuddy.shared.generated.resources.settings_debug_active_badge
 import com.cashbuddy.platform.getAppVersionDisplay
 import com.cashbuddy.presentation.theme.CashBuddyTypography
 import com.cashbuddy.presentation.theme.PrimaryIndigo
 import com.cashbuddy.presentation.theme.RadiusLarge
 import org.jetbrains.compose.resources.painterResource
+import org.jetbrains.compose.resources.stringResource
 
 @Composable
 fun AboutSection(
@@ -44,7 +52,7 @@ fun AboutSection(
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         Text(
-            text = "About, Privacy Policy & Legal",
+            text = stringResource(Res.string.settings_section_legal),
             style = CashBuddyTypography.titleLarge,
             fontWeight = FontWeight.Bold
         )
@@ -64,7 +72,7 @@ fun AboutSection(
                 verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
                 Text(
-                    text = "Read CashBuddy's 100% offline architecture philosophy, core capabilities, privacy policy, and terms of service.",
+                    text = stringResource(Res.string.settings_legal_desc),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -74,7 +82,7 @@ fun AboutSection(
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(10.dp)
                 ) {
-                    Text("Privacy Policy")
+                    Text(stringResource(Res.string.settings_privacy_policy_btn))
                 }
 
                 OutlinedButton(
@@ -82,7 +90,7 @@ fun AboutSection(
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(10.dp)
                 ) {
-                    Text("Terms of Service")
+                    Text(stringResource(Res.string.settings_terms_btn))
                 }
 
                 OutlinedButton(
@@ -90,7 +98,7 @@ fun AboutSection(
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(10.dp)
                 ) {
-                    Text("About CashBuddy (Official Website)")
+                    Text(stringResource(Res.string.settings_about_website_btn))
                 }
 
                 OutlinedButton(
@@ -98,7 +106,7 @@ fun AboutSection(
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(10.dp)
                 ) {
-                    Text("GitHub Repository")
+                    Text(stringResource(Res.string.settings_github_repo_btn))
                 }
             }
         }
@@ -132,7 +140,7 @@ fun AboutSection(
             if (isDebugLogEnabled) {
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
-                    text = "Debug Logging Active",
+                    text = stringResource(Res.string.settings_debug_active_badge),
                     style = MaterialTheme.typography.labelSmall,
                     color = PrimaryIndigo,
                     fontWeight = FontWeight.Bold

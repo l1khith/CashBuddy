@@ -24,10 +24,20 @@ import androidx.compose.ui.unit.dp
 import cashbuddy.shared.generated.resources.Res
 import cashbuddy.shared.generated.resources.ic_tune
 import cashbuddy.shared.generated.resources.ic_warning
+import cashbuddy.shared.generated.resources.settings_notification_listener_title
+import cashbuddy.shared.generated.resources.settings_notification_listener_desc
+import cashbuddy.shared.generated.resources.settings_smart_notifications_title
+import cashbuddy.shared.generated.resources.settings_smart_notifications_desc
+import cashbuddy.shared.generated.resources.settings_android_notification_settings_btn
+import cashbuddy.shared.generated.resources.settings_ignored_apps_btn
+import cashbuddy.shared.generated.resources.settings_ocr_title
+import cashbuddy.shared.generated.resources.settings_ocr_desc
+import cashbuddy.shared.generated.resources.settings_ocr_active
 import com.cashbuddy.presentation.theme.AccentEmerald
 import com.cashbuddy.presentation.theme.CashBuddyTypography
 import com.cashbuddy.presentation.theme.RadiusLarge
 import org.jetbrains.compose.resources.painterResource
+import org.jetbrains.compose.resources.stringResource
 
 @Composable
 fun AutomationSection(
@@ -68,12 +78,12 @@ fun AutomationSection(
                 ) {
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
-                            text = "Notification Intake",
+                            text = stringResource(Res.string.settings_notification_listener_title),
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.SemiBold
                         )
                         Text(
-                            text = "Parse bank & payment apps passively",
+                            text = stringResource(Res.string.settings_notification_listener_desc),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -92,12 +102,12 @@ fun AutomationSection(
                 ) {
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
-                            text = "Smart Notifications",
+                            text = stringResource(Res.string.settings_smart_notifications_title),
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.SemiBold
                         )
                         Text(
-                            text = "Budget pacing alerts, anomaly warnings & weekly recaps",
+                            text = stringResource(Res.string.settings_smart_notifications_desc),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -115,12 +125,12 @@ fun AutomationSection(
                 ) {
                     Icon(
                         painter = painterResource(Res.drawable.ic_tune),
-                        contentDescription = "Notification Settings",
+                        contentDescription = stringResource(Res.string.settings_android_notification_settings_btn),
                         tint = MaterialTheme.colorScheme.primary,
                         modifier = Modifier.size(18.dp)
                     )
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text("Android Notification Access Settings")
+                    Text(stringResource(Res.string.settings_android_notification_settings_btn))
                 }
 
                 OutlinedButton(
@@ -130,12 +140,12 @@ fun AutomationSection(
                 ) {
                     Icon(
                         painter = painterResource(Res.drawable.ic_warning),
-                        contentDescription = "Ignore List",
+                        contentDescription = null,
                         tint = MaterialTheme.colorScheme.primary,
                         modifier = Modifier.size(18.dp)
                     )
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text("Ignored Apps List ($ignoredPackagesCount)")
+                    Text(stringResource(Res.string.settings_ignored_apps_btn, ignoredPackagesCount))
                 }
 
                 if (isOcrAvailable) {
@@ -146,18 +156,18 @@ fun AutomationSection(
                     ) {
                         Column(modifier = Modifier.weight(1f)) {
                             Text(
-                                text = "Screenshot Receipt OCR",
+                                text = stringResource(Res.string.settings_ocr_title),
                                 style = MaterialTheme.typography.titleMedium,
                                 fontWeight = FontWeight.SemiBold
                             )
                             Text(
-                                text = "Screenshot OCR uses ML Kit on the Play Store build and Tesseract on the F-Droid build. Both run entirely on-device.",
+                                text = stringResource(Res.string.settings_ocr_desc),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
                         Text(
-                            text = "Active",
+                            text = stringResource(Res.string.settings_ocr_active),
                             style = MaterialTheme.typography.labelMedium,
                             color = AccentEmerald,
                             fontWeight = FontWeight.Bold

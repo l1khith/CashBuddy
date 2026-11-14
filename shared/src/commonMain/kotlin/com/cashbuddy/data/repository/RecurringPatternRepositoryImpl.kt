@@ -48,21 +48,6 @@ class RecurringPatternRepositoryImpl(
         lastUpdated = lastUpdated
     )
 
-    override suspend fun upsert(pattern: RecurringPattern): Unit = withContext(dispatcher) {
-        queries.upsert(
-            merchantNormalized = pattern.merchantNormalized.lowercase().trim(),
-            amountPaise = pattern.amountPaise,
-            occurrenceCount = pattern.occurrenceCount.toLong(),
-            medianIntervalHours = pattern.medianIntervalHours,
-            cv = pattern.cv,
-            periodHours = pattern.periodHours.toLong(),
-            autocorrelationPeak = pattern.autocorrelationPeak,
-            firstSeen = pattern.firstSeen,
-            lastSeen = pattern.lastSeen,
-            lastUpdated = pattern.lastUpdated
-        )
-    }
-
     override suspend fun upsertAll(patterns: List<RecurringPattern>): Unit = withContext(dispatcher) {
         db.transaction {
             for (p in patterns) {
@@ -116,9 +101,5 @@ class RecurringPatternRepositoryImpl(
 
     override suspend fun deleteAll(): Unit = withContext(dispatcher) {
         queries.deleteAll()
-    }
-
-    override suspend fun deleteStale(staleBefore: Long): Unit = withContext(dispatcher) {
-        queries.deleteStale(staleBefore)
     }
 }

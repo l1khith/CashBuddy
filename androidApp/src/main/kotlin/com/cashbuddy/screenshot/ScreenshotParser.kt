@@ -1,6 +1,7 @@
 package com.cashbuddy.screenshot
 
 import android.util.Log
+import com.cashbuddy.core.ScreenshotParserEngine
 import com.cashbuddy.core.ScreenshotTransaction
 import com.cashbuddy.core.parseScreenshotText
 import com.cashbuddy.ocr.OcrEngine
@@ -9,7 +10,8 @@ import kotlinx.coroutines.withContext
 import java.io.File
 
 class ScreenshotParser(
-    private val ocrEngine: OcrEngine
+    private val ocrEngine: OcrEngine,
+    private val parserEngine: ScreenshotParserEngine? = null
 ) {
 
     companion object {
@@ -50,9 +52,9 @@ class ScreenshotParser(
         Log.d(TAG, "OCR text preview: ${ocrText.take(200)}")
 
         val result = try {
-            parseScreenshotText(ocrText)
+            parserEngine?.parse(ocrText) ?: parseScreenshotText(ocrText)
         } catch (e: Throwable) {
-            Log.e(TAG, "parseScreenshotText failed", e)
+            Log.e(TAG, "Screenshot parsing failed", e)
             null
         }
 
