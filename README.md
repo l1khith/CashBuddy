@@ -9,6 +9,7 @@
 [![Kotlin Multiplatform](https://img.shields.io/badge/Kotlin_Multiplatform-2.2.1-7F52FF?logo=kotlin&logoColor=white)](https://kotlinlang.org/docs/multiplatform.html)
 [![Compose Multiplatform](https://img.shields.io/badge/Compose_Multiplatform-1.7.3-4285F4?logo=jetpackcompose&logoColor=white)](https://www.jetbrains.com/lp/compose-multiplatform/)
 [![Zero Network](https://img.shields.io/badge/Network_Permission-ZERO-success?logo=adguard&logoColor=white)](#-the-pitch-why-cashbuddy)
+[![Obtainium](https://img.shields.io/badge/Obtainium-Install_FOSS_APK-00BCD4?logo=android&logoColor=white)](https://github.com/l1khith/CashBuddy/releases/latest)
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
 [![Platform](https://img.shields.io/badge/Platform-Android-green?logo=android&logoColor=white)](#-building-the-app)
 [![Encryption](https://img.shields.io/badge/Database-SQLCipher_AES--256-orange?logo=sqlite&logoColor=white)](#️-tech-stack)
@@ -122,6 +123,40 @@ To guarantee absolute accounting accuracy:
 │        Android Keystore TEE  •  100% Offline Storage            │
 └─────────────────────────────────────────────────────────────────┘
 ```
+
+---
+
+## 📥 Installation & Updates
+
+### 1. Install via Obtainium (Recommended for Auto-Updates)
+[Obtainium](https://github.com/ImranR98/Obtainium) allows you to install and get automatic updates directly from this GitHub repository.
+
+1. Install Obtainium on your Android device.
+2. Tap **Add App** and paste the repository URL:
+   ```text
+   https://github.com/l1khith/CashBuddy
+   ```
+3. In **Filter APKs by Regular Expression**, enter:
+   ```regex
+   .*-foss\.apk$
+   ```
+4. Tap **Add** & **Install**. Obtainium will automatically track new releases and keep your app updated seamlessly!
+
+> **One-Click Obtainium Link**: If you already have Obtainium installed on your Android phone, tap below:
+> 
+> [`obtainium://app/https%3A%2F%2Fgithub.com%2Fl1khith%2FCashBuddy`](obtainium://app/https%3A%2F%2Fgithub.com%2Fl1khith%2FCashBuddy)
+
+---
+
+### 2. Direct GitHub Release
+Download the latest signed release APK from [GitHub Releases](https://github.com/l1khith/CashBuddy/releases/latest):
+- **`CashBuddy-v1.0.6-foss.apk`**: 100% FOSS edition with offline Tesseract OCR and zero proprietary blobs.
+- **`androidApp-play-release.apk`**: Standard release edition with ML Kit OCR.
+
+---
+
+### 3. F-Droid (Pending Review)
+CashBuddy is submitted to the official F-Droid catalog ([Merge Request !57498](https://gitlab.com/fdroid/fdroiddata/-/merge_requests/57498)). Once approved, CashBuddy will be available directly in the F-Droid client.
 
 ---
 
