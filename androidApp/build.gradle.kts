@@ -62,7 +62,12 @@ android {
         }
         create("fdroid") {
             dimension = "distribution"
-            signingConfig = null
+            val releaseSigning = signingConfigs.getByName("release")
+            if (releaseSigning.storeFile?.exists() == true) {
+                signingConfig = releaseSigning
+            } else {
+                signingConfig = null
+            }
         }
     }
     packaging {
