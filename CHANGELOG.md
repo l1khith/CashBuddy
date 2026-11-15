@@ -2,6 +2,28 @@
 
 All notable changes to the CashBuddy project will be documented in this file.
 
+## [1.0.6] - 2026-11-13
+
+### Added - Dynamic Custom Category Domains
+- **Manage Categories Screen**: Full Material 3 custom category domain management (`ManageCategoriesScreen`, `ManageCategoriesViewModel`) accessible directly from Settings.
+- **Custom Domains Customization**: Allows creating, editing, and deleting custom income/expense categories with custom hex colors and curated icons.
+- **Safe Reassignment**: Deleting a custom category automatically reassigns all historical transactions to Uncategorized (ID 0) in the same database transaction.
+- **System Domain Protection**: Core system categories (`is_system = 1`) are locked and protected from deletion/renaming.
+
+### Added - Mathematical Pipeline & Statistical Integrity
+- **Dimensionless Recurrence Detection**: Fixed `RecurrenceDetector` to calculate and store the true dimensionless Coefficient of Variation ($\text{CV} = \frac{\sqrt{\text{Var}}}{\mu} = \frac{\sigma}{\mu}$) derived from Inter-Arrival Times (IAT), eliminating the 720× Fano factor inflation on monthly transactions.
+- **Tier-2 Deduplication Merchant Guard**: `DedupEngine` now verifies merchant equality or Jaro-Winkler similarity ($\ge 0.70$) before merging same-amount transactions within $\pm 5$ minutes, preventing distinct merchants with identical amounts from merging.
+- **Self-Calibration Feedback Loop**: Enabled active on-device calibration in `LikelihoodCalibrator` with dual ground-truth feedback loops (pipeline auto-outcomes and user confirm/reject actions) blending empirical likelihood ratios once $\ge 50$ observations accumulate.
+- **Human-in-the-Loop Threshold Synchronization**: Centrally extracted `HUMAN_IN_THE_LOOP_MAX_AMOUNT = 10000.0` across `PolicyEngine`, `MessagePipeline`, and `DedupEngine`.
+- **Trained OCR Pipeline**: Injected DI-configured `CategoryEngine` into `ScreenshotParser` to apply learned merchant rules to OCR receipts.
+- **Budget Alert Delivery**: Added and registered `AndroidBudgetNotifier` in `CashBuddyApplication` ensuring real-time pacing alerts are dispatched.
+
+### Changed & Cleaned - Database, Migrations & Dead Code Sweep
+- **SQLDelight Migration 4.sqm**: Dropped orphaned `goals` table across existing installs, deleted `goals.sq`, and cleaned raw SQL fallbacks.
+- **Repository Surface Pruning**: Removed dead repository methods (`getByCategory`, `getMonthlySummary`, `getAverageAmount`, `sumByCategory`, `updateNotes`, etc.) and synchronized all unit test fakes.
+- **Dead Theme & ViewModels**: Removed 13 unused theme colors, unused spacing tokens, dead ViewModel functions (`deleteTransaction`, `clearFilters`, `moveNavItem`, `exportDuplicatePreviewCsv`), and 10 unused XML drawables.
+- **Presentation i18n**: Replaced hardcoded strings with `stringResource(...)` across all Settings sections, dialogs, and Duplicate Reconciliation components.
+
 ## [Unreleased] - 2026-10-08
 
 ### Added - Global Budget Feature (Spec-Driven Development Bundle)

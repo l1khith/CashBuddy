@@ -233,3 +233,33 @@ CashBuddy integrates three core mathematical formulas across its core pipeline, 
   $$\text{logit} = \ln\left(\frac{P_0}{1 - P_0}\right) + \sum_{i} \ln(\text{LR}_i)$$
   $$p = \frac{1}{1 + \exp(-\text{logit})}$$
 - **Behavior**: Translates base prior log-odds and product of likelihood ratios into a monotonic, well-calibrated confidence probability $p \in [0.0, 1.0]$ for policy thresholding (Auto-Log $\ge 0.85$, Pending Review $\ge 0.50$, Ignore $< 0.50$).
+
+### 4. Point-Process Inter-Arrival Time & Dimensionless Coefficient of Variation
+- **Architectural Role**: Statistically rigorous recurring habit detection in [`RecurrenceDetector.kt`](../shared/src/commonMain/kotlin/com/cashbuddy/core/analytics/RecurrenceDetector.kt).
+- **Formulation**:
+  $$\text{IAT}_k = t_{k+1} - t_k \quad (\text{hours})$$
+  $$\mu = \frac{1}{N-1} \sum_{k=1}^{N-1} \text{IAT}_k, \quad \text{Var} = \frac{1}{N-2} \sum_{k=1}^{N-1} (\text{IAT}_k - \mu)^2$$
+  $$\text{CV} = \frac{\sqrt{\text{Var}}}{\mu} = \frac{\sigma}{\mu}$$
+- **Behavior**: Evaluates inter-arrival periodicity without dimensional time bias. A sequence is periodic iff $\text{CV} \le 0.30$ AND a valid discrete period (12h, 24h, 48h, 168h, 720h) is identified. Storing the true dimensionless $\text{CV}$ prevents metric inflation on monthly recurring expenses.
+
+### 5. Multi-Tier Deduplication with Jaro-Winkler Similarity Guard
+- **Architectural Role**: High-precision duplicate resolution in [`DedupEngine.kt`](../shared/src/commonMain/kotlin/com/cashbuddy/core/prob/DedupEngine.kt) preventing false merges across intake channels.
+- **Formulation**:
+  $$\text{IsCandidate}(A, B) \iff |t_A - t_B| \le 300\,\text{s} \;\land\; \text{amountPaise}_A = \text{amountPaise}_B$$
+  $$\text{CanMerge}(A, B) \iff \text{merchant}_A = \text{merchant}_B \;\lor\; d_w(\text{merchant}_A, \text{merchant}_B) \ge 0.70 \;\lor\; \text{IsBlankOrUnknown}(A, B)$$
+- **Behavior**: If two transactions occur within $\pm 5$ minutes with identical amounts but distinct merchants ($d_w < 0.70$), they are treated as independent transactions (`Decision.Insert`) rather than duplicates.
+
+### 6. Empirical Likelihood Ratio Self-Calibration (Beta-Binomial Feedback)
+- **Architectural Role**: On-device statistical feedback loop in [`LikelihoodCalibrator.kt`](../shared/src/commonMain/kotlin/com/cashbuddy/core/prob/LikelihoodCalibrator.kt).
+- **Formulation**:
+  $$\text{Sensitivity} = \frac{\text{TP}}{\max(1, \text{TP} + \text{FN})}, \quad \text{FPR} = \frac{\text{FP}}{\max(1, \text{FP} + \text{TN})}$$
+  $$\text{LR}_{\text{empirical}} = \min\left(100.0, \max\left(0.01, \frac{\text{Sensitivity}}{\max(0.001, \text{FPR})}\right)\right)$$
+  $$\text{LR}_{\text{calibrated}} = 0.3 \cdot \text{LR}_{\text{base}} + 0.7 \cdot \text{LR}_{\text{empirical}} \quad (\text{when } \text{TotalObservations} \ge 50)$$
+- **Behavior**: Signals adapt to real user transaction behavior over time without hardcoded rules. Ground truth accumulates automatically from pipeline auto-outcomes and manual user review actions (confirm $\to$ TP, reject $\to$ FP).
+
+### 7. Linear Regression Spending Forecast
+- **Architectural Role**: Month-end budget projection in [`BudgetPacer.kt`](../shared/src/commonMain/kotlin/com/cashbuddy/core/budget/BudgetPacer.kt).
+- **Formulation**:
+  $$\bar{r} = \frac{\text{Spent}}{\text{ElapsedDays}}$$
+  $$\text{ProjectedTotal} = \bar{r} \times \text{TotalDaysInPeriod}$$
+  $$\text{PacingStatus} = \begin{cases} \text{EXCEEDED} & \text{if } \text{Spent} > \text{Budget} \\ \text{PROJECTED\_OVER} & \text{if } \text{ProjectedTotal} > \text{Budget} \\ \text{APPROACHING} & \text{if } \frac{\text{Spent}}{\text{Budget}} \ge 0.85 \\ \text{ON\_TRACK} & \text{otherwise} \end{cases}$$
