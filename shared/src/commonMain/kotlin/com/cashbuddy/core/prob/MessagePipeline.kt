@@ -127,7 +127,10 @@ class MessagePipeline(
 
             // 5. Policy decision
             val maxAutoConfirm = settingsRepo?.getAutoConfirmThreshold()?.firstOrNull() ?: PolicyEngine.HUMAN_IN_THE_LOOP_MAX_AMOUNT
-            val action = if (isRecurringMatch && (classification.amount ?: 0.0) < maxAutoConfirm) {
+            val action = if (raw.sourceType == SourceType.SCREENSHOT) {
+                // Rule 6: Screenshot OCR receipts must always be routed to Review Inbox (PENDING)
+                if (classification.pTransaction >= 0.30) PolicyEngine.Action.LOG_AND_FLAG else PolicyEngine.Action.IGNORE
+            } else if (isRecurringMatch && (classification.amount ?: 0.0) < maxAutoConfirm) {
                 PolicyEngine.Action.AUTO_LOG
             } else {
                 policy.action(

@@ -176,7 +176,7 @@ class ScreenshotHandler(private val context: Context) : KoinComponent {
                                     timestamp = timestamp,
                                     merchant = parsed.merchant,
                                     notes = "Captured via Screenshot (${parsed.appName ?: "UPI"})",
-                                    status = if (parsed.confidence >= 0.85f && parsed.amount < 10000.0) TransactionStatus.CONFIRMED else TransactionStatus.PENDING,
+                                    status = TransactionStatus.PENDING,
                                     confidence = parsed.confidence,
                                     sourceApp = parsed.appName ?: "screenshot",
                                     rawText = parsed.rawText

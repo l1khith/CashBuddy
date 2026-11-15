@@ -351,7 +351,7 @@ class MainActivity : FragmentActivity() {
         }
 
         if (urisToProcess.isNotEmpty()) {
-            currentNavigationRoute = "processing_screenshot"
+            currentNavigationRoute = "review_inbox"
             lifecycleScope.launch(Dispatchers.IO) {
                 val cachedScreenshotFiles = mutableListOf<java.io.File>()
                 for (uri in urisToProcess) {
@@ -364,7 +364,7 @@ class MainActivity : FragmentActivity() {
                         if (createdIds.isNotEmpty()) {
                             android.widget.Toast.makeText(
                                 this@MainActivity,
-                                "${createdIds.size} transaction(s) parsed from screenshot",
+                                "${createdIds.size} transaction(s) parsed — Added to Review Inbox",
                                 android.widget.Toast.LENGTH_LONG
                             ).show()
                         } else {

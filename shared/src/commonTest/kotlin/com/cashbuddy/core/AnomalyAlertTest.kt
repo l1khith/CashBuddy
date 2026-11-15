@@ -7,11 +7,13 @@ import com.cashbuddy.core.prob.DedupEngine
 import com.cashbuddy.core.prob.EvidenceExtractor
 import com.cashbuddy.core.prob.MessagePipeline
 import com.cashbuddy.core.prob.NoOpCalibrator
+import com.cashbuddy.core.prob.PipelineOutcome
 import com.cashbuddy.core.prob.PolicyEngine
 import com.cashbuddy.core.prob.ProbabilisticClassifier
 import com.cashbuddy.core.prob.RawMessage
 import com.cashbuddy.core.prob.SourceDetector
 import com.cashbuddy.core.prob.SourceType
+import kotlin.test.assertTrue
 import com.cashbuddy.domain.model.Account
 import com.cashbuddy.domain.model.AccountType
 import com.cashbuddy.domain.model.Category
@@ -197,5 +199,37 @@ class AnomalyAlertTest {
         pipeline.ingest(rawMessage)
 
         assertNull(anomalyNotifier.alertedTxId, "AnomalyNotifier must not be triggered for normal transactions")
+    }
+
+    @Test
+    fun testScreenshotSourceAlwaysFlaggedAsPendingReview() = runBlocking {
+        val txRepo = TestTxRepo(emptyList())
+        val pipeline = MessagePipeline(
+            sourceDetector = SourceDetector(),
+            evidenceExtractor = EvidenceExtractor(),
+            classifier = ProbabilisticClassifier(calibrator = NoOpCalibrator),
+            policy = PolicyEngine(),
+            dedup = DedupEngine,
+            accountRegistry = AccountRegistry(TestAccountRepo()),
+            categoryEngine = CategoryEngine(),
+            transactionRepo = txRepo,
+            rawMessageRepo = TestRawMessageRepo(),
+            categoryRepo = TestCategoryRepo(),
+            fraudDetector = FraudDetector(txRepo)
+        )
+
+        val rawScreenshot = RawMessage(
+            id = "scr_1",
+            sourceType = SourceType.SCREENSHOT,
+            packageName = "screenshot",
+            senderId = null,
+            title = "Google Pay",
+            text = "Paid ₹500 to Swiggy on 15 Nov. UPI Ref: 123456789012",
+            timestamp = 1727600000000L
+        )
+
+        val outcome = pipeline.ingest(rawScreenshot)
+        assertTrue(outcome is PipelineOutcome.PendingReview, "Screenshot must always produce PendingReview outcome")
+        assertEquals(TransactionStatus.PENDING, txRepo.currentStatus, "Screenshot transaction must have PENDING status")
     }
 }
