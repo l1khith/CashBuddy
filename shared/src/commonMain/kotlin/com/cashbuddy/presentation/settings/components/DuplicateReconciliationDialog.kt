@@ -18,16 +18,29 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.ContentCopy
 import cashbuddy.shared.generated.resources.Res
+import cashbuddy.shared.generated.resources.action_cancel
+import cashbuddy.shared.generated.resources.action_close
+import cashbuddy.shared.generated.resources.dup_groups_found
+import cashbuddy.shared.generated.resources.dup_hide
+import cashbuddy.shared.generated.resources.dup_keep_survivor
+import cashbuddy.shared.generated.resources.dup_merge_button
+import cashbuddy.shared.generated.resources.dup_merge_duplicate
+import cashbuddy.shared.generated.resources.dup_merging_progress
+import cashbuddy.shared.generated.resources.dup_preview_csv
+import cashbuddy.shared.generated.resources.dup_summary_line
+import cashbuddy.shared.generated.resources.dup_title
+import cashbuddy.shared.generated.resources.dup_view_all
+import cashbuddy.shared.generated.resources.dup_zero_found_desc
+import cashbuddy.shared.generated.resources.dup_zero_found_title
+import cashbuddy.shared.generated.resources.ic_check_circle
 import cashbuddy.shared.generated.resources.ic_download
+import cashbuddy.shared.generated.resources.ic_expand_less
+import cashbuddy.shared.generated.resources.ic_expand_more
+import cashbuddy.shared.generated.resources.ic_merge_type
+import cashbuddy.shared.generated.resources.ic_remove_circle_outline
 import org.jetbrains.compose.resources.painterResource
-import androidx.compose.material.icons.filled.ExpandLess
-import androidx.compose.material.icons.filled.ExpandMore
-import androidx.compose.material.icons.automirrored.filled.MergeType
-import androidx.compose.material.icons.filled.RemoveCircleOutline
+import org.jetbrains.compose.resources.stringResource
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -96,14 +109,14 @@ fun DuplicateReconciliationDialog(
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
-                            imageVector = Icons.AutoMirrored.Filled.MergeType,
+                            painter = painterResource(Res.drawable.ic_merge_type),
                             contentDescription = null,
                             tint = PrimaryIndigo,
                             modifier = Modifier.size(22.dp)
                         )
                     }
                     Text(
-                        text = "Clean Up Duplicates",
+                        text = stringResource(Res.string.dup_title),
                         style = CashBuddyTypography.titleLarge,
                         fontWeight = FontWeight.Bold
                     )
@@ -111,7 +124,12 @@ fun DuplicateReconciliationDialog(
                 Spacer(modifier = Modifier.height(4.dp))
                 if (duplicateGroups.isNotEmpty()) {
                     Text(
-                        text = "Found ${duplicateGroups.size} duplicate group(s) ($totalRecords records → $recordsToKeep records)",
+                        text = stringResource(
+                            Res.string.dup_groups_found,
+                            duplicateGroups.size,
+                            totalRecords,
+                            recordsToKeep
+                        ),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -127,20 +145,20 @@ fun DuplicateReconciliationDialog(
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     Icon(
-                        imageVector = Icons.Default.CheckCircle,
+                        painter = painterResource(Res.drawable.ic_check_circle),
                         contentDescription = null,
                         tint = AccentEmerald,
                         modifier = Modifier.size(48.dp)
                     )
                     Spacer(modifier = Modifier.height(12.dp))
                     Text(
-                        text = "Zero Duplicates Found",
+                        text = stringResource(Res.string.dup_zero_found_title),
                         style = CashBuddyTypography.titleMedium,
                         fontWeight = FontWeight.Bold
                     )
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
-                        text = "Your transaction ledger has no identical payment entries or duplicated screenshot imports.",
+                        text = stringResource(Res.string.dup_zero_found_desc),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.padding(horizontal = 8.dp)
@@ -185,9 +203,9 @@ fun DuplicateReconciliationDialog(
                             strokeWidth = 2.dp
                         )
                         Spacer(modifier = Modifier.width(6.dp))
-                        Text("Merging...")
+                        Text(stringResource(Res.string.dup_merging_progress))
                     } else {
-                        Text("Merge $totalToMerge Duplicates")
+                        Text(stringResource(Res.string.dup_merge_button, totalToMerge))
                     }
                 }
             }
@@ -201,19 +219,19 @@ fun DuplicateReconciliationDialog(
                     ) {
                         Icon(
                             painter = painterResource(Res.drawable.ic_download),
-                            contentDescription = "Preview CSV",
+                            contentDescription = stringResource(Res.string.dup_preview_csv),
                             tint = MaterialTheme.colorScheme.primary,
                             modifier = Modifier.size(16.dp)
                         )
                         Spacer(modifier = Modifier.width(4.dp))
-                        Text("Preview CSV", fontSize = 12.sp)
+                        Text(stringResource(Res.string.dup_preview_csv), fontSize = 12.sp)
                     }
                 }
                 TextButton(
                     onClick = onDismiss,
                     enabled = !isMerging
                 ) {
-                    Text(if (duplicateGroups.isEmpty()) "Close" else "Cancel")
+                    Text(if (duplicateGroups.isEmpty()) stringResource(Res.string.action_close) else stringResource(Res.string.action_cancel))
                 }
             }
         }
@@ -262,7 +280,12 @@ private fun DuplicateGroupCard(
                     }
                     Spacer(modifier = Modifier.height(2.dp))
                     Text(
-                        text = "${group.totalCount} records → keep 1 (${survivor.sourceApp}, p=${(survivor.confidence * 100).toInt()}%)",
+                        text = stringResource(
+                            Res.string.dup_summary_line,
+                            group.totalCount,
+                            survivor.sourceApp,
+                            (survivor.confidence * 100).toInt()
+                        ),
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -276,13 +299,13 @@ private fun DuplicateGroupCard(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        text = if (isExpanded) "Hide" else "View all ${group.totalCount}",
+                        text = if (isExpanded) stringResource(Res.string.dup_hide) else stringResource(Res.string.dup_view_all, group.totalCount),
                         style = MaterialTheme.typography.labelSmall,
                         color = PrimaryIndigo,
                         fontWeight = FontWeight.SemiBold
                     )
                     Icon(
-                        imageVector = if (isExpanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+                        painter = painterResource(if (isExpanded) Res.drawable.ic_expand_less else Res.drawable.ic_expand_more),
                         contentDescription = null,
                         tint = PrimaryIndigo,
                         modifier = Modifier.size(16.dp)
@@ -344,14 +367,14 @@ private fun TransactionDetailItem(
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(
-                        imageVector = if (isSurvivor) Icons.Default.CheckCircle else Icons.Default.RemoveCircleOutline,
+                        painter = painterResource(if (isSurvivor) Res.drawable.ic_check_circle else Res.drawable.ic_remove_circle_outline),
                         contentDescription = null,
                         tint = if (isSurvivor) AccentEmerald else DangerRed,
                         modifier = Modifier.size(14.dp)
                     )
                     Spacer(modifier = Modifier.width(6.dp))
                     Text(
-                        text = if (isSurvivor) "Keep • Survivor" else "Merge • Duplicate",
+                        text = if (isSurvivor) stringResource(Res.string.dup_keep_survivor) else stringResource(Res.string.dup_merge_duplicate),
                         style = MaterialTheme.typography.labelSmall,
                         fontWeight = FontWeight.Bold,
                         color = if (isSurvivor) AccentEmerald else DangerRed

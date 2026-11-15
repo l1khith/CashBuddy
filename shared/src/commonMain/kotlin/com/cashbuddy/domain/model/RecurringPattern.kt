@@ -28,27 +28,4 @@ data class RecurringPattern(
     val firstSeen: Long,
     val lastSeen: Long,
     val lastUpdated: Long
-) {
-    /**
-     * Human-readable amount formatted in Rupees.
-     */
-    val amountInRupees: Double get() = amountPaise / 100.0
-
-    /**
-     * Descriptive label for the period (e.g. "twice-daily", "daily", "every-other-day", "weekly").
-     */
-    val periodLabel: String
-        get() = when (periodHours) {
-            12 -> "twice-daily"
-            24 -> "daily"
-            48 -> "every-other-day"
-            168 -> "weekly"
-            else -> "${periodHours}h"
-        }
-
-    /**
-     * Estimated next occurrence timestamp based on last_seen + periodHours.
-     */
-    val nextExpectedTimestamp: Long
-        get() = lastSeen + (periodHours * 3600_000L)
-}
+)

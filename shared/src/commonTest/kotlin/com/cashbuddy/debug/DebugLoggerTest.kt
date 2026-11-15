@@ -30,7 +30,6 @@ import com.cashbuddy.domain.repository.TransactionRepository
 import com.cashbuddy.domain.model.AccountType
 import com.cashbuddy.domain.model.CategoryType
 import com.cashbuddy.domain.repository.CategoryBreakdown
-import com.cashbuddy.domain.repository.MonthlySummary
 import com.cashbuddy.presentation.debug.DebugLogViewModel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flowOf
@@ -106,20 +105,7 @@ class DebugLoggerTest {
             }
         }
 
-        override suspend fun updateRawText(id: String, rawText: String) {
-            val idx = entries.indexOfFirst { it.id == id }
-            if (idx != -1) {
-                val old = entries[idx]
-                entries[idx] = old.copy(rawText = rawText)
-            }
-        }
-
-        override suspend fun getById(id: String): DebugLogEntry? = entries.find { it.id == id }
-        override suspend fun countWithFilter(filter: DebugLogFilter): Long = entries.size.toLong()
-        override suspend fun distinctPackages(): List<String> = entries.mapNotNull { it.packageName }.distinct().sorted()
-
-        override suspend fun query(filter: DebugLogFilter): List<DebugLogEntry> = entries.toList()
-        override suspend fun recent(limit: Int): List<DebugLogEntry> = entries.takeLast(limit).reversed()
+        override suspend fun getByResultingTxId(txId: String): DebugLogEntry? = entries.find { it.resultingTxId == txId }
         override suspend fun clearAll() { entries.clear() }
         override suspend fun count(): Long = entries.size.toLong()
     }
@@ -147,8 +133,6 @@ class DebugLoggerTest {
             val credit = inRange.filter { it.type == TransactionType.CREDIT && it.status == TransactionStatus.CONFIRMED }.sumOf { it.amount }
             return flowOf(com.cashbuddy.domain.model.DateRangeSummary(debit, credit, inRange.size.toLong()))
         }
-        override fun getByCategory(categoryId: Long): Flow<List<Transaction>> = flowOf(txs.filter { it.categoryId == categoryId })
-        override fun getMonthlySummary(): Flow<List<MonthlySummary>> = flowOf(emptyList())
         override fun getCategoryBreakdown(start: Long, end: Long): Flow<List<CategoryBreakdown>> = flowOf(emptyList())
         override suspend fun insert(transaction: Transaction): Long {
             val id = (txs.size + 1).toLong()
@@ -159,7 +143,6 @@ class DebugLoggerTest {
         override suspend fun updateStatus(id: Long, status: TransactionStatus) {}
         override suspend fun deleteById(id: Long) {}
         override fun getBalance(): Flow<Double> = flowOf(0.0)
-        override fun getAverageAmount(): Flow<Double> = flowOf(0.0)
         override fun getCount(): Flow<Long> = flowOf(txs.size.toLong())
         override suspend fun findDuplicateCandidates(): List<Transaction> = txs.filter { !it.isMerged }
         override suspend fun markMerged(id: Long, survivorId: Long) {
@@ -170,12 +153,9 @@ class DebugLoggerTest {
             val idx = txs.indexOfFirst { it.id == id }
             if (idx != -1) txs[idx] = txs[idx].copy(isMerged = false, mergedIntoId = null)
         }
-        override suspend fun insertMergeLog(survivorId: Long, mergedId: Long, timestamp: Long) {}
         override suspend fun getMergedTransactions(survivorId: Long): List<Transaction> = txs.filter { it.mergedIntoId == survivorId }
-        override suspend fun deleteMergeLog(survivorId: Long) {}
         override suspend fun getRecentMergeLogs(): List<com.cashbuddy.domain.repository.MergeLogEntry> = emptyList()
         override suspend fun getMergeLogCount(): Long = 0L
-        override suspend fun sumByCategory(category: String, startTime: Long, endTime: Long): Double = 0.0
         override fun getByCategoryAndPeriod(category: String, startTime: Long, endTime: Long): Flow<List<Transaction>> = flowOf(emptyList())
     }
 

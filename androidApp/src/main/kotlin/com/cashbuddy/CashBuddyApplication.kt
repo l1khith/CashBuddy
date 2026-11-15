@@ -28,6 +28,10 @@ class CashBuddyApplication : Application() {
             single<com.cashbuddy.core.anomaly.AnomalyNotifier> {
                 com.cashbuddy.notification.AndroidAnomalyNotifier(get(), get())
             }
+            // Bound so BudgetAlertScheduler (AppModule getOrNull) can actually deliver alerts
+            single<com.cashbuddy.core.budget.BudgetNotifier> {
+                com.cashbuddy.notification.AndroidBudgetNotifier(get())
+            }
         }
 
         // Initialize Koin Dependency Injection
@@ -38,6 +42,12 @@ class CashBuddyApplication : Application() {
 
         // Setup notification channels for Assistant features
         com.cashbuddy.notification.NotificationHelper.createChannels(this)
+
+        // Audit fix 1.4: the learned-token GC is core data maintenance — schedule it
+        // unconditionally so it can never be cancelled by the notifications toggle
+        // (previously disabling smart notifications left learned_token growing unbounded).
+        com.cashbuddy.worker.AssistantWorkManager.scheduleTokenPurge(this)
+        com.cashbuddy.worker.AssistantWorkManager.scheduleRecurrenceWorker(this)
 
         // Observe smart notifications setting to schedule or cancel workers & persistent notification
         applicationScope.launch {
@@ -54,6 +64,18 @@ class CashBuddyApplication : Application() {
                 }
             } catch (e: Throwable) {
                 Log.e("CashBuddyApplication", "Failed to initialize Assistant workers", e)
+            }
+        }
+
+        // Observe daily wrap-up reminder time
+        applicationScope.launch {
+            try {
+                val settingsRepository: com.cashbuddy.domain.repository.SettingsRepository = get()
+                settingsRepository.getDailyWrapUpTime().collect { (hour, minute) ->
+                    com.cashbuddy.worker.AssistantWorkManager.scheduleDailyWrapUp(this@CashBuddyApplication, hour, minute)
+                }
+            } catch (e: Throwable) {
+                Log.e("CashBuddyApplication", "Failed to schedule daily wrap-up", e)
             }
         }
 

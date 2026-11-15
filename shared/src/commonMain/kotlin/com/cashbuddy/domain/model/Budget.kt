@@ -11,7 +11,4 @@ data class Budget(
     val lastAlertAt: Long? = null,
     val createdAt: Long = 0L,
     val updatedAt: Long = 0L
-) {
-    val categoryName: String get() = category
-    val spentAmount: Double get() = 0.0
-}
+)

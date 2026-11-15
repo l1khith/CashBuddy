@@ -11,12 +11,15 @@ import com.cashbuddy.domain.model.Transaction
 import com.cashbuddy.domain.model.TransactionStatus
 import com.cashbuddy.domain.model.TransactionType
 import com.cashbuddy.domain.repository.CategoryBreakdown
-import com.cashbuddy.domain.repository.MonthlySummary
 import com.cashbuddy.domain.repository.TransactionRepository
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.drop
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.merge
 import kotlinx.coroutines.withContext
 
 class TransactionRepositoryImpl(
@@ -25,6 +28,18 @@ class TransactionRepositoryImpl(
 ) : TransactionRepository {
 
     private val queries = db.transactionsQueries
+    private val _mutationEvents = MutableSharedFlow<Unit>(extraBufferCapacity = 64)
+
+    /**
+     * Combines explicit repository mutation events with SQLDelight's reactive table-level
+     * query notification (which also catches out-of-band writes such as TransactionIngestStore).
+     * Drops the initial synchronous getCount emission per collector so subscribers only wake
+     * on real DB changes.
+     */
+    override val transactionUpdates: Flow<Unit> = merge(
+        _mutationEvents,
+        queries.getCount().asFlow().drop(1).map { }
+    )
 
     override fun getAll(): Flow<List<Transaction>> =
         queries.getAll(::mapTransaction).asFlow().mapToList(dispatcher).distinctUntilChanged()
@@ -53,19 +68,6 @@ class TransactionRepositoryImpl(
             )
         }.asFlow().mapToOne(dispatcher).distinctUntilChanged()
 
-    override fun getByCategory(categoryId: Long): Flow<List<Transaction>> =
-        queries.getByCategory(categoryId, ::mapTransaction).asFlow().mapToList(dispatcher).distinctUntilChanged()
-
-    override fun getMonthlySummary(): Flow<List<MonthlySummary>> =
-        queries.getMonthlySummary { month, totalDebit, totalCredit, transactionCount ->
-            MonthlySummary(
-                month = month,
-                totalDebit = totalDebit ?: 0.0,
-                totalCredit = totalCredit ?: 0.0,
-                transactionCount = transactionCount
-            )
-        }.asFlow().mapToList(dispatcher)
-
     override fun getCategoryBreakdown(start: Long, end: Long): Flow<List<CategoryBreakdown>> =
         queries.getCategoryBreakdown(startTime = start, endTime = end) { categoryName, categoryColor, categoryIcon, totalAmount, transactionCount, averageAmount ->
             CategoryBreakdown(
@@ -79,31 +81,67 @@ class TransactionRepositoryImpl(
         }.asFlow().mapToList(dispatcher)
 
     override suspend fun insert(transaction: Transaction): Long = withContext(dispatcher) {
-        queries.insert(
-            amount = transaction.amount,
-            type = transaction.type.name,
-            currency = transaction.currency,
-            merchant = transaction.merchant,
-            category_id = transaction.categoryId,
-            account_id = transaction.accountId,
-            source_app = transaction.sourceApp,
-            raw_text = transaction.rawText,
-            confidence = transaction.confidence.toDouble(),
-            status = transaction.status.name,
-            notes = transaction.notes,
-            timestamp = transaction.timestamp,
-            created_at = transaction.createdAt,
-            updated_at = transaction.updatedAt,
-            is_merged = if (transaction.isMerged) 1L else 0L,
-            merged_into_id = transaction.mergedIntoId,
-            payment_method = transaction.paymentMethod,
-            is_loan_given = if (transaction.isLoanGiven) 1L else 0L
-        )
-        queries.lastInsertRowId().executeAsOne()
+        val id = db.transactionWithResult {
+            queries.insert(
+                amount = transaction.amount,
+                type = transaction.type.name,
+                currency = transaction.currency,
+                merchant = transaction.merchant,
+                category_id = transaction.categoryId,
+                account_id = transaction.accountId,
+                source_app = transaction.sourceApp,
+                raw_text = transaction.rawText,
+                confidence = transaction.confidence.toDouble(),
+                status = transaction.status.name,
+                notes = transaction.notes,
+                timestamp = transaction.timestamp,
+                created_at = transaction.createdAt,
+                updated_at = transaction.updatedAt,
+                is_merged = if (transaction.isMerged) 1L else 0L,
+                merged_into_id = transaction.mergedIntoId,
+                payment_method = transaction.paymentMethod,
+                is_loan_given = if (transaction.isLoanGiven) 1L else 0L
+            )
+            queries.lastInsertRowId().executeAsOne()
+        }
+        _mutationEvents.tryEmit(Unit)
+        id
+    }
+
+    override suspend fun insertAll(transactions: List<Transaction>): List<Long> = withContext(dispatcher) {
+        if (transactions.isEmpty()) return@withContext emptyList()
+        val ids = db.transactionWithResult {
+            transactions.map { transaction ->
+                queries.insert(
+                    amount = transaction.amount,
+                    type = transaction.type.name,
+                    currency = transaction.currency,
+                    merchant = transaction.merchant,
+                    category_id = transaction.categoryId,
+                    account_id = transaction.accountId,
+                    source_app = transaction.sourceApp,
+                    raw_text = transaction.rawText,
+                    confidence = transaction.confidence.toDouble(),
+                    status = transaction.status.name,
+                    notes = transaction.notes,
+                    timestamp = transaction.timestamp,
+                    created_at = transaction.createdAt,
+                    updated_at = transaction.updatedAt,
+                    is_merged = if (transaction.isMerged) 1L else 0L,
+                    merged_into_id = transaction.mergedIntoId,
+                    payment_method = transaction.paymentMethod,
+                    is_loan_given = if (transaction.isLoanGiven) 1L else 0L
+                )
+                queries.lastInsertRowId().executeAsOne()
+            }
+        }
+        _mutationEvents.tryEmit(Unit)
+        ids
     }
 
     override suspend fun updateStatus(id: Long, status: TransactionStatus): Unit = withContext(dispatcher) {
         queries.updateStatus(status = status.name, updated_at = com.cashbuddy.platform.currentTimeMillis(), id = id)
+        _mutationEvents.tryEmit(Unit)
     }
 
     override suspend fun update(transaction: Transaction): Unit = withContext(dispatcher) {
@@ -144,16 +182,43 @@ class TransactionRepositoryImpl(
                 }
             }
         }
+        _mutationEvents.tryEmit(Unit)
     }
 
     override suspend fun deleteById(id: Long): Unit = withContext(dispatcher) {
-        queries.deleteById(id)
+        db.transaction {
+            // Audit fix 1.5: if the deleted row was a merge SURVIVOR, its merged duplicates
+            // would otherwise be orphaned forever (is_merged = 1 pointing at a dead id —
+            // invisible and unrecoverable). Restore them to visible standalone transactions
+            // and re-apply the balance impact that the merge reverted, keeping sums and
+            // account balances consistent. Whole flow commits in ONE transaction.
+            val now = com.cashbuddy.platform.currentTimeMillis()
+            val orphans = queries.getMergedRecordsForSurvivor(id, ::mapTransaction).executeAsList()
+                .filter { it.isMerged }
+            for (dup in orphans) {
+                if (dup.accountId != null &&
+                    (dup.status == TransactionStatus.CONFIRMED || dup.status == TransactionStatus.MODIFIED)
+                ) {
+                    // Merge-time revert was: debit dup → +amount, credit dup → -amount.
+                    // Re-applying the duplicate's own impact: debit → -amount, credit → +amount.
+                    val delta = if (dup.type == TransactionType.DEBIT) -dup.amount else dup.amount
+                    db.accountsQueries.applyBalanceDelta(delta = delta, updatedAt = now, id = dup.accountId)
+                }
+                queries.unmarkMerged(updated_at = now, id = dup.id)
+            }
+            // Explicit audit-log cleanup: the merge_log ON DELETE CASCADE only fires when
+            // the foreign_keys pragma is actually on — don't depend on it.
+            queries.deleteMergeLogForSurvivor(id)
+            queries.deleteById(id)
+        }
+        _mutationEvents.tryEmit(Unit)
     }
 
     override suspend fun deleteAll(): Unit = withContext(dispatcher) {
         db.transaction {
             queries.deleteAll()
         }
+        _mutationEvents.tryEmit(Unit)
     }
 
     override fun getBalance(): Flow<Double> =
@@ -162,31 +227,22 @@ class TransactionRepositoryImpl(
     override fun getCount(): Flow<Long> =
         queries.getCount().asFlow().mapToOne(dispatcher).distinctUntilChanged()
 
-    override fun getAverageAmount(): Flow<Double> =
-        queries.getAverageAmount().asFlow().mapToOne(dispatcher).distinctUntilChanged()
-
     override suspend fun findDuplicateCandidates(): List<Transaction> = withContext(dispatcher) {
         queries.findDuplicateCandidates(::mapTransaction).executeAsList()
     }
 
     override suspend fun markMerged(id: Long, survivorId: Long): Unit = withContext(dispatcher) {
         queries.markMerged(merged_into_id = survivorId, updated_at = com.cashbuddy.platform.currentTimeMillis(), id = id)
+        _mutationEvents.tryEmit(Unit)
     }
 
     override suspend fun unmarkMerged(id: Long): Unit = withContext(dispatcher) {
         queries.unmarkMerged(updated_at = com.cashbuddy.platform.currentTimeMillis(), id = id)
-    }
-
-    override suspend fun insertMergeLog(survivorId: Long, mergedId: Long, timestamp: Long): Unit = withContext(dispatcher) {
-        queries.insertMergeLog(survivor_id = survivorId, merged_id = mergedId, merged_at = timestamp)
+        _mutationEvents.tryEmit(Unit)
     }
 
     override suspend fun getMergedTransactions(survivorId: Long): List<Transaction> = withContext(dispatcher) {
         queries.getMergedRecordsForSurvivor(survivorId, ::mapTransaction).executeAsList()
-    }
-
-    override suspend fun deleteMergeLog(survivorId: Long): Unit = withContext(dispatcher) {
-        queries.deleteMergeLogForSurvivor(survivorId)
     }
 
     override suspend fun getRecentMergeLogs(): List<com.cashbuddy.domain.repository.MergeLogEntry> = withContext(dispatcher) {
@@ -204,22 +260,6 @@ class TransactionRepositoryImpl(
         queries.getMergeLogCount().executeAsOne()
     }
 
-    override suspend fun sumByCategory(category: String, startTime: Long, endTime: Long): Double = withContext(dispatcher) {
-        queries.sumByCategory(
-            category = category,
-            startTime = startTime,
-            endTime = endTime
-        ).executeAsOne()
-    }
-
-    override suspend fun sumAll(startTime: Long, endTime: Long, type: TransactionType): Double = withContext(dispatcher) {
-        queries.sumAll(
-            type = type.name,
-            startTime = startTime,
-            endTime = endTime
-        ).executeAsOne()
-    }
-
     override suspend fun sumActualSpent(startTime: Long, endTime: Long): Double = withContext(dispatcher) {
         queries.sumActualSpent(startTime = startTime, endTime = endTime).executeAsOne()
     }
@@ -235,11 +275,13 @@ class TransactionRepositoryImpl(
     override suspend fun updatePaymentMethod(id: Long, paymentMethod: String): Unit = withContext(dispatcher) {
         val now = com.cashbuddy.platform.currentTimeMillis()
         queries.updatePaymentMethod(payment_method = paymentMethod, updated_at = now, id = id)
+        _mutationEvents.tryEmit(Unit)
     }
 
     override suspend fun updateLoanStatus(id: Long, isLoanGiven: Boolean): Unit = withContext(dispatcher) {
         val now = com.cashbuddy.platform.currentTimeMillis()
         queries.updateLoanStatus(is_loan_given = if (isLoanGiven) 1L else 0L, updated_at = now, id = id)
+        _mutationEvents.tryEmit(Unit)
     }
 
     override fun getByCategoryAndPeriod(category: String, startTime: Long, endTime: Long): Flow<List<Transaction>> =
@@ -260,11 +302,6 @@ class TransactionRepositoryImpl(
             fromTimestamp = fromTimestamp,
             toTimestamp = toTimestamp
         ).executeAsList()
-    }
-
-    override suspend fun updateNotes(id: Long, notes: String): Unit = withContext(dispatcher) {
-        val now = com.cashbuddy.platform.currentTimeMillis()
-        queries.updateNotes(notes = notes, updatedAt = now, id = id)
     }
 
     override suspend fun getHistoryPage(
@@ -318,6 +355,57 @@ class TransactionRepositoryImpl(
             totalCount = row.total_count
         )
     }
+
+    override fun getHistorySummaryFlow(
+        searchQuery: String?,
+        type: String?,
+        categoryId: Long?,
+        startTime: Long?,
+        endTime: Long?,
+        minAmount: Double?,
+        maxAmount: Double?
+    ): Flow<com.cashbuddy.domain.repository.HistorySummary> =
+        queries.getHistorySummary(
+            searchQuery = searchQuery,
+            type = type,
+            categoryId = categoryId,
+            startTime = startTime,
+            endTime = endTime,
+            minAmount = minAmount,
+            maxAmount = maxAmount
+        ) { totalDebit, totalCredit, totalCount ->
+            com.cashbuddy.domain.repository.HistorySummary(
+                totalDebit = totalDebit,
+                totalCredit = totalCredit,
+                totalCount = totalCount
+            )
+        }.asFlow().mapToOne(dispatcher).distinctUntilChanged()
+
+    override fun getHistoryPageFlow(
+        searchQuery: String?,
+        type: String?,
+        categoryId: Long?,
+        startTime: Long?,
+        endTime: Long?,
+        minAmount: Double?,
+        maxAmount: Double?,
+        cursorTimestamp: Long?,
+        cursorId: Long?,
+        limit: Long
+    ): Flow<List<Transaction>> =
+        queries.getHistoryPage(
+            searchQuery = searchQuery,
+            type = type,
+            categoryId = categoryId,
+            startTime = startTime,
+            endTime = endTime,
+            minAmount = minAmount,
+            maxAmount = maxAmount,
+            cursorTimestamp = cursorTimestamp,
+            cursorId = cursorId,
+            limit = limit,
+            mapper = ::mapTransaction
+        ).asFlow().mapToList(dispatcher).distinctUntilChanged()
 
     override suspend fun findByUtr(utr: String): Transaction? = withContext(dispatcher) {
         val cleanUtr = utr.trim()

@@ -53,6 +53,28 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.foundation.layout.width
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import cashbuddy.shared.generated.resources.Res
+import cashbuddy.shared.generated.resources.action_discard
+import cashbuddy.shared.generated.resources.action_keep_editing
+import cashbuddy.shared.generated.resources.add_tx_account
+import cashbuddy.shared.generated.resources.add_tx_amount_header
+import cashbuddy.shared.generated.resources.add_tx_loan_checkbox
+import cashbuddy.shared.generated.resources.add_tx_manual_entry
+import cashbuddy.shared.generated.resources.add_tx_merchant_hint
+import cashbuddy.shared.generated.resources.add_tx_method_card
+import cashbuddy.shared.generated.resources.add_tx_method_cash
+import cashbuddy.shared.generated.resources.add_tx_method_upi
+import cashbuddy.shared.generated.resources.add_tx_notes_hint
+import cashbuddy.shared.generated.resources.add_tx_payment_method
+import cashbuddy.shared.generated.resources.add_tx_save_button
+import cashbuddy.shared.generated.resources.add_tx_title
+import cashbuddy.shared.generated.resources.cd_back
+import cashbuddy.shared.generated.resources.dialog_discard_message
+import cashbuddy.shared.generated.resources.dialog_discard_title
+import cashbuddy.shared.generated.resources.dialog_edit_tx_category_label
+import cashbuddy.shared.generated.resources.tx_type_expense
+import cashbuddy.shared.generated.resources.tx_type_income
+import org.jetbrains.compose.resources.stringResource
 import com.cashbuddy.domain.model.TransactionType
 import com.cashbuddy.presentation.theme.ExpenseCrimson
 import com.cashbuddy.presentation.theme.IncomeEmerald
@@ -90,6 +112,9 @@ fun AddTransactionScreen(
     var isLoanGiven by rememberSaveable { mutableStateOf(false) }
     var hasInitializedPrefill by rememberSaveable { mutableStateOf(false) }
     var showDiscardDialog by rememberSaveable { mutableStateOf(false) }
+
+    val defaultCreditMerchant = stringResource(Res.string.tx_type_income)
+    val defaultDebitMerchant = stringResource(Res.string.add_tx_manual_entry)
 
     val hasUnsavedChanges = (amountString.isNotBlank() && amountString != "0") || merchant.isNotBlank()
 
@@ -176,12 +201,12 @@ fun AddTransactionScreen(
                     IconButton(onClick = { if (hasUnsavedChanges) showDiscardDialog = true else onNavigateBack() }) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Back",
+                            contentDescription = stringResource(Res.string.cd_back),
                             tint = MaterialTheme.colorScheme.onBackground
                         )
                     }
                     Text(
-                        text = "New Transaction",
+                        text = stringResource(Res.string.add_tx_title),
                         style = CashBuddyTypography.titleLarge,
                         fontWeight = FontWeight.Bold
                     )
@@ -209,7 +234,7 @@ fun AddTransactionScreen(
                         contentAlignment = Alignment.Center
                     ) {
                         Text(
-                            text = "Expense",
+                            text = stringResource(Res.string.tx_type_expense),
                             style = CashBuddyTypography.labelLarge,
                             color = if (selectedType == TransactionType.DEBIT) Color.White else MaterialTheme.colorScheme.onSurfaceVariant,
                             fontWeight = FontWeight.Bold
@@ -226,7 +251,7 @@ fun AddTransactionScreen(
                         contentAlignment = Alignment.Center
                     ) {
                         Text(
-                            text = "Income",
+                            text = stringResource(Res.string.tx_type_income),
                             style = CashBuddyTypography.labelLarge,
                             color = if (selectedType == TransactionType.CREDIT) Color.White else MaterialTheme.colorScheme.onSurfaceVariant,
                             fontWeight = FontWeight.Bold
@@ -250,7 +275,7 @@ fun AddTransactionScreen(
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
                         Text(
-                            text = "AMOUNT",
+                            text = stringResource(Res.string.add_tx_amount_header),
                             style = CashBuddyTypography.labelSmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -329,7 +354,7 @@ fun AddTransactionScreen(
                             selectedCategoryId = suggestedId
                         }
                     },
-                    label = { Text("Merchant / Description (e.g. Swiggy, Metro)") },
+                    label = { Text(stringResource(Res.string.add_tx_merchant_hint)) },
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true,
                     keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
@@ -372,7 +397,7 @@ fun AddTransactionScreen(
                 if (selectedType == TransactionType.DEBIT) {
                     // Category Selection
                     Text(
-                        text = "Category",
+                        text = stringResource(Res.string.dialog_edit_tx_category_label),
                         style = CashBuddyTypography.titleMedium,
                         fontWeight = FontWeight.SemiBold
                     )
@@ -408,7 +433,7 @@ fun AddTransactionScreen(
 
                     // Payment Method FilterChips
                     Text(
-                        text = "Payment Method",
+                        text = stringResource(Res.string.add_tx_payment_method),
                         style = CashBuddyTypography.titleMedium,
                         fontWeight = FontWeight.SemiBold
                     )
@@ -416,14 +441,18 @@ fun AddTransactionScreen(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        listOf("UPI", "Card", "Cash").forEach { method ->
-                            val isSelected = paymentMethod.equals(method, ignoreCase = true)
+                        listOf(
+                            "UPI" to Res.string.add_tx_method_upi,
+                            "Card" to Res.string.add_tx_method_card,
+                            "Cash" to Res.string.add_tx_method_cash
+                        ).forEach { (methodKey, labelRes) ->
+                            val isSelected = paymentMethod.equals(methodKey, ignoreCase = true)
                             FilterChip(
                                 selected = isSelected,
-                                onClick = { paymentMethod = method },
+                                onClick = { paymentMethod = methodKey },
                                 label = {
                                     Text(
-                                        text = method,
+                                        text = stringResource(labelRes),
                                         style = CashBuddyTypography.labelMedium,
                                         fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
                                     )
@@ -447,7 +476,7 @@ fun AddTransactionScreen(
                         )
                         Spacer(modifier = Modifier.width(4.dp))
                         Text(
-                            text = "This is a loan I expect back",
+                            text = stringResource(Res.string.add_tx_loan_checkbox),
                             style = CashBuddyTypography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurface
                         )
@@ -457,7 +486,7 @@ fun AddTransactionScreen(
                 // Account Selection
                 if (state.accounts.isNotEmpty()) {
                     Text(
-                        text = "Account",
+                        text = stringResource(Res.string.add_tx_account),
                         style = CashBuddyTypography.titleMedium,
                         fontWeight = FontWeight.SemiBold
                     )
@@ -493,7 +522,7 @@ fun AddTransactionScreen(
                 OutlinedTextField(
                     value = notes,
                     onValueChange = { notes = it },
-                    label = { Text("Notes (Optional)") },
+                    label = { Text(stringResource(Res.string.add_tx_notes_hint)) },
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true,
                     keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
@@ -529,7 +558,7 @@ fun AddTransactionScreen(
                             viewModel.saveTransaction(
                                 amount = parsedAmount,
                                 type = selectedType,
-                                merchant = merchant.ifBlank { if (selectedType == TransactionType.CREDIT) "Income" else "Manual Entry" },
+                                merchant = merchant.ifBlank { if (selectedType == TransactionType.CREDIT) defaultCreditMerchant else defaultDebitMerchant },
                                 categoryId = effectiveCatId,
                                 accountId = accId,
                                 notes = notes.ifBlank { null },
@@ -556,7 +585,7 @@ fun AddTransactionScreen(
                         )
                     } else {
                         Text(
-                            text = "Save Transaction",
+                            text = stringResource(Res.string.add_tx_save_button),
                             style = CashBuddyTypography.labelLarge,
                             fontWeight = FontWeight.Bold,
                             color = if (isSaveEnabled) Color.White else MaterialTheme.colorScheme.onSurfaceVariant
@@ -571,8 +600,8 @@ fun AddTransactionScreen(
         if (showDiscardDialog) {
             AlertDialog(
                 onDismissRequest = { showDiscardDialog = false },
-                title = { Text("Discard Changes?", style = CashBuddyTypography.titleMedium, fontWeight = FontWeight.Bold) },
-                text = { Text("You have unsaved changes. Are you sure you want to discard them?", style = CashBuddyTypography.bodyMedium) },
+                title = { Text(stringResource(Res.string.dialog_discard_title), style = CashBuddyTypography.titleMedium, fontWeight = FontWeight.Bold) },
+                text = { Text(stringResource(Res.string.dialog_discard_message), style = CashBuddyTypography.bodyMedium) },
                 confirmButton = {
                     Button(
                         onClick = {
@@ -581,12 +610,12 @@ fun AddTransactionScreen(
                         },
                         colors = ButtonDefaults.buttonColors(containerColor = DangerRed)
                     ) {
-                        Text("Discard", color = Color.White)
+                        Text(stringResource(Res.string.action_discard), color = Color.White)
                     }
                 },
                 dismissButton = {
                     TextButton(onClick = { showDiscardDialog = false }) {
-                        Text("Keep Editing")
+                        Text(stringResource(Res.string.action_keep_editing))
                     }
                 }
             )

@@ -20,8 +20,15 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import cashbuddy.shared.generated.resources.Res
+import cashbuddy.shared.generated.resources.budget_drilldown_empty_subtitle
+import cashbuddy.shared.generated.resources.budget_drilldown_empty_title
+import cashbuddy.shared.generated.resources.budget_drilldown_spending
+import cashbuddy.shared.generated.resources.budget_drilldown_tx_count
+import cashbuddy.shared.generated.resources.budget_screen_title
+import cashbuddy.shared.generated.resources.cd_back
 import cashbuddy.shared.generated.resources.ic_receipt_long
 import org.jetbrains.compose.resources.painterResource
+import org.jetbrains.compose.resources.stringResource
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -84,7 +91,7 @@ fun BudgetDrilldownContent(
             TopAppBar(
                 title = {
                     Text(
-                        text = state.category.ifBlank { "Budget Details" },
+                        text = state.category.ifBlank { stringResource(Res.string.budget_screen_title) },
                         style = CashBuddyTypography.titleLarge,
                         fontWeight = FontWeight.Bold
                     )
@@ -93,7 +100,7 @@ fun BudgetDrilldownContent(
                     IconButton(onClick = onNavigateBack) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Back"
+                            contentDescription = stringResource(Res.string.cd_back)
                         )
                     }
                 },
@@ -146,7 +153,7 @@ fun BudgetDrilldownContent(
 
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
-                            text = "$periodLabel Budget Spending",
+                            text = stringResource(Res.string.budget_drilldown_spending, periodLabel),
                             style = CashBuddyTypography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -160,7 +167,7 @@ fun BudgetDrilldownContent(
                     }
 
                     Text(
-                        text = "${state.transactions.size} txns",
+                        text = stringResource(Res.string.budget_drilldown_tx_count, state.transactions.size),
                         style = CashBuddyTypography.labelMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -182,8 +189,8 @@ fun BudgetDrilldownContent(
                 state.transactions.isEmpty() -> {
                     EmptyStateView(
                         painter = painterResource(Res.drawable.ic_receipt_long),
-                        title = "No transactions found",
-                        subtitle = "No spending recorded for ${state.category} in this period.",
+                        title = stringResource(Res.string.budget_drilldown_empty_title),
+                        subtitle = stringResource(Res.string.budget_drilldown_empty_subtitle, state.category),
                         modifier = Modifier
                             .fillMaxSize()
                             .weight(1f)

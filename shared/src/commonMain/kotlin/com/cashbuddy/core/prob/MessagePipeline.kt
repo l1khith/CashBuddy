@@ -67,12 +67,15 @@ class MessagePipeline(
     private val recentStateRepository: RecentStateRepository? = null,
     private val settingsRepo: SettingsRepository? = null,
     private val budgetAlertScheduler: com.cashbuddy.core.budget.BudgetAlertScheduler? = null,
-    private val fraudDetector: com.cashbuddy.core.FraudDetector = com.cashbuddy.core.FraudDetector(transactionRepo),
     private val recurringPatternRepo: com.cashbuddy.domain.repository.RecurringPatternRepository? = null,
+    private val fraudDetector: com.cashbuddy.core.FraudDetector = com.cashbuddy.core.FraudDetector(transactionRepo, recurringPatternRepo),
     private val anomalyNotifier: com.cashbuddy.core.anomaly.AnomalyNotifier? = null,
     // C1: when provided, tx insert + raw_message audit-link commit in one driver-level transaction.
     // Tests construct the pipeline without it → fallback below replicates the exact old two-step write.
-    private val ingestStore: com.cashbuddy.data.repository.TransactionIngestStore? = null
+    private val ingestStore: com.cashbuddy.data.repository.TransactionIngestStore? = null,
+    // Phase 3 Loop: when provided, unambiguous auto-outcomes feed the likelihood
+    // self-calibration loop (see observeSignals).
+    private val calibrator: Calibrator? = null
 ) {
     private val mutex = Mutex()
 
@@ -97,7 +100,14 @@ class MessagePipeline(
             var isRecurringMatch = false
             if (classification.merchant != null && classification.amount != null && classification.amount > 0.0) {
                 val amountPaise = (classification.amount * 100.0).roundToLong()
-                val pattern = recurringPatternRepo?.findByMerchantAndAmount(classification.merchant, amountPaise)
+                val candidatePatterns = recurringPatternRepo?.findByMerchant(classification.merchant) ?: emptyList()
+                val pattern = candidatePatterns.firstOrNull { p ->
+                    if (p.amountPaise == amountPaise) true
+                    else {
+                        val patAmount = p.amountPaise / 100.0
+                        patAmount > 0.0 && (kotlin.math.abs(classification.amount - patAmount) / patAmount) <= 0.10
+                    }
+                }
                 if (pattern != null) {
                     isRecurringMatch = true
                     classification = classification.copy(
@@ -116,7 +126,7 @@ class MessagePipeline(
             )
 
             // 5. Policy decision
-            val maxAutoConfirm = settingsRepo?.getAutoConfirmThreshold()?.firstOrNull() ?: 10000.0
+            val maxAutoConfirm = settingsRepo?.getAutoConfirmThreshold()?.firstOrNull() ?: PolicyEngine.HUMAN_IN_THE_LOOP_MAX_AMOUNT
             val action = if (isRecurringMatch && (classification.amount ?: 0.0) < maxAutoConfirm) {
                 PolicyEngine.Action.AUTO_LOG
             } else {
@@ -131,6 +141,9 @@ class MessagePipeline(
 
             val outcome: PipelineOutcome = when (action) {
                 PolicyEngine.Action.IGNORE -> {
+                    // Auto-label: the message was classified as a non-transaction and
+                    // dropped without user review → true negatives for present signals.
+                    observeSignals(classification.contributions, wasCorrect = true, wasPositive = false)
                     PipelineOutcome.Ignored(raw.id, classification.pTransaction)
                 }
 
@@ -215,7 +228,7 @@ class MessagePipeline(
                                 val isAnomalous = anomaly.isAnomalous
                                 val note = if (isAnomalous) formatAnomalyNote(anomaly.score, anomaly.median, anomaly.mad) else null
 
-                                val finalStatus = if (isPolicyAutoLog && isCategoryKnownOrConfirmed && !isAnomalous) {
+                                val finalStatus = if ((isPolicyAutoLog && (isCategoryKnownOrConfirmed || isRecurringMatch)) && !isAnomalous) {
                                     TransactionStatus.CONFIRMED
                                 } else {
                                     TransactionStatus.PENDING
@@ -276,6 +289,9 @@ class MessagePipeline(
                                 }
 
                                 if (finalStatus == TransactionStatus.CONFIRMED) {
+                                    // Auto-label: pipeline + category gate auto-confirmed this
+                                    // transaction → true positives for present signals.
+                                    observeSignals(classification.contributions, wasCorrect = true, wasPositive = true)
                                     if (recurringPatternRepo != null) {
                                         try {
                                             val totalCount = transactionRepo.getCount().firstOrNull() ?: 0L
@@ -301,6 +317,10 @@ class MessagePipeline(
                                         TransactionStatus.CONFIRMED
                                     } else {
                                         existing.status
+                                    }
+                                    if (newStatus == TransactionStatus.CONFIRMED) {
+                                        // Auto-label: dedup auto-confirmed the merge → true positives.
+                                        observeSignals(classification.contributions, wasCorrect = true, wasPositive = true)
                                     }
                                     val upgradedAccount = classification.accountLast4?.let {
                                         accountRegistry.findOrCreate(it, classification.bankHint)
@@ -363,5 +383,30 @@ class MessagePipeline(
 
     private fun formatAnomalyNote(score: Double, median: Double, mad: Double): String {
         return "anomaly_score=${format2Decimals(score)} median=${format2Decimals(median)} mad=${format2Decimals(mad)}"
+    }
+
+    /**
+     * Phase 3 Loop — self-calibration. Only AUTO-outcomes are observed here because
+     * they carry unambiguous ground truth:
+     *  - policy IGNORE → classified (and presumed correctly dropped) as a
+     *    non-transaction → true negatives for every present signal;
+     *  - auto-confirmed insert / auto-confirmed dedup merge → true positives.
+     * Ambiguous outcomes (PENDING_REVIEW, zero-amount parse failures, duplicate
+     * skips) are intentionally NOT observed here — those get labeled later by the
+     * user's confirm/reject via ConfirmTransactionUseCase / RejectTransactionUseCase.
+     */
+    private suspend fun observeSignals(
+        contributions: List<Contribution>,
+        wasCorrect: Boolean,
+        wasPositive: Boolean
+    ) {
+        val cal = calibrator ?: return
+        for (contribution in contributions) {
+            try {
+                cal.observe(contribution.signal, wasCorrect = wasCorrect, wasPositive = wasPositive)
+            } catch (_: Throwable) {
+                // Non-blocking best-effort calibration feedback
+            }
+        }
     }
 }

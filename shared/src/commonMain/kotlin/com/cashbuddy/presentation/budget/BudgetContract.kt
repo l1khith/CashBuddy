@@ -21,5 +21,3 @@ sealed interface BudgetIntent {
     data class SetBudget(val categoryId: Long, val amount: Double, val period: BudgetPeriod) : BudgetIntent
     data class DeleteBudget(val budgetId: Long) : BudgetIntent
 }
-
-typealias BudgetState = BudgetUiState

@@ -19,8 +19,19 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.Public
 import cashbuddy.shared.generated.resources.Res
+import cashbuddy.shared.generated.resources.action_delete
+import cashbuddy.shared.generated.resources.budget_edit_edit_title
+import cashbuddy.shared.generated.resources.budget_edit_new_title
+import cashbuddy.shared.generated.resources.budget_global_all_spending
+import cashbuddy.shared.generated.resources.budget_limit_amount_hint
+import cashbuddy.shared.generated.resources.budget_limit_amount_label
+import cashbuddy.shared.generated.resources.budget_period_label
+import cashbuddy.shared.generated.resources.budget_save_button
+import cashbuddy.shared.generated.resources.budget_update_button
+import cashbuddy.shared.generated.resources.dialog_edit_tx_category_label
 import cashbuddy.shared.generated.resources.ic_delete_forever
 import org.jetbrains.compose.resources.painterResource
+import org.jetbrains.compose.resources.stringResource
 import com.cashbuddy.domain.model.BudgetCategories
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -111,7 +122,7 @@ fun BudgetEditSheet(
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             Text(
-                text = if (initialBudget != null) "Edit Budget" else "New Budget",
+                text = if (initialBudget != null) stringResource(Res.string.budget_edit_edit_title) else stringResource(Res.string.budget_edit_new_title),
                 style = CashBuddyTypography.titleLarge,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onSurface
@@ -120,7 +131,7 @@ fun BudgetEditSheet(
             // Category Selector
             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 Text(
-                    text = "Category",
+                    text = stringResource(Res.string.dialog_edit_tx_category_label),
                     style = CashBuddyTypography.labelMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -135,7 +146,7 @@ fun BudgetEditSheet(
                         trailingIcon = {
                             Icon(
                                 imageVector = Icons.Default.ArrowDropDown,
-                                contentDescription = "Select Category",
+                                contentDescription = stringResource(Res.string.dialog_edit_tx_category_label),
                                 modifier = Modifier.clickable { categoryDropdownExpanded = true }
                             )
                         },
@@ -165,6 +176,7 @@ fun BudgetEditSheet(
                         modifier = Modifier.fillMaxWidth(0.85f)
                     ) {
                         // Global (all spending) as first option
+                        val globalLabel = stringResource(Res.string.budget_global_all_spending)
                         DropdownMenuItem(
                             text = {
                                 Row(verticalAlignment = Alignment.CenterVertically) {
@@ -175,7 +187,7 @@ fun BudgetEditSheet(
                                         modifier = Modifier.size(16.dp)
                                     )
                                     Spacer(modifier = Modifier.width(8.dp))
-                                    Text("Global (all spending)", fontWeight = FontWeight.SemiBold)
+                                    Text(globalLabel, fontWeight = FontWeight.SemiBold)
                                 }
                             },
                             onClick = {
@@ -213,7 +225,7 @@ fun BudgetEditSheet(
             // Amount field
             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 Text(
-                    text = "Limit Amount",
+                    text = stringResource(Res.string.budget_limit_amount_label),
                     style = CashBuddyTypography.labelMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -224,7 +236,7 @@ fun BudgetEditSheet(
                         inlineError = null
                     },
                     prefix = { Text("₹", fontWeight = FontWeight.Bold) },
-                    placeholder = { Text("e.g. 5000") },
+                    placeholder = { Text(stringResource(Res.string.budget_limit_amount_hint)) },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal, imeAction = ImeAction.Done),
                     singleLine = true,
                     shape = RadiusMedium,
@@ -235,7 +247,7 @@ fun BudgetEditSheet(
             // Period segmented control
             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 Text(
-                    text = "Period",
+                    text = stringResource(Res.string.budget_period_label),
                     style = CashBuddyTypography.labelMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -288,12 +300,12 @@ fun BudgetEditSheet(
                     ) {
                         Icon(
                             painter = painterResource(Res.drawable.ic_delete_forever),
-                            contentDescription = "Delete Budget",
+                            contentDescription = stringResource(Res.string.action_delete),
                             tint = DangerRed,
                             modifier = Modifier.size(16.dp)
                         )
                         Spacer(modifier = Modifier.width(4.dp))
-                        Text("Delete")
+                        Text(stringResource(Res.string.action_delete))
                     }
                 }
 
@@ -321,7 +333,7 @@ fun BudgetEditSheet(
                     shape = RadiusMedium,
                     modifier = Modifier.weight(if (initialBudget != null && onDelete != null) 2f else 1f)
                 ) {
-                    Text(if (initialBudget != null) "Update Budget" else "Save Budget")
+                    Text(if (initialBudget != null) stringResource(Res.string.budget_update_button) else stringResource(Res.string.budget_save_button))
                 }
             }
         }

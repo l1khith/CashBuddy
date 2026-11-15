@@ -23,8 +23,18 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import org.jetbrains.compose.resources.painterResource
 import cashbuddy.shared.generated.resources.Res
+import cashbuddy.shared.generated.resources.action_cancel
+import cashbuddy.shared.generated.resources.action_save
+import cashbuddy.shared.generated.resources.dialog_edit_tx_amount_label
+import cashbuddy.shared.generated.resources.dialog_edit_tx_category_label
+import cashbuddy.shared.generated.resources.dialog_edit_tx_merchant_label
+import cashbuddy.shared.generated.resources.dialog_edit_tx_title
+import cashbuddy.shared.generated.resources.dialog_edit_tx_type
 import cashbuddy.shared.generated.resources.ic_trending_down
 import cashbuddy.shared.generated.resources.ic_trending_up
+import cashbuddy.shared.generated.resources.tx_type_expense
+import cashbuddy.shared.generated.resources.tx_type_income
+import org.jetbrains.compose.resources.stringResource
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
@@ -63,13 +73,15 @@ fun EditTransactionDialog(
     initialMerchant: String,
     initialCategoryId: Long,
     categories: List<Category>,
-    title: String = "Edit Transaction",
-    confirmButtonText: String = "Save",
+    title: String? = null,
+    confirmButtonText: String? = null,
     actionButtonText: String? = null,
     onAction: ((amount: Double, type: TransactionType, merchant: String, categoryId: Long) -> Unit)? = null,
     onDismiss: () -> Unit,
     onConfirm: (amount: Double, type: TransactionType, merchant: String, categoryId: Long) -> Unit
 ) {
+    val displayTitle = title ?: stringResource(Res.string.dialog_edit_tx_title)
+    val displayConfirm = confirmButtonText ?: stringResource(Res.string.action_save)
     var amountText by remember {
         mutableStateOf(if (initialAmount % 1.0 == 0.0) initialAmount.toLong().toString() else initialAmount.toString())
     }
@@ -85,7 +97,7 @@ fun EditTransactionDialog(
         onDismissRequest = onDismiss,
         title = {
             Text(
-                text = title,
+                text = displayTitle,
                 style = CashBuddyTypography.titleLarge,
                 fontWeight = FontWeight.Bold
             )
@@ -97,7 +109,7 @@ fun EditTransactionDialog(
             ) {
                 // Type Toggle (Expense vs Income)
                 Text(
-                    text = "Transaction Type",
+                    text = stringResource(Res.string.dialog_edit_tx_type),
                     style = CashBuddyTypography.labelMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -105,15 +117,18 @@ fun EditTransactionDialog(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
+                    val expenseLabel = stringResource(Res.string.tx_type_expense)
+                    val incomeLabel = stringResource(Res.string.tx_type_income)
+
                     // Expense Chip
                     FilterChip(
                         selected = selectedType == TransactionType.DEBIT,
                         onClick = { selectedType = TransactionType.DEBIT },
-                        label = { Text("Expense", fontWeight = FontWeight.SemiBold) },
+                        label = { Text(expenseLabel, fontWeight = FontWeight.SemiBold) },
                         leadingIcon = {
                             Icon(
                                 painter = painterResource(Res.drawable.ic_trending_down),
-                                contentDescription = "Expense",
+                                contentDescription = expenseLabel,
                                 tint = DangerRed,
                                 modifier = Modifier.size(16.dp)
                             )
@@ -130,11 +145,11 @@ fun EditTransactionDialog(
                     FilterChip(
                         selected = selectedType == TransactionType.CREDIT,
                         onClick = { selectedType = TransactionType.CREDIT },
-                        label = { Text("Income", fontWeight = FontWeight.SemiBold) },
+                        label = { Text(incomeLabel, fontWeight = FontWeight.SemiBold) },
                         leadingIcon = {
                             Icon(
                                 painter = painterResource(Res.drawable.ic_trending_up),
-                                contentDescription = "Income",
+                                contentDescription = incomeLabel,
                                 tint = AccentEmerald,
                                 modifier = Modifier.size(16.dp)
                             )
@@ -156,7 +171,7 @@ fun EditTransactionDialog(
                             amountText = input
                         }
                     },
-                    label = { Text("Amount (₹)") },
+                    label = { Text(stringResource(Res.string.dialog_edit_tx_amount_label)) },
                     singleLine = true,
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal, imeAction = ImeAction.Next),
                     isError = amountText.isNotBlank() && !isAmountValid,
@@ -167,7 +182,7 @@ fun EditTransactionDialog(
                 OutlinedTextField(
                     value = merchantText,
                     onValueChange = { merchantText = it },
-                    label = { Text("Merchant / Description") },
+                    label = { Text(stringResource(Res.string.dialog_edit_tx_merchant_label)) },
                     singleLine = true,
                     keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
                     modifier = Modifier.fillMaxWidth()
@@ -175,7 +190,7 @@ fun EditTransactionDialog(
 
                 // Category Selector
                 Text(
-                    text = "Category",
+                    text = stringResource(Res.string.dialog_edit_tx_category_label),
                     style = CashBuddyTypography.labelMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -250,13 +265,13 @@ fun EditTransactionDialog(
                     },
                     enabled = isAmountValid
                 ) {
-                    Text(confirmButtonText, fontWeight = FontWeight.Bold)
+                    Text(displayConfirm, fontWeight = FontWeight.Bold)
                 }
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("Cancel")
+                Text(stringResource(Res.string.action_cancel))
             }
         }
     )

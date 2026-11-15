@@ -35,7 +35,7 @@ class HomeViewModel(
 ) : ViewModel() {
 
     init {
-        viewModelScope.launch {
+        viewModelScope.launch(com.cashbuddy.platform.ioDispatcher) {
             if (recurringPatternRepository != null && transactionRepository != null) {
                 try {
                     val patterns = recurringPatternRepository.getAll().firstOrNull() ?: emptyList()
@@ -43,7 +43,9 @@ class HomeViewModel(
                     val now = com.cashbuddy.platform.currentTimeMillis()
                     if (now - lastUpdated > 24L * 3600_000L || patterns.isEmpty()) {
                         val allTxs = transactionRepository.getAll().firstOrNull() ?: emptyList()
-                        val detected = com.cashbuddy.core.analytics.RecurrenceDetector.detect(allTxs, now)
+                        val detected = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) {
+                            com.cashbuddy.core.analytics.RecurrenceDetector.detect(allTxs, now)
+                        }
                         if (detected.isNotEmpty()) {
                             recurringPatternRepository.upsertAll(detected)
                         }

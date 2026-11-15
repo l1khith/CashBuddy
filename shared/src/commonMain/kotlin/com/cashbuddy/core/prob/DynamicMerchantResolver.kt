@@ -21,62 +21,10 @@ package com.cashbuddy.core.prob
  */
 object DynamicMerchantResolver {
 
-    const val FUZZY_THRESHOLD: Double = 0.70
-
-    // Prefix patterns injected by payment aggregators, switches, and bank gateways (structural, no hardcoded brand lists)
-    private val GATEWAY_PREFIXES = listOf(
-        Regex("""(?i)^[a-z0-9]{2,12}[*/\-_]\s*"""),
-        Regex("""(?i)^(?:pos\s+|ecom\s+|vpa\s+|upi\s+)"""),
-        Regex("""(?i)^(?:to\s+|paid\s+to\s+|sent\s+to\s+|at\s+)""")
-    )
-
-    // Suffix patterns (locations, corporate abbreviations, random transaction hashes)
-    private val GATEWAY_SUFFIXES = listOf(
-        Regex("""(?i)\*[a-z]{3,4}$"""),
-        Regex("""(?i)\s+(?:pvt\s+ltd|private\s+limited|limited|ltd)\b.*$"""),
-        Regex("""(?i)[-_*#]\d{4,16}$""")
-    )
-
-    // UPI handles to strip: @icici, @ybl, @paytm, @okaxis, etc.
-    private val UPI_HANDLE_REGEX = Regex("""(?i)@[a-zA-Z0-9.\-_]{2,32}\b""")
-
     // Standard internet domain segments to skip when parsing package names
     private val IGNORED_PACKAGE_SEGMENTS = setOf(
         "com", "in", "org", "net", "io", "co"
     )
-
-    data class Resolution(
-        val canonicalName: String,
-        val similarity: Double,
-        val matchedVia: MatchSource
-    )
-
-    enum class MatchSource { PACKAGE_EXTRACTED, CONTENT_CLEANED, FALLBACK }
-
-    /**
-     * Cleaning function g(S_raw) = S_raw \ ( G_prefix ∪ G_suffix ∪ V_handles )
-     */
-    fun cleanRawMerchant(raw: String): String {
-        if (raw.isBlank()) return ""
-        var s = raw.trim()
-
-        // 1. Strip UPI handles: zomato@ybl -> zomato
-        s = UPI_HANDLE_REGEX.replace(s, "")
-
-        // 2. Strip gateway prefixes
-        for (prefix in GATEWAY_PREFIXES) {
-            s = prefix.replace(s, "").trim()
-        }
-
-        // 3. Strip gateway suffixes and corporate noise
-        for (suffix in GATEWAY_SUFFIXES) {
-            s = suffix.replace(s, "").trim()
-        }
-
-        // 4. Clean extra punctuation / non-alphanumeric trailing
-        s = s.trim('-', ':', '*', '/', '_', '#', '.', ' ', '•', '!')
-        return s
-    }
 
     /**
      * Algorithmically extracts a human-readable brand name from ANY Android package name.
@@ -96,33 +44,6 @@ object DynamicMerchantResolver {
         // Pick the most distinctive segment (usually the last or second last)
         val candidate = segments.lastOrNull { !it.contains("app") } ?: segments.last()
         return formatTitleCase(candidate)
-    }
-
-    /**
-     * Resolves ANY merchant string and optional package ID purely algorithmically.
-     * No hardcoded apps or dictionaries.
-     */
-    fun resolve(rawMerchant: String?, packageName: String?): Resolution {
-        // 1. If raw merchant text is present, clean it through g(S_raw)
-        if (!rawMerchant.isNullOrBlank()) {
-            val cleaned = cleanRawMerchant(rawMerchant)
-            if (cleaned.isNotBlank()) {
-                val formatted = formatTitleCase(cleaned)
-                return Resolution(formatted, 1.0, MatchSource.CONTENT_CLEANED)
-            }
-        }
-
-        // 2. If merchant text was absent, extract brand dynamically from package name
-        if (!packageName.isNullOrBlank()) {
-            val brand = extractBrandFromPackage(packageName)
-            if (brand != null) {
-                return Resolution(brand, 0.90, MatchSource.PACKAGE_EXTRACTED)
-            }
-        }
-
-        // 3. Fallback
-        val fallback = if (!rawMerchant.isNullOrBlank()) formatTitleCase(rawMerchant.trim()) else "Unknown Merchant"
-        return Resolution(fallback, 0.0, MatchSource.FALLBACK)
     }
 
     fun formatTitleCase(input: String): String {

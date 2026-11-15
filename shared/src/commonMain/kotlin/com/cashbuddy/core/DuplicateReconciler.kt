@@ -4,10 +4,11 @@ package com.cashbuddy.core
 import com.cashbuddy.domain.model.Transaction
 import com.cashbuddy.domain.model.TransactionStatus
 import com.cashbuddy.domain.model.TransactionType
-import com.cashbuddy.domain.repository.AccountRepository
+import com.cashbuddy.domain.repository.MergeOperation
+import com.cashbuddy.domain.repository.MergeTransactionStore
 import com.cashbuddy.domain.repository.TransactionRepository
+import com.cashbuddy.domain.repository.UndoMergeOperation
 import com.cashbuddy.platform.currentTimeMillis
-import kotlinx.coroutines.flow.firstOrNull
 import kotlin.math.roundToLong
 
 /**
@@ -15,10 +16,15 @@ import kotlin.math.roundToLong
  * Retroactively identifies duplicate screenshot and payment entries,
  * deterministically picks the highest-fidelity survivor, merges duplicates,
  * preserves raw records, and reverts duplicate account ledger impacts.
+ *
+ * All writes go through [MergeTransactionStore], which commits the merge UPDATE +
+ * merge_log INSERT + balance revert as ONE driver-level transaction (audit fix B1/B2).
+ * This class is pure orchestration: it reads via [TransactionRepository], computes the
+ * domain deltas, and emits operations — it performs no DB writes itself.
  */
 class DuplicateReconciler(
     private val transactionRepository: TransactionRepository,
-    private val accountRepository: AccountRepository
+    private val mergeStore: MergeTransactionStore
 ) {
 
     data class DuplicateGroup(
@@ -37,7 +43,7 @@ class DuplicateReconciler(
     )
 
     private val utrRegex = Regex(
-        """(?i)(?:UPI\s+(?:transaction\s+id|ref(?:\s+no|\s+id|\s+number)?)|Transaction\s+ID|UTR)[:\s]+([A-Za-z0-9]{8,35})"""
+        """(?i)\b(?:UPI\s+(?:transaction\s+id|ref(?:\s+no|\s+id|\s+number)?)|Transaction\s+ID|UTR)[:\s]+([A-Za-z0-9]{8,35})"""
     )
 
     private val dateRegex = Regex(
@@ -180,41 +186,43 @@ class DuplicateReconciler(
      * - Marks duplicate transactions as merged with survivor ID
      * - Records audit trail in merge_log table
      * - Reverts double-deducted account balances for confirmed transactions
+     *
+     * The ENTIRE batch (all groups, all duplicates) commits atomically via
+     * [MergeTransactionStore.applyMerges] — a crash mid-merge rolls everything back.
      */
     suspend fun mergeDuplicateGroups(groups: List<DuplicateGroup>): MergeSummary {
-        var mergedCount = 0
-        val survivorIds = mutableListOf<Long>()
         val now = currentTimeMillis()
+        val operations = mutableListOf<MergeOperation>()
+        val survivorIds = mutableListOf<Long>()
 
         for (group in groups) {
-            val survivor = group.survivor
-            survivorIds.add(survivor.id)
-
+            survivorIds.add(group.survivor.id)
             for (dup in group.duplicates) {
-                // 1. Mark merged in transactions table
-                transactionRepository.markMerged(id = dup.id, survivorId = survivor.id)
-
-                // 2. Insert audit log entry
-                transactionRepository.insertMergeLog(
-                    survivorId = survivor.id,
-                    mergedId = dup.id,
-                    timestamp = now
+                // Revert duplicate balance impact if duplicate was confirmed or modified.
+                // Debit duplicates were deducted, so reverting adds back (+amount);
+                // credit duplicates were added, so reverting subtracts (-amount).
+                val revertDelta =
+                    if (dup.accountId != null &&
+                        (dup.status == TransactionStatus.CONFIRMED || dup.status == TransactionStatus.MODIFIED)
+                    ) {
+                        if (dup.type == TransactionType.DEBIT) dup.amount else -dup.amount
+                    } else {
+                        null
+                    }
+                operations += MergeOperation(
+                    duplicateId = dup.id,
+                    survivorId = group.survivor.id,
+                    balanceAccountId = if (revertDelta != null) dup.accountId else null,
+                    balanceDelta = revertDelta ?: 0.0
                 )
-
-                // 3. Revert duplicate balance impact if duplicate was confirmed or modified
-                if (dup.accountId != null &&
-                    (dup.status == TransactionStatus.CONFIRMED || dup.status == TransactionStatus.MODIFIED)
-                ) {
-                    val delta = if (dup.type == TransactionType.DEBIT) dup.amount else -dup.amount
-                    accountRepository.applyBalanceDelta(dup.accountId, delta)
-                }
-                mergedCount++
             }
         }
 
+        mergeStore.applyMerges(operations, mergedAt = now)
+
         return MergeSummary(
             groupsMerged = groups.size,
-            totalDuplicatesMerged = mergedCount,
+            totalDuplicatesMerged = operations.size,
             survivorIds = survivorIds
         )
     }
@@ -224,24 +232,37 @@ class DuplicateReconciler(
      * - Restores merged records
      * - Reapplies account balance
      * - Clears merge_log records
+     *
+     * The whole undo (all duplicates + log deletion) commits atomically via
+     * [MergeTransactionStore.undoMerges].
      */
     suspend fun undoMergeForSurvivor(survivorId: Long): Int {
         val mergedList = transactionRepository.getMergedTransactions(survivorId)
         if (mergedList.isEmpty()) return 0
 
-        for (dup in mergedList) {
-            transactionRepository.unmarkMerged(dup.id)
-
-            if (dup.accountId != null &&
-                (dup.status == TransactionStatus.CONFIRMED || dup.status == TransactionStatus.MODIFIED)
-            ) {
-                val delta = if (dup.type == TransactionType.DEBIT) -dup.amount else dup.amount
-                accountRepository.applyBalanceDelta(dup.accountId, delta)
-            }
+        val now = currentTimeMillis()
+        val operations = mergedList.map { dup ->
+            val restoreDelta =
+                if (dup.accountId != null &&
+                    (dup.status == TransactionStatus.CONFIRMED || dup.status == TransactionStatus.MODIFIED)
+                ) {
+                    if (dup.type == TransactionType.DEBIT) -dup.amount else dup.amount
+                } else {
+                    null
+                }
+            UndoMergeOperation(
+                duplicateId = dup.id,
+                balanceAccountId = if (restoreDelta != null) dup.accountId else null,
+                balanceDelta = restoreDelta ?: 0.0
+            )
         }
 
-        transactionRepository.deleteMergeLog(survivorId)
-        return mergedList.size
+        mergeStore.undoMerges(
+            survivorIds = listOf(survivorId),
+            operations = operations,
+            updatedAt = now
+        )
+        return operations.size
     }
 
     /**

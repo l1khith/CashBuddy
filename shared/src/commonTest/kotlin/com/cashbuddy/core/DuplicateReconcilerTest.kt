@@ -7,7 +7,10 @@ import com.cashbuddy.domain.model.TransactionStatus
 import com.cashbuddy.domain.model.TransactionType
 import com.cashbuddy.domain.repository.AccountRepository
 import com.cashbuddy.domain.repository.MergeLogEntry
+import com.cashbuddy.domain.repository.MergeOperation
+import com.cashbuddy.domain.repository.MergeTransactionStore
 import com.cashbuddy.domain.repository.TransactionRepository
+import com.cashbuddy.domain.repository.UndoMergeOperation
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.runBlocking
@@ -32,8 +35,6 @@ class DuplicateReconcilerTest {
             flowOf(txs.filter { it.timestamp in start..end && !it.isMerged }.take(limit.toInt()))
         override fun getSummaryByDateRange(start: Long, end: Long): Flow<com.cashbuddy.domain.model.DateRangeSummary> =
             flowOf(com.cashbuddy.domain.model.DateRangeSummary(0.0, 0.0, 0L))
-        override fun getByCategory(categoryId: Long): Flow<List<Transaction>> = flowOf(txs.filter { it.categoryId == categoryId && !it.isMerged })
-        override fun getMonthlySummary(): Flow<List<com.cashbuddy.domain.repository.MonthlySummary>> = flowOf(emptyList())
         override fun getCategoryBreakdown(start: Long, end: Long): Flow<List<com.cashbuddy.domain.repository.CategoryBreakdown>> = flowOf(emptyList())
         override suspend fun insert(transaction: Transaction): Long {
             val id = (txs.size + 1).toLong()
@@ -44,7 +45,6 @@ class DuplicateReconcilerTest {
         override suspend fun updateStatus(id: Long, status: TransactionStatus) {}
         override suspend fun deleteById(id: Long) {}
         override fun getBalance(): Flow<Double> = flowOf(0.0)
-        override fun getAverageAmount(): Flow<Double> = flowOf(0.0)
         override fun getCount(): Flow<Long> = flowOf(txs.count { !it.isMerged }.toLong())
 
         override suspend fun findDuplicateCandidates(): List<Transaction> = txs.filter { !it.isMerged }
@@ -56,22 +56,9 @@ class DuplicateReconcilerTest {
             val idx = txs.indexOfFirst { it.id == id }
             if (idx != -1) txs[idx] = txs[idx].copy(isMerged = false, mergedIntoId = null)
         }
-        override suspend fun insertMergeLog(survivorId: Long, mergedId: Long, timestamp: Long) {
-            mergeLogs.add(MergeLogEntry(id = (mergeLogs.size + 1).toLong(), survivorId = survivorId, mergedId = mergedId, mergedAt = timestamp))
-        }
         override suspend fun getMergedTransactions(survivorId: Long): List<Transaction> = txs.filter { it.mergedIntoId == survivorId }
-        override suspend fun deleteMergeLog(survivorId: Long) {
-            mergeLogs.removeAll { it.survivorId == survivorId }
-        }
         override suspend fun getRecentMergeLogs(): List<MergeLogEntry> = mergeLogs.sortedByDescending { it.mergedAt }
         override suspend fun getMergeLogCount(): Long = mergeLogs.size.toLong()
-        override suspend fun sumByCategory(category: String, startTime: Long, endTime: Long): Double =
-            txs.filter {
-                (it.categoryName == category || it.categoryId.toString() == category) &&
-                it.type == TransactionType.DEBIT &&
-                it.timestamp in startTime..endTime &&
-                !it.isMerged
-            }.sumOf { it.amount }
         override fun getByCategoryAndPeriod(category: String, startTime: Long, endTime: Long): Flow<List<Transaction>> =
             flowOf(txs.filter {
                 (it.categoryName == category || it.categoryId.toString() == category) &&
@@ -107,9 +94,59 @@ class DuplicateReconcilerTest {
         override fun getCount(): Flow<Long> = flowOf(accounts.size.toLong())
     }
 
+    /**
+     * In-memory mirror of [com.cashbuddy.data.repository.SqlDelightMergeStore] semantics,
+     * delegating state to the fakes so balance/mark/audit assertions still hold.
+     */
+    private class FakeMergeStore(
+        private val txRepo: FakeTransactionRepo,
+        private val accRepo: FakeAccountRepo
+    ) : MergeTransactionStore {
+        override suspend fun applyMerges(operations: List<MergeOperation>, mergedAt: Long) {
+            for (op in operations) {
+                txRepo.markMerged(op.duplicateId, op.survivorId)
+                txRepo.mergeLogs.add(
+                    MergeLogEntry(
+                        id = (txRepo.mergeLogs.size + 1).toLong(),
+                        survivorId = op.survivorId,
+                        mergedId = op.duplicateId,
+                        mergedAt = mergedAt
+                    )
+                )
+                if (op.balanceAccountId != null && op.balanceDelta != 0.0) {
+                    accRepo.applyBalanceDelta(op.balanceAccountId, op.balanceDelta)
+                }
+            }
+        }
+
+        override suspend fun undoMerges(
+            survivorIds: List<Long>,
+            operations: List<UndoMergeOperation>,
+            updatedAt: Long
+        ) {
+            for (op in operations) {
+                txRepo.unmarkMerged(op.duplicateId)
+                if (op.balanceAccountId != null && op.balanceDelta != 0.0) {
+                    accRepo.applyBalanceDelta(op.balanceAccountId, op.balanceDelta)
+                }
+            }
+            for (survivorId in survivorIds) {
+                txRepo.mergeLogs.removeAll { it.survivorId == survivorId }
+            }
+        }
+    }
+
+    /** Builds a reconciler whose writes land through the atomic-merge fake. */
+    private fun reconcilerWith(
+        txRepo: FakeTransactionRepo = FakeTransactionRepo(),
+        accRepo: FakeAccountRepo = FakeAccountRepo()
+    ): Pair<DuplicateReconciler, FakeAccountRepo> {
+        return DuplicateReconciler(txRepo, FakeMergeStore(txRepo, accRepo)) to accRepo
+    }
+
     @Test
     fun testDuplicateReconciler_GroupsIdenticalScreenshotsByParsedDate() {
-        val reconciler = DuplicateReconciler(FakeTransactionRepo(), FakeAccountRepo())
+        val (reconciler, _) = reconcilerWith()
 
         val ocr1 = """
             ₹18
@@ -183,7 +220,7 @@ class DuplicateReconcilerTest {
 
     @Test
     fun testDuplicateReconciler_GroupsByUtr() {
-        val reconciler = DuplicateReconciler(FakeTransactionRepo(), FakeAccountRepo())
+        val (reconciler, _) = reconcilerWith()
 
         val tx1 = Transaction(
             id = 10L,
@@ -216,7 +253,7 @@ class DuplicateReconcilerTest {
 
     @Test
     fun testDuplicateReconciler_GroupsBy5MinuteWindowWhenNoDateInText() {
-        val reconciler = DuplicateReconciler(FakeTransactionRepo(), FakeAccountRepo())
+        val (reconciler, _) = reconcilerWith()
         val baseTime = 1727610000000L
 
         val tx1 = Transaction(
@@ -250,7 +287,7 @@ class DuplicateReconcilerTest {
 
     @Test
     fun testDuplicateReconciler_NonDuplicatesRemainIndependent() {
-        val reconciler = DuplicateReconciler(FakeTransactionRepo(), FakeAccountRepo())
+        val (reconciler, _) = reconcilerWith()
 
         val tx1 = Transaction(id = 1L, amount = 18.0, type = TransactionType.DEBIT, merchant = "BMTC", categoryId = 1L, sourceApp = "UPI", rawText = "", confidence = 0.9f, timestamp = 1000L)
         val tx2 = Transaction(id = 2L, amount = 49.0, type = TransactionType.DEBIT, merchant = "Rapido", categoryId = 1L, sourceApp = "UPI", rawText = "", confidence = 0.9f, timestamp = 2000L)
@@ -263,8 +300,7 @@ class DuplicateReconcilerTest {
     @Test
     fun testDuplicateReconciler_MergeAndUndoRevertsAccountBalance() = runBlocking {
         val txRepo = FakeTransactionRepo()
-        val accRepo = FakeAccountRepo()
-        val reconciler = DuplicateReconciler(txRepo, accRepo)
+        val (reconciler, accRepo) = reconcilerWith(txRepo)
 
         // 1. Setup account with ₹5000 initial balance
         accRepo.insert(

@@ -26,8 +26,38 @@ import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.DoneAll
 import cashbuddy.shared.generated.resources.Res
+import cashbuddy.shared.generated.resources.action_confirm
+import cashbuddy.shared.generated.resources.action_discard
+import cashbuddy.shared.generated.resources.action_edit
+import cashbuddy.shared.generated.resources.action_save
+import cashbuddy.shared.generated.resources.add_tx_loan_checkbox
+import cashbuddy.shared.generated.resources.add_tx_method_card
+import cashbuddy.shared.generated.resources.add_tx_method_cash
+import cashbuddy.shared.generated.resources.add_tx_method_upi
+import cashbuddy.shared.generated.resources.add_tx_payment_method
+import cashbuddy.shared.generated.resources.cd_back
+import cashbuddy.shared.generated.resources.dialog_edit_tx_review_title
+import cashbuddy.shared.generated.resources.dialog_edit_tx_save_changes
+import cashbuddy.shared.generated.resources.dialog_edit_tx_save_confirm
 import cashbuddy.shared.generated.resources.ic_edit
+import cashbuddy.shared.generated.resources.review_action_ignore_app
+import cashbuddy.shared.generated.resources.review_action_keep_receiving
+import cashbuddy.shared.generated.resources.review_assigned_category_label
+import cashbuddy.shared.generated.resources.review_detected_via
+import cashbuddy.shared.generated.resources.review_empty_subtitle
+import cashbuddy.shared.generated.resources.review_empty_title
+import cashbuddy.shared.generated.resources.review_filter_all
+import cashbuddy.shared.generated.resources.review_filter_high
+import cashbuddy.shared.generated.resources.review_filter_medium
+import cashbuddy.shared.generated.resources.review_ignore_prompt_message
+import cashbuddy.shared.generated.resources.review_ignore_prompt_title
+import cashbuddy.shared.generated.resources.review_inbox_subtitle
+import cashbuddy.shared.generated.resources.review_inbox_title
+import cashbuddy.shared.generated.resources.review_pending_count
+import cashbuddy.shared.generated.resources.review_quick_confirm_all
+import cashbuddy.shared.generated.resources.tx_unknown_merchant
 import org.jetbrains.compose.resources.painterResource
+import org.jetbrains.compose.resources.stringResource
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -118,6 +148,30 @@ fun ReviewScreen(
                 }
             }
 
+            val onConfirmTx: (Long) -> Unit = androidx.compose.runtime.remember(viewModel) {
+                { id -> viewModel.processIntent(ReviewIntent.ConfirmTransaction(id)) }
+            }
+            val onRejectTx: (com.cashbuddy.domain.model.Transaction) -> Unit = androidx.compose.runtime.remember(viewModel) {
+                { tx ->
+                    viewModel.processIntent(ReviewIntent.RejectTransaction(tx.id))
+                    if (viewModel.onTransactionDiscarded(tx.sourceApp)) {
+                        packageToIgnorePrompt = tx.sourceApp
+                    }
+                }
+            }
+            val onEditTx: (Long) -> Unit = androidx.compose.runtime.remember {
+                { id -> editingTransactionId = id }
+            }
+            val onCategoryChangeTx: (Long, Long) -> Unit = androidx.compose.runtime.remember(viewModel) {
+                { txId, newCatId -> viewModel.processIntent(ReviewIntent.ModifyCategory(txId, newCatId)) }
+            }
+            val onPaymentMethodChangeTx: (Long, String) -> Unit = androidx.compose.runtime.remember(viewModel) {
+                { txId, method -> viewModel.updatePaymentMethod(txId, method) }
+            }
+            val onLoanStatusChangeTx: (Long, Boolean) -> Unit = androidx.compose.runtime.remember(viewModel) {
+                { txId, isLoan -> viewModel.toggleLoanStatus(txId, isLoan) }
+            }
+
             LazyColumn(
                 modifier = Modifier
                     .fillMaxSize()
@@ -143,12 +197,12 @@ fun ReviewScreen(
                                 ) {
                                     Icon(
                                         imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                                        contentDescription = "Back",
+                                        contentDescription = stringResource(Res.string.cd_back),
                                         tint = MaterialTheme.colorScheme.onBackground
                                     )
                                 }
                                 Text(
-                                    text = "Review Inbox",
+                                    text = stringResource(Res.string.review_inbox_title),
                                     style = MaterialTheme.typography.headlineMedium,
                                     fontWeight = FontWeight.Bold,
                                     color = MaterialTheme.colorScheme.onBackground
@@ -161,7 +215,7 @@ fun ReviewScreen(
                                     .padding(horizontal = 10.dp, vertical = 4.dp)
                             ) {
                                 Text(
-                                    text = "${state.transactions.size} pending",
+                                    text = stringResource(Res.string.review_pending_count, state.transactions.size),
                                     style = MaterialTheme.typography.labelMedium,
                                     color = TrustBluePrimary,
                                     fontWeight = FontWeight.Bold
@@ -170,7 +224,7 @@ fun ReviewScreen(
                         }
                         Spacer(modifier = Modifier.height(4.dp))
                         Text(
-                            text = "Verify categorized transactions from payment notifications",
+                            text = stringResource(Res.string.review_inbox_subtitle),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -186,17 +240,17 @@ fun ReviewScreen(
                         FilterChip(
                             selected = state.selectedConfidenceFilter == 0.0f,
                             onClick = { viewModel.processIntent(ReviewIntent.FilterByConfidence(0.0f)) },
-                            label = { Text("All (${state.transactions.size})") }
+                            label = { Text(stringResource(Res.string.review_filter_all, state.transactions.size)) }
                         )
                         FilterChip(
                             selected = state.selectedConfidenceFilter == 0.85f,
                             onClick = { viewModel.processIntent(ReviewIntent.FilterByConfidence(0.85f)) },
-                            label = { Text("High (≥85%) • ${state.highConfidenceCount}") }
+                            label = { Text(stringResource(Res.string.review_filter_high, state.highConfidenceCount)) }
                         )
                         FilterChip(
                             selected = state.selectedConfidenceFilter == 0.50f,
                             onClick = { viewModel.processIntent(ReviewIntent.FilterByConfidence(0.50f)) },
-                            label = { Text("Medium (≥50%)") }
+                            label = { Text(stringResource(Res.string.review_filter_medium)) }
                         )
                     }
                 }
@@ -218,7 +272,7 @@ fun ReviewScreen(
                             )
                             Spacer(modifier = Modifier.width(8.dp))
                             Text(
-                                text = "Quick Confirm All (${state.highConfidenceCount})",
+                                text = stringResource(Res.string.review_quick_confirm_all, state.highConfidenceCount),
                                 fontWeight = FontWeight.Bold,
                                 color = Color.White
                             )
@@ -231,32 +285,25 @@ fun ReviewScreen(
                     item {
                         EmptyStateView(
                             imageVector = Icons.Default.CheckCircle,
-                            title = "Inbox Zero",
-                            subtitle = "All pending transactions have been reviewed and confirmed."
+                            title = stringResource(Res.string.review_empty_title),
+                            subtitle = stringResource(Res.string.review_empty_subtitle)
                         )
                     }
                 } else {
-                    items(filteredTransactions, key = { it.id }) { tx ->
+                    items(
+                        items = filteredTransactions,
+                        key = { it.id },
+                        contentType = { "pending_review_transaction" }
+                    ) { tx ->
                         PendingReviewCard(
                             transaction = tx,
                             allCategories = state.allCategories,
-                            onConfirm = { viewModel.processIntent(ReviewIntent.ConfirmTransaction(tx.id)) },
-                            onReject = {
-                                viewModel.processIntent(ReviewIntent.RejectTransaction(tx.id))
-                                if (viewModel.onTransactionDiscarded(tx.sourceApp)) {
-                                    packageToIgnorePrompt = tx.sourceApp
-                                }
-                            },
-                            onEdit = { editingTransactionId = tx.id },
-                            onCategoryChange = { newCatId ->
-                                viewModel.processIntent(ReviewIntent.ModifyCategory(tx.id, newCatId))
-                            },
-                            onPaymentMethodChange = { method ->
-                                viewModel.updatePaymentMethod(tx.id, method)
-                            },
-                            onLoanStatusChange = { isLoan ->
-                                viewModel.toggleLoanStatus(tx.id, isLoan)
-                            }
+                            onConfirm = { onConfirmTx(tx.id) },
+                            onReject = { onRejectTx(tx) },
+                            onEdit = { onEditTx(tx.id) },
+                            onCategoryChange = { newCatId -> onCategoryChangeTx(tx.id, newCatId) },
+                            onPaymentMethodChange = { method -> onPaymentMethodChangeTx(tx.id, method) },
+                            onLoanStatusChange = { isLoan -> onLoanStatusChangeTx(tx.id, isLoan) }
                         )
                     }
                 }
@@ -267,8 +314,8 @@ fun ReviewScreen(
             val pkg = packageToIgnorePrompt!!
             AlertDialog(
                 onDismissRequest = { packageToIgnorePrompt = null },
-                title = { Text("Ignore App Notifications?") },
-                text = { Text("You discarded transactions from $pkg 3 times. Would you like to ignore all future notifications from this app?") },
+                title = { Text(stringResource(Res.string.review_ignore_prompt_title)) },
+                text = { Text(stringResource(Res.string.review_ignore_prompt_message, pkg)) },
                 confirmButton = {
                     Button(
                         onClick = {
@@ -277,7 +324,7 @@ fun ReviewScreen(
                             packageToIgnorePrompt = null
                         }
                     ) {
-                        Text("Ignore App")
+                        Text(stringResource(Res.string.review_action_ignore_app))
                     }
                 },
                 dismissButton = {
@@ -287,7 +334,7 @@ fun ReviewScreen(
                             packageToIgnorePrompt = null
                         }
                     ) {
-                        Text("Keep Receiving")
+                        Text(stringResource(Res.string.review_action_keep_receiving))
                     }
                 }
             )
@@ -301,9 +348,9 @@ fun ReviewScreen(
                 initialMerchant = txToEdit.merchant,
                 initialCategoryId = txToEdit.categoryId,
                 categories = state.allCategories,
-                title = "Edit & Review Transaction",
-                confirmButtonText = "Save Changes",
-                actionButtonText = "Save & Confirm",
+                title = stringResource(Res.string.dialog_edit_tx_review_title),
+                confirmButtonText = stringResource(Res.string.dialog_edit_tx_save_changes),
+                actionButtonText = stringResource(Res.string.dialog_edit_tx_save_confirm),
                 onAction = { amount, type, merchant, categoryId ->
                     viewModel.processIntent(
                         ReviewIntent.UpdateAndConfirmTransaction(
@@ -382,12 +429,12 @@ private fun PendingReviewCard(
 
             // Merchant & Source
             Text(
-                text = transaction.merchant.ifBlank { "Unknown Merchant" },
+                text = transaction.merchant.ifBlank { stringResource(Res.string.tx_unknown_merchant) },
                 style = CashBuddyTypography.titleLarge,
                 color = MaterialTheme.colorScheme.onSurface
             )
             Text(
-                text = "Detected via ${transaction.sourceApp.substringAfterLast('.')}",
+                text = stringResource(Res.string.review_detected_via, com.cashbuddy.platform.getApplicationLabel(transaction.sourceApp)),
                 style = CashBuddyTypography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -415,7 +462,7 @@ private fun PendingReviewCard(
 
             // Category Quick-Chip Selector
             Text(
-                text = "Assigned Category (Confirm to teach app):",
+                text = stringResource(Res.string.review_assigned_category_label),
                 style = CashBuddyTypography.labelMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -457,7 +504,7 @@ private fun PendingReviewCard(
                 Spacer(modifier = Modifier.height(10.dp))
 
                 Text(
-                    text = "Payment Method:",
+                    text = stringResource(Res.string.add_tx_payment_method),
                     style = CashBuddyTypography.labelMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -466,14 +513,18 @@ private fun PendingReviewCard(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    listOf("UPI", "Card", "Cash").forEach { method ->
-                        val isSelected = transaction.paymentMethod.equals(method, ignoreCase = true)
+                    listOf(
+                        "UPI" to Res.string.add_tx_method_upi,
+                        "Card" to Res.string.add_tx_method_card,
+                        "Cash" to Res.string.add_tx_method_cash
+                    ).forEach { (methodKey, labelRes) ->
+                        val isSelected = transaction.paymentMethod.equals(methodKey, ignoreCase = true)
                         FilterChip(
                             selected = isSelected,
-                            onClick = { onPaymentMethodChange(method) },
+                            onClick = { onPaymentMethodChange(methodKey) },
                             label = {
                                 Text(
-                                    text = method,
+                                    text = stringResource(labelRes),
                                     style = CashBuddyTypography.labelMedium,
                                     fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
                                 )
@@ -497,7 +548,7 @@ private fun PendingReviewCard(
                     )
                     Spacer(modifier = Modifier.width(4.dp))
                     Text(
-                        text = "This is a loan I expect back",
+                        text = stringResource(Res.string.add_tx_loan_checkbox),
                         style = CashBuddyTypography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurface
                     )
@@ -507,6 +558,9 @@ private fun PendingReviewCard(
             Spacer(modifier = Modifier.height(18.dp))
 
             // Action Buttons (Discard, Edit, Confirm)
+            val discardLabel = stringResource(Res.string.action_discard)
+            val editLabel = stringResource(Res.string.action_edit)
+            val confirmLabel = stringResource(Res.string.action_confirm)
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -519,12 +573,12 @@ private fun PendingReviewCard(
                 ) {
                     Icon(
                         imageVector = Icons.Default.Close,
-                        contentDescription = "Discard transaction",
+                        contentDescription = discardLabel,
                         modifier = Modifier.size(16.dp),
                         tint = DangerRed
                     )
                     Spacer(modifier = Modifier.width(4.dp))
-                    Text(text = "Discard", style = CashBuddyTypography.labelLarge, color = DangerRed)
+                    Text(text = discardLabel, style = CashBuddyTypography.labelLarge, color = DangerRed)
                 }
 
                 OutlinedButton(
@@ -535,12 +589,12 @@ private fun PendingReviewCard(
                 ) {
                     Icon(
                         painter = painterResource(Res.drawable.ic_edit),
-                        contentDescription = "Edit",
+                        contentDescription = editLabel,
                         modifier = Modifier.size(16.dp),
                         tint = MaterialTheme.colorScheme.primary
                     )
                     Spacer(modifier = Modifier.width(4.dp))
-                    Text(text = "Edit", style = CashBuddyTypography.labelLarge, color = MaterialTheme.colorScheme.primary)
+                    Text(text = editLabel, style = CashBuddyTypography.labelLarge, color = MaterialTheme.colorScheme.primary)
                 }
 
                 Button(
@@ -551,12 +605,12 @@ private fun PendingReviewCard(
                 ) {
                     Icon(
                         imageVector = Icons.Default.Check,
-                        contentDescription = "Confirm transaction",
+                        contentDescription = confirmLabel,
                         modifier = Modifier.size(16.dp),
                         tint = Color.White
                     )
                     Spacer(modifier = Modifier.width(4.dp))
-                    Text(text = "Confirm", style = CashBuddyTypography.labelLarge, color = Color.White)
+                    Text(text = confirmLabel, style = CashBuddyTypography.labelLarge, color = Color.White)
                 }
             }
         }

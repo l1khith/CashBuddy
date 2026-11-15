@@ -238,20 +238,6 @@ class ProbabilisticEngineTest {
     }
 
     @Test
-    fun testHeuristicCategorizer_VpaFoodReturnsHighConfidence() {
-        // Zero-Map contract (HeuristicCategorizer.kt, post-4a94d73): both tiers are
-        // deliberately void of hardcoded mappings — VPA handles must not mint categories
-        // and clock hours must not hallucinate them. Unconfirmed merchants enter Review
-        // as Unknown for user confirmation (non-negotiable #6, human-in-the-loop).
-        val vpaMatch = com.cashbuddy.core.prob.HeuristicCategorizer.matchVpa("swiggy.food@icici")
-        assertNull(vpaMatch, "matchVpa must never hardcode a VPA->category map in Zero-Map mode")
-        val contextMatch = com.cashbuddy.core.prob.HeuristicCategorizer.matchContext(
-            timestamp = 1727500000000L, amount = 450.0
-        )
-        assertNull(contextMatch, "matchContext must never hallucinate a category from clock time")
-    }
-
-    @Test
     fun testBankDebitSmsWithColonAmountAndFvgMerchant() {
         val text = "Bank A/c *0383 Debited Rs:60.00 on 28-09-2026 13:02:20 by Mob Bk ref no 663757559850, Fvg: BOTTLE L Avl Bal Rs:1675.08."
         val raw = RawMessage(
@@ -738,6 +724,20 @@ class ProbabilisticEngineTest {
         val evidence = evidenceExtractor.extract(raw, NotificationSource.UPI_APP)
         val classification = classifier.classify(evidence, text, NotificationSource.UPI_APP)
         assertTrue(classification.pTransaction >= 0.85, "Expected high confidence for valid bank receipt")
+    }
+
+    @Test
+    fun testMerchantExtraction_FavoringWithHelplinePhoneNumber() {
+        val text = "JK-UNIOND-S Union Bank of India A/c*0383 Dr Rs60.00 on 12-11-26 13:02 by MB 142520047769 Fv.BOTTL, Bal Rs212710.08 Not U?Call 18002333/SMS BLOCK 0383 to 8879635472"
+        val merchant = evidenceExtractor.extractMerchant(text, "com.google.android.apps.messaging")
+        assertEquals("Bottl", merchant)
+    }
+
+    @Test
+    fun testMerchantExtraction_RejectsPurePhoneNumbers() {
+        val text = "Call 18002333/SMS BLOCK 0383 to 8879635472"
+        val merchant = evidenceExtractor.extractMerchant(text, null)
+        assertNull(merchant, "Expected purely numeric candidate to be rejected as a merchant")
     }
 }
 

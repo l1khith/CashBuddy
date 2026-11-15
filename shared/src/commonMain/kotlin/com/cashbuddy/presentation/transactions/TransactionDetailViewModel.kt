@@ -26,6 +26,7 @@ import kotlinx.coroutines.launch
 data class TransactionDetailUiState(
     val transaction: Transaction? = null,
     val categories: List<Category> = emptyList(),
+    val isRecurringHabit: Boolean = false,
     val isLoading: Boolean = true
 )
 
@@ -35,7 +36,8 @@ class TransactionDetailViewModel(
     private val categoryRepository: CategoryRepository,
     private val trainingDataRepository: TrainingDataRepository,
     private val merchantRuleRepository: MerchantRuleRepository,
-    private val learnedTokenRepository: LearnedTokenRepository? = null
+    private val learnedTokenRepository: LearnedTokenRepository? = null,
+    private val recurringPatternRepository: com.cashbuddy.domain.repository.RecurringPatternRepository? = null
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(TransactionDetailUiState())
@@ -58,9 +60,24 @@ class TransactionDetailViewModel(
                 transactionRepository.getById(transactionId),
                 categoryRepository.getAll()
             ) { tx, cats ->
+                val isRecurring = if (tx != null && recurringPatternRepository != null) {
+                    val patterns = recurringPatternRepository.findByMerchant(tx.merchant)
+                    patterns.any { p ->
+                        val pAmt = p.amountPaise / 100.0
+                        if (pAmt > 0.0) {
+                            kotlin.math.abs(tx.amount - pAmt) / pAmt <= 0.10
+                        } else {
+                            false
+                        }
+                    }
+                } else {
+                    false
+                }
+
                 TransactionDetailUiState(
                     transaction = tx,
                     categories = cats,
+                    isRecurringHabit = isRecurring,
                     isLoading = false
                 )
             }.collect { newState ->

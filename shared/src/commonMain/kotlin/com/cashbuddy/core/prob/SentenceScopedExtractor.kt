@@ -27,14 +27,6 @@ object SentenceScopedExtractor {
         """(?i)\b(debited|withdrawn|spent|paid(?!\s+(?:to\s+)?you\b)|payment(?:\s+of|\s+for|\s+successful|\s+done|\s+completed)?|sent(?!\s+you\b)|transferred(?!\s+to\s+you\b)|deducted|charged|purchase\s+at|credited|received|deposited|added|refunded|cashback|fare(?:\s+of)?|bill(?:\s+of)?)\b"""
     )
 
-    val DEBIT_STATE_VERBS = Regex(
-        """(?i)\b(debited|withdrawn|spent|paid(?!\s+(?:to\s+)?you\b)|payment(?:\s+of|\s+for|\s+successful|\s+done|\s+completed)?|sent(?!\s+you\b)|transferred(?!\s+to\s+you\b)|deducted|charged|purchase\s+at|order\s+paid|fare(?:\s+of)?|bill(?:\s+of)?)\b"""
-    )
-
-    val CREDIT_STATE_VERBS = Regex(
-        """(?i)\b(credited|received|deposited|added|refunded|cashback|paid\s+(?:to\s+)?you|sent\s+you|transferred\s+to\s+you)\b"""
-    )
-
     // N: Negative forbidden tokens (Promotions, salary, OTP, discounts, reminders)
     private val FORBIDDEN_TOKENS = listOf(
         Regex("""(?i)\b(?:lpa|ctc|stipend)\b"""),
@@ -48,32 +40,6 @@ object SentenceScopedExtractor {
         Regex("""(?i)\b(?:bill\s+is\s+due|emi\s+due|upcoming\s+bill)\b"""),
         Regex("""(?i)\b(?:pre-approved|win\s+cash|apply\s+now|apply\s+for)\b""")
     )
-
-    private val DECIMAL_NUMBER_PROTECT_REGEX = Regex("""(\d)\.(\d)""")
-    private val CURRENCY_ABBREV_PROTECT_REGEX = Regex("""(?i)\b(rs|re|inr)\.""")
-    private val BANKING_ABBREV_PROTECT_REGEX = Regex("""(?i)\b(a/c|ac|no|ref|vpa|co|ltd|dr|mr|mrs)\.""")
-    private val SENTENCE_DELIMITER_REGEX = Regex("""[.!?\n\r•·|—]+""")
-
-    /**
-     * Splits raw text into independent clauses/sentences,
-     * protecting numbers with decimals (e.g., 140.0, 100.00), currency abbreviations (Rs.),
-     * and bank terms (a/c, no., ref.).
-     */
-    fun splitSentences(text: String): List<String> {
-        if (text.isBlank()) return emptyList()
-
-        // 1. Protect decimal numbers between digits: e.g. "140.0" -> "140\u00000"
-        var s = DECIMAL_NUMBER_PROTECT_REGEX.replace(text, "$1\u0000$2")
-        // 2. Protect currency abbreviations: "Rs.", "Re.", "INR."
-        s = CURRENCY_ABBREV_PROTECT_REGEX.replace(s, "$1\u0001")
-        // 3. Protect common banking abbreviations
-        s = BANKING_ABBREV_PROTECT_REGEX.replace(s, "$1\u0001")
-
-        // 4. Split on sentence delimiters: period, !, ?, newline, bullets, pipe, em-dash
-        return s.split(SENTENCE_DELIMITER_REGEX)
-            .map { it.replace('\u0000', '.').replace('\u0001', '.').trim() }
-            .filter { it.isNotBlank() }
-    }
 
     /**
      * Computes the sentence validity indicator V(s_i) ∈ {0, 1}
@@ -96,52 +62,5 @@ object SentenceScopedExtractor {
         if (hasForbidden) return false
 
         return true
-    }
-
-    /**
-     * Isolates all valid transaction sentences from raw alert text.
-     */
-    fun extractValidSentences(fullText: String): List<String> {
-        return splitSentences(fullText).filter { isValidTransactionSentence(it) }
-    }
-
-    /**
-     * Extracts normalized amount from valid sentences or returns null.
-     */
-    fun extractNormalizedAmount(sentence: String): Double? {
-        // Normalize common OCR misreads in amount: 'O'/'o' -> '0', 'l'/'I' -> '1'
-        var normalized = sentence
-        // Check paise only (e.g. "50 paise")
-        val paiseMatch = PAISE_ONLY_REGEX.find(normalized)
-        if (paiseMatch != null) {
-            val pVal = paiseMatch.groups[1]?.value?.toDoubleOrNull()
-            if (pVal != null) return pVal / 100.0
-        }
-
-        // Amount with prefix
-        val m1 = AMOUNT_PREFIX_REGEX.find(normalized)
-        if (m1 != null) {
-            val numStr = cleanNumberString(m1.groups[1]?.value)
-            numStr?.toDoubleOrNull()?.let { return it }
-        }
-
-        // Amount with suffix
-        val m2 = AMOUNT_SUFFIX_REGEX.find(normalized)
-        if (m2 != null) {
-            val numStr = cleanNumberString(m2.groups[1]?.value)
-            numStr?.toDoubleOrNull()?.let { return it }
-        }
-
-        return null
-    }
-
-    private fun cleanNumberString(raw: String?): String? {
-        if (raw == null) return null
-        var s = raw.replace(",", "").trim()
-        // If trailing dot: "50." -> "50"
-        if (s.endsWith(".")) s = s.dropLast(1)
-        // Clean OCR noise: 'O' -> '0', 'o' -> '0', 'l' -> '1'
-        s = s.replace('O', '0').replace('o', '0').replace('l', '1').replace('I', '1')
-        return s
     }
 }

@@ -16,6 +16,16 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.width
 import androidx.compose.ui.Alignment
+import cashbuddy.shared.generated.resources.Res
+import cashbuddy.shared.generated.resources.confidence_high
+import cashbuddy.shared.generated.resources.confidence_label_format
+import cashbuddy.shared.generated.resources.confidence_low
+import cashbuddy.shared.generated.resources.confidence_medium
+import cashbuddy.shared.generated.resources.status_confirmed
+import cashbuddy.shared.generated.resources.status_modified
+import cashbuddy.shared.generated.resources.status_review
+import cashbuddy.shared.generated.resources.status_rejected
+import org.jetbrains.compose.resources.stringResource
 import com.cashbuddy.domain.model.TransactionStatus
 import com.cashbuddy.presentation.theme.AccentEmerald
 import com.cashbuddy.presentation.theme.CashBuddyTypography
@@ -28,11 +38,11 @@ fun StatusBadge(
     status: TransactionStatus,
     modifier: Modifier = Modifier
 ) {
-    val (bgColor, textColor, text) = when (status) {
-        TransactionStatus.PENDING -> Triple(WarningAmber.copy(alpha = 0.15f), WarningAmber, "Review")
-        TransactionStatus.CONFIRMED -> Triple(AccentEmerald.copy(alpha = 0.15f), AccentEmerald, "Confirmed")
-        TransactionStatus.REJECTED -> Triple(DangerRed.copy(alpha = 0.15f), DangerRed, "Rejected")
-        TransactionStatus.MODIFIED -> Triple(PrimaryIndigo.copy(alpha = 0.15f), PrimaryIndigo, "Modified")
+    val (bgColor, textColor, textRes) = when (status) {
+        TransactionStatus.PENDING -> Triple(WarningAmber.copy(alpha = 0.15f), WarningAmber, Res.string.status_review)
+        TransactionStatus.CONFIRMED -> Triple(AccentEmerald.copy(alpha = 0.15f), AccentEmerald, Res.string.status_confirmed)
+        TransactionStatus.REJECTED -> Triple(DangerRed.copy(alpha = 0.15f), DangerRed, Res.string.status_rejected)
+        TransactionStatus.MODIFIED -> Triple(PrimaryIndigo.copy(alpha = 0.15f), PrimaryIndigo, Res.string.status_modified)
     }
 
     Box(
@@ -41,7 +51,7 @@ fun StatusBadge(
             .padding(horizontal = 8.dp, vertical = 4.dp)
     ) {
         Text(
-            text = text,
+            text = stringResource(textRes),
             style = CashBuddyTypography.labelMedium,
             color = textColor
         )
@@ -59,10 +69,10 @@ fun ConfidenceIndicator(
         else -> DangerRed
     }
 
-    val label = when {
-        confidence >= 0.85f -> "High"
-        confidence >= 0.60f -> "Medium"
-        else -> "Low"
+    val labelRes = when {
+        confidence >= 0.85f -> Res.string.confidence_high
+        confidence >= 0.60f -> Res.string.confidence_medium
+        else -> Res.string.confidence_low
     }
 
     Row(
@@ -86,7 +96,7 @@ fun ConfidenceIndicator(
         Spacer(modifier = Modifier.width(6.dp))
 
         Text(
-            text = "$label (${(confidence * 100).toInt()}%)",
+            text = stringResource(Res.string.confidence_label_format, stringResource(labelRes), (confidence * 100).toInt()),
             style = CashBuddyTypography.labelSmall,
             color = color
         )

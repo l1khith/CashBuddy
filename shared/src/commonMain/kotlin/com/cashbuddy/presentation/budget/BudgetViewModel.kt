@@ -9,6 +9,7 @@ import com.cashbuddy.domain.model.BudgetPeriod
 import com.cashbuddy.domain.model.BudgetStatus
 import com.cashbuddy.domain.repository.BudgetRepository
 import com.cashbuddy.domain.repository.CategoryRepository
+import com.cashbuddy.domain.repository.TransactionRepository
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -24,14 +25,22 @@ class BudgetViewModel(
     private val budgetRepository: BudgetRepository,
     private val categoryRepository: CategoryRepository,
     private val budgetEngine: BudgetEngine,
-    coroutineScope: CoroutineScope? = null
+    coroutineScope: CoroutineScope? = null,
+    private val transactionRepository: TransactionRepository? = null
 ) : ViewModel() {
 
     constructor(
         budgetRepository: BudgetRepository,
         categoryRepository: CategoryRepository,
         budgetEngine: BudgetEngine
-    ) : this(budgetRepository, categoryRepository, budgetEngine, null)
+    ) : this(budgetRepository, categoryRepository, budgetEngine, null, null)
+
+    constructor(
+        budgetRepository: BudgetRepository,
+        categoryRepository: CategoryRepository,
+        budgetEngine: BudgetEngine,
+        coroutineScope: CoroutineScope?
+    ) : this(budgetRepository, categoryRepository, budgetEngine, coroutineScope, null)
 
     private val scope: CoroutineScope = coroutineScope ?: viewModelScope
 
@@ -51,6 +60,13 @@ class BudgetViewModel(
 
     init {
         loadBudgets()
+        if (transactionRepository != null) {
+            scope.launch {
+                transactionRepository.transactionUpdates.collect {
+                    loadBudgets()
+                }
+            }
+        }
     }
 
     fun loadBudgets(): Job = scope.launch {
@@ -58,9 +74,9 @@ class BudgetViewModel(
         try {
             val now = com.cashbuddy.platform.currentTimeMillis()
             val activeBudgets = budgetRepository.getActive()
-            val statuses = activeBudgets.map { budget ->
-                budgetEngine.statusFor(budget, now)
-            }
+            // Audit fix P2: batched computation — one period-range query per DISTINCT
+            // period instead of ~4 queries per budget.
+            val statuses = budgetEngine.statusesFor(activeBudgets, now)
             val global = statuses.firstOrNull { it.budget.category == BudgetCategories.GLOBAL }
             val categoriesOnly = statuses.filter { it.budget.category != BudgetCategories.GLOBAL }
             val unbudgeted = if (global == null) 0.0 else global.spent - categoriesOnly.sumOf { it.spent }

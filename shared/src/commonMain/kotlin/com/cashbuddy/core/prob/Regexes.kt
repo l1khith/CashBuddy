@@ -8,7 +8,10 @@ object Regexes {
     val AMOUNT = Regex("""(?i)$CURRENCY_PREFIX\s*(\d+(?:,\d{2,3})*(?:\.\d{1,2})?|\d+(?:\.\d{1,2})?)""")
     val AMOUNT_SUFFIX = Regex("""(?i)(\d+(?:,\d{2,3})*(?:\.\d{1,2})?|\d+(?:\.\d{1,2})?)\s*$CURRENCY_SUFFIX""")
     val ACCOUNT = Regex("""(?i)\b(?:a/c|ac|acct|account|card)\s*(?:no\.?)?\s*(?:ending\s+)?(?:with\s+)?(?:[*xX.]*)(\d{3,4})\b""")
-    val UTR = Regex("""(?i)(?:UPI\s+(?:transaction\s+id|ref(?:\s+no|\s+id|\s+number)?)|Transaction\s+ID|utr|ref|txn|rrn)\s*(?:no\.?|id)?\s*[:#]?\s*([A-Za-z0-9]{8,35})""")
+    // Word-boundary anchored + separator required (audit fix 1.3): prevents mid-word
+    // keyword matches (e.g. "myreference12345678" capturing "erence12345678") that used
+    // to feed false UTRs into the 24h dedup window and Tier-1 UTR merging.
+    val UTR = Regex("""(?i)\b(?:UPI\s+(?:transaction\s+id|ref(?:\s+no|\s+id|\s+number)?)|Transaction\s+ID|utr|ref|txn|rrn)\s*(?:no\.?|id)?\s*[:#\s]+\s*([A-Za-z0-9]{8,35})""")
     val UPI_HANDLE = Regex("""(?i)\b[a-z0-9._-]+@[a-z]+\b""")
     val BALANCE = Regex("""(?i)(?:avl\s*bal|available\s*balance|bal)\s*[:₹$€£¥]?\s*\d""")
 
@@ -17,6 +20,5 @@ object Regexes {
     val OTP = Regex("""(?i)\b(otp|one time password|verification code|secret code|do not share)\b""")
     val PROMO = Regex("""(?i)\b(congratulations|pre-approved|win cash|apply now|apply for|apply|earn|special offer|voucher)\b""")
     val OFFER = Regex("""(?i)\b(offer|discount|deal|cashback up to)\b""")
-    val TX_VERB = Regex("""(?i)\b(payment|transaction|debited|credited|paid|sent|transferred|spent|received)\b""")
     val SUCCESS = Regex("""(?i)\b(successful|completed|success|confirmed|done)\b""")
 }

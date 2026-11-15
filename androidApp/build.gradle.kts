@@ -28,8 +28,8 @@ android {
         applicationId = "com.cashbuddy"
         minSdk = libs.versions.android.minSdk.get().toInt()
         targetSdk = libs.versions.android.targetSdk.get().toInt()
-        versionCode = 6
-        versionName = "1.0.5"
+        versionCode = 7
+        versionName = "1.0.6"
 
         ndk {
             abiFilters.addAll(listOf("arm64-v8a", "x86_64"))
@@ -117,16 +117,13 @@ dependencies {
     implementation(project(":shared"))
 
     implementation(libs.androidx.activity.compose)
-    implementation(libs.androidx.appcompat)
     implementation(libs.androidx.biometric)
     implementation(libs.androidx.core)
     implementation(libs.androidx.profileinstaller)
     implementation(libs.androidx.work.runtime.ktx)
     implementation(libs.androidx.glance.appwidget)
     implementation(libs.androidx.glance.material3)
-    implementation(libs.kotlin.datetime)
     implementation(libs.koin.android)
-    implementation(libs.koin.compose)
     implementation(libs.sqlcipher)
     implementation(libs.compose.runtime)
     implementation(libs.compose.foundation)

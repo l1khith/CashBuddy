@@ -3,6 +3,7 @@ package com.cashbuddy.domain.usecase
 import com.cashbuddy.domain.model.Transaction
 import com.cashbuddy.domain.model.TransactionStatus
 import com.cashbuddy.domain.repository.AccountRepository
+import com.cashbuddy.domain.repository.DebugLogRepository
 import com.cashbuddy.domain.repository.MerchantRuleRepository
 import com.cashbuddy.domain.repository.TrainingDataRepository
 import com.cashbuddy.domain.repository.TransactionRepository
@@ -93,7 +94,11 @@ class ConfirmTransactionUseCase(
     private val repository: TransactionRepository,
     private val merchantRuleRepository: MerchantRuleRepository? = null,
     private val categoryEngine: com.cashbuddy.core.CategoryEngine? = null,
-    private val learnedTokenRepository: com.cashbuddy.domain.repository.LearnedTokenRepository? = null
+    private val learnedTokenRepository: com.cashbuddy.domain.repository.LearnedTokenRepository? = null,
+    // Calibrator feedback loop (Phase 3 Loop): user confirmation is ground truth
+    // for the signals that fired during classification.
+    private val debugLogRepository: DebugLogRepository? = null,
+    private val calibrator: com.cashbuddy.core.prob.Calibrator? = null
 ) {
     suspend operator fun invoke(id: Long) {
         val tx = repository.getById(id).firstOrNull()
@@ -120,23 +125,50 @@ class ConfirmTransactionUseCase(
                 categoryEngine?.learn(merchantNorm, catName)
             }
         }
+
+        // Phase 3 Loop: calibrator feedback — the user confirmed the pipeline's
+        // "transaction" prediction, so every present signal earns a true positive.
+        recordClassificationFeedback(
+            txId = id,
+            wasCorrect = true,
+            debugLogRepository = debugLogRepository,
+            calibrator = calibrator
+        )
     }
 }
 
 class RejectTransactionUseCase(
     private val repository: TransactionRepository,
-    private val learnedTokenRepository: com.cashbuddy.domain.repository.LearnedTokenRepository? = null
+    private val learnedTokenRepository: com.cashbuddy.domain.repository.LearnedTokenRepository? = null,
+    // Calibrator feedback loop (Phase 3 Loop): user rejection is ground truth
+    // against the pipeline's "transaction" prediction.
+    private val debugLogRepository: DebugLogRepository? = null,
+    private val calibrator: com.cashbuddy.core.prob.Calibrator? = null
 ) {
     suspend operator fun invoke(id: Long) {
         val tx = repository.getById(id).firstOrNull()
-        // Phase 3 Loop: Record tokens as non-transaction in Zero-Map learned_token table
+        // Audit fix B3: delete FIRST, record learning signals AFTER. The old order recorded
+        // tokens before the delete — a crash (or failed delete) in between left the tokens
+        // recorded as non-transaction for a transaction the user did not successfully
+        // reject, and retrying the rejection double-incremented learned_token counts
+        // (the upsert blindly adds +1). The new worst case — crash after a successful
+        // delete — only loses one training signal, which is harmless and retry-safe.
+        repository.deleteById(id)
         if (tx != null && tx.rawText.isNotBlank()) {
             val tokens = com.cashbuddy.core.prob.Tokenizer.tokenize(tx.rawText)
             if (tokens.isNotEmpty()) {
                 learnedTokenRepository?.record(isTransaction = false, tokens = tokens)
             }
         }
-        repository.deleteById(id)
+
+        // Phase 3 Loop: calibrator feedback — the user rejected the pipeline's
+        // "transaction" prediction, so every present signal earns a false positive.
+        recordClassificationFeedback(
+            txId = id,
+            wasCorrect = false,
+            debugLogRepository = debugLogRepository,
+            calibrator = calibrator
+        )
     }
 }
 
@@ -185,6 +217,34 @@ class ModifyTransactionUseCase(
 }
 
 private const val USER_RULE_PRIORITY = 100L
+
+/**
+ * Phase 3 Loop — Calibrator feedback. Attributes a user verdict (confirm/reject)
+ * back to the per-signal contributions recorded in the pipeline's debug log, so
+ * LikelihoodCalibrator.observe() can blend empirical likelihood ratios into
+ * future classifications once >= 50 observations accumulate per signal.
+ *
+ * Only PRESENT signals are observable (contributions are recorded only for
+ * signals that fired), so this path updates TP/FP quadrants; TN/FN accumulate
+ * from the pipeline's auto-outcomes (see MessagePipeline.observeSignals).
+ */
+private suspend fun recordClassificationFeedback(
+    txId: Long,
+    wasCorrect: Boolean,
+    debugLogRepository: DebugLogRepository?,
+    calibrator: com.cashbuddy.core.prob.Calibrator?
+) {
+    if (debugLogRepository == null || calibrator == null) return
+    try {
+        val log = debugLogRepository.getByResultingTxId(txId.toString()) ?: return
+        val contributionsJson = log.contributionsJson ?: return
+        for (contribution in com.cashbuddy.core.prob.Contribution.listFromJson(contributionsJson)) {
+            calibrator.observe(contribution.signal, wasCorrect = wasCorrect, wasPositive = true)
+        }
+    } catch (_: Throwable) {
+        // Non-blocking best-effort calibration feedback
+    }
+}
 
 private fun isValidMerchantName(name: String): Boolean {
     val trimmed = name.trim()

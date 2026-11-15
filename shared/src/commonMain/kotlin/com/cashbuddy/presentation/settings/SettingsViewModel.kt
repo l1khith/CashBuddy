@@ -8,6 +8,7 @@ import com.cashbuddy.domain.repository.TransactionRepository
 import com.cashbuddy.domain.usecase.ExportDataUseCase
 import com.cashbuddy.platform.FileExporter
 import com.cashbuddy.platform.currentTimeMillis
+import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -17,9 +18,14 @@ import com.cashbuddy.domain.model.TrainingStats
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import androidx.compose.runtime.Immutable
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.debounce
+import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import cashbuddy.shared.generated.resources.Res
+import cashbuddy.shared.generated.resources.recurrence_patterns_refreshed
 
 @Immutable
 data class SettingsUiState(
@@ -42,7 +48,17 @@ data class SettingsUiState(
     val isOcrAvailable: Boolean = false,
     val ignoredPackages: List<String> = emptyList(),
     val isImportingCsv: Boolean = false,
-    val smartNotificationsEnabled: Boolean = true
+    val smartNotificationsEnabled: Boolean = true,
+    val customAppName: String = com.cashbuddy.domain.model.UserSettings.DEFAULT_APP_NAME,
+    val customAppSubtitle: String = com.cashbuddy.domain.model.UserSettings.DEFAULT_APP_SUBTITLE,
+    val showAppLogo: Boolean = true,
+    val navOrder: String = com.cashbuddy.domain.model.UserSettings.DEFAULT_NAV_ORDER,
+    val navOrderList: List<String> = listOf("home", "stats", "history"),
+    val showHealthInTopBar: Boolean = false,
+    val isNotificationAccessGranted: Boolean = false,
+    val lastSyncTimestamp: Long = 0L,
+    val dailyWrapUpHour: Int = com.cashbuddy.domain.model.UserSettings.DEFAULT_WRAP_UP_HOUR,
+    val dailyWrapUpMinute: Int = com.cashbuddy.domain.model.UserSettings.DEFAULT_WRAP_UP_MINUTE
 )
 
 class SettingsViewModel(
@@ -58,7 +74,12 @@ class SettingsViewModel(
     private val importDataUseCase: com.cashbuddy.domain.usecase.ImportDataUseCase? = null,
     // C10: learned tokens are derived from training data — clearing one clears the other,
     // otherwise clearAllData leaves the classifier's learned vocabulary inconsistent.
-    private val learnedTokenRepository: com.cashbuddy.domain.repository.LearnedTokenRepository? = null
+    private val learnedTokenRepository: com.cashbuddy.domain.repository.LearnedTokenRepository? = null,
+    // Audit fix P1-C: wipe all data in ONE driver-level transaction instead of four
+    // separate repository transactions from the ViewModel.
+    private val dataResetStore: com.cashbuddy.domain.repository.DataResetStore? = null,
+    private val diagnosticsProvider: com.cashbuddy.platform.PlatformDiagnosticsProvider? = null,
+    private val detectAndStoreRecurrencesUseCase: com.cashbuddy.domain.usecase.DetectAndStoreRecurrencesUseCase? = null
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(SettingsUiState(isOcrAvailable = ocrEngine?.isAvailable ?: false))
@@ -69,7 +90,34 @@ class SettingsViewModel(
 
     private var versionTapCount = 0
 
+    // Instant UI draft overrides so typing and dragging never stutter waiting for SQLite writes
+    private val _pendingAppName = MutableStateFlow<String?>(null)
+    private val _pendingAppSubtitle = MutableStateFlow<String?>(null)
+    private val _pendingNavOrder = MutableStateFlow<List<String>?>(null)
+
+    @OptIn(FlowPreview::class)
+    private fun startCustomizationPersistence() {
+        viewModelScope.launch {
+            _pendingAppName.filterNotNull().debounce(300).collectLatest { name ->
+                settingsRepository.setCustomAppName(name)
+                if (_pendingAppName.value == name) {
+                    _pendingAppName.value = null
+                }
+            }
+        }
+        viewModelScope.launch {
+            _pendingAppSubtitle.filterNotNull().debounce(300).collectLatest { subtitle ->
+                settingsRepository.setCustomAppSubtitle(subtitle)
+                if (_pendingAppSubtitle.value == subtitle) {
+                    _pendingAppSubtitle.value = null
+                }
+            }
+        }
+    }
+
     init {
+        startCustomizationPersistence()
+
         viewModelScope.launch {
             combine(
                 settingsRepository.getSettings(),
@@ -77,7 +125,10 @@ class SettingsViewModel(
                 accountRepository.getCount(),
                 trainingDataRepository.getStats(),
                 settingsRepository.getDebugLogEnabled(),
-                settingsRepository.getIgnoredPackages()
+                settingsRepository.getIgnoredPackages(),
+                _pendingAppName,
+                _pendingAppSubtitle,
+                _pendingNavOrder
             ) { args: Array<Any?> ->
                 val settings = args[0] as com.cashbuddy.domain.model.UserSettings
                 val txCount = args[1] as Long
@@ -86,10 +137,15 @@ class SettingsViewModel(
                 val debugLogEnabled = args[4] as Boolean
                 @Suppress("UNCHECKED_CAST")
                 val ignoredPkgs = args[5] as List<String>
+                val pendingName = args[6] as String?
+                val pendingSubtitle = args[7] as String?
+                @Suppress("UNCHECKED_CAST")
+                val pendingOrder = args[8] as List<String>?
 
                 if (debugConfig != null) {
                     debugConfig.cachedDeveloperMode = debugLogEnabled
                 }
+                val activeOrder = pendingOrder ?: parseNavOrder(settings.navOrder)
                 SettingsUiState(
                     notificationEnabled = settings.notificationsEnabled,
                     autoConfirmThreshold = settings.autoConfirmThreshold,
@@ -105,7 +161,17 @@ class SettingsViewModel(
                     isLoading = false,
                     isOcrAvailable = ocrEngine?.isAvailable ?: false,
                     ignoredPackages = ignoredPkgs,
-                    smartNotificationsEnabled = settings.smartNotificationsEnabled
+                    smartNotificationsEnabled = settings.smartNotificationsEnabled,
+                    customAppName = pendingName ?: settings.customAppName,
+                    customAppSubtitle = pendingSubtitle ?: settings.customAppSubtitle,
+                    showAppLogo = settings.showAppLogo,
+                    navOrder = activeOrder.joinToString(","),
+                    navOrderList = activeOrder,
+                    showHealthInTopBar = settings.showHealthInTopBar,
+                    isNotificationAccessGranted = diagnosticsProvider?.checkDiagnostics(settings.lastSyncTimestamp)?.isNotificationAccessGranted ?: false,
+                    lastSyncTimestamp = settings.lastSyncTimestamp,
+                    dailyWrapUpHour = settings.dailyWrapUpHour,
+                    dailyWrapUpMinute = settings.dailyWrapUpMinute
                 )
             }.collect {
                 _uiState.value = it
@@ -148,6 +214,18 @@ class SettingsViewModel(
         }
     }
 
+    fun forceRefreshRecurrencePatterns() {
+        viewModelScope.launch {
+            try {
+                val patterns = detectAndStoreRecurrencesUseCase?.invoke() ?: emptyList()
+                val msg = org.jetbrains.compose.resources.getString(Res.string.recurrence_patterns_refreshed, patterns.size)
+                _messageEffect.emit(msg)
+            } catch (e: Throwable) {
+                _messageEffect.emit("Failed to update patterns: ${e.message}")
+            }
+        }
+    }
+
     fun setAutoConfirmThreshold(threshold: Double) {
         viewModelScope.launch {
             settingsRepository.setAutoConfirmThreshold(threshold)
@@ -164,6 +242,63 @@ class SettingsViewModel(
         viewModelScope.launch {
             settingsRepository.setBiometricEnabled(enabled)
         }
+    }
+
+    fun setCustomAppName(name: String) {
+        _pendingAppName.value = name.take(com.cashbuddy.domain.model.UserSettings.MAX_APP_NAME_LENGTH)
+    }
+
+    fun setCustomAppSubtitle(subtitle: String) {
+        _pendingAppSubtitle.value = subtitle.take(com.cashbuddy.domain.model.UserSettings.MAX_APP_SUBTITLE_LENGTH)
+    }
+
+    fun setShowAppLogo(show: Boolean) {
+        viewModelScope.launch {
+            settingsRepository.setShowAppLogo(show)
+        }
+    }
+
+    fun setNavOrder(order: String) {
+        viewModelScope.launch {
+            settingsRepository.setNavOrder(order)
+        }
+    }
+
+    fun commitNavOrder(newOrder: List<String>) {
+        val serialized = newOrder.joinToString(",")
+        _pendingNavOrder.value = newOrder
+        viewModelScope.launch {
+            settingsRepository.setNavOrder(serialized)
+            if (_pendingNavOrder.value == newOrder) {
+                _pendingNavOrder.value = null
+            }
+        }
+    }
+
+    fun resetAppCustomization() {
+        val defaultOrder = parseNavOrder(com.cashbuddy.domain.model.UserSettings.DEFAULT_NAV_ORDER)
+        _pendingAppName.value = com.cashbuddy.domain.model.UserSettings.DEFAULT_APP_NAME
+        _pendingAppSubtitle.value = com.cashbuddy.domain.model.UserSettings.DEFAULT_APP_SUBTITLE
+        _pendingNavOrder.value = defaultOrder
+        viewModelScope.launch {
+            settingsRepository.setCustomAppName(com.cashbuddy.domain.model.UserSettings.DEFAULT_APP_NAME)
+            settingsRepository.setCustomAppSubtitle(com.cashbuddy.domain.model.UserSettings.DEFAULT_APP_SUBTITLE)
+            settingsRepository.setShowAppLogo(true)
+            settingsRepository.setNavOrder(com.cashbuddy.domain.model.UserSettings.DEFAULT_NAV_ORDER)
+            _pendingAppName.value = null
+            _pendingAppSubtitle.value = null
+            _pendingNavOrder.value = null
+            _messageEffect.emit("App customization reset to defaults")
+        }
+    }
+
+    private fun parseNavOrder(raw: String): List<String> {
+        val defaults = listOf("home", "stats", "history")
+        val parsed = raw.split(",")
+            .map { it.trim().lowercase() }
+            .filter { it in defaults }
+            .distinct()
+        return (parsed + defaults).distinct()
     }
 
     fun exportCsvData(onCsvReady: (String) -> Unit = {}) {
@@ -222,12 +357,20 @@ class SettingsViewModel(
     fun clearAllData() {
         viewModelScope.launch {
             val allTxs = _uiState.value.totalTransactionsCount
-            transactionRepository.deleteAll()
-            trainingDataRepository.clearTrainingData()
-            learnedTokenRepository?.clear()
-            val accounts = accountRepository.getAll().first()
-            for (acc in accounts) {
-                accountRepository.updateBalance(acc.id, 0.0)
+            // Audit fix P1-C: the whole wipe commits atomically via the store when
+            // available; the legacy multi-repository path remains as a fallback for
+            // construction sites that don't pass the store.
+            val store = dataResetStore
+            if (store != null) {
+                store.clearAllData()
+            } else {
+                transactionRepository.deleteAll()
+                trainingDataRepository.clearTrainingData()
+                learnedTokenRepository?.clear()
+                val accounts = accountRepository.getAll().first()
+                for (acc in accounts) {
+                    accountRepository.updateBalance(acc.id, 0.0)
+                }
             }
             _messageEffect.emit("All data deleted ($allTxs transactions)")
         }
@@ -284,21 +427,6 @@ class SettingsViewModel(
         }
     }
 
-    fun exportDuplicatePreviewCsv(): String {
-        val groups = _uiState.value.duplicateGroups
-        val sb = StringBuilder()
-        sb.append("Group,Role,TransactionId,Amount,Merchant,Confidence,Status,Timestamp,SourceApp,RawText\n")
-        groups.forEachIndexed { groupIndex, group ->
-            val gNum = groupIndex + 1
-            val survivor = group.survivor
-            sb.append("$gNum,SURVIVOR,${survivor.id},${survivor.amount},\"${survivor.merchant}\",${survivor.confidence},${survivor.status},${survivor.timestamp},\"${survivor.sourceApp}\",\"${survivor.rawText.replace("\"", "\"\"")}\"\n")
-            group.duplicates.forEach { dup ->
-                sb.append("$gNum,DUPLICATE_TO_MERGE,${dup.id},${dup.amount},\"${dup.merchant}\",${dup.confidence},${dup.status},${dup.timestamp},\"${dup.sourceApp}\",\"${dup.rawText.replace("\"", "\"\"")}\"\n")
-            }
-        }
-        return sb.toString()
-    }
-
     fun addIgnoredPackage(packageName: String) {
         val clean = packageName.trim()
         if (clean.isBlank()) return
@@ -315,6 +443,32 @@ class SettingsViewModel(
             settingsRepository.removeIgnoredPackage(clean)
             _messageEffect.emit("Removed $clean from Ignore List")
         }
+    }
+
+    fun setShowHealthInTopBar(show: Boolean) {
+        viewModelScope.launch {
+            settingsRepository.setShowHealthInTopBar(show)
+        }
+    }
+
+    fun setDailyWrapUpTime(hour: Int, minute: Int) {
+        viewModelScope.launch {
+            settingsRepository.setDailyWrapUpTime(hour, minute)
+        }
+    }
+
+    fun refreshDiagnostics() {
+        val lastSync = _uiState.value.lastSyncTimestamp
+        val diagnostics = diagnosticsProvider?.checkDiagnostics(lastSync)
+        if (diagnostics != null) {
+            _uiState.value = _uiState.value.copy(
+                isNotificationAccessGranted = diagnostics.isNotificationAccessGranted
+            )
+        }
+    }
+
+    fun openNotificationListenerSettings() {
+        diagnosticsProvider?.openNotificationListenerSettings()
     }
 
     fun importCsvData(csvContent: String) {

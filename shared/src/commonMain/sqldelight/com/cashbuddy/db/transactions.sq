@@ -181,7 +181,10 @@ ORDER BY t.timestamp DESC;
 
 getMonthlySummary:
 SELECT 
-    strftime('%Y-%m', datetime(t.timestamp/1000, 'unixepoch')) AS month,
+    -- 'localtime' modifier (audit fix P3): plain unixepoch buckets by UTC month, so a
+    -- transaction at 00:30 IST on the 1st was grouped into the PREVIOUS month.
+    -- Device-local month matches the app's day/month semantics everywhere else.
+    strftime('%Y-%m', datetime(t.timestamp/1000, 'unixepoch', 'localtime')) AS month,
     SUM(CASE WHEN t.type = 'DEBIT' AND t.status IN ('CONFIRMED', 'MODIFIED') THEN t.amount ELSE 0.0 END) AS total_debit,
     SUM(CASE WHEN t.type = 'CREDIT' AND t.status IN ('CONFIRMED', 'MODIFIED') THEN t.amount ELSE 0.0 END) AS total_credit,
     COUNT(*) AS transaction_count
@@ -283,7 +286,7 @@ sumByCategory:
 SELECT COALESCE(SUM(t.amount), 0.0)
 FROM transactions t
 LEFT JOIN categories c ON t.category_id = c.id
-WHERE (c.name = :category OR CAST(t.category_id AS TEXT) = :category)
+WHERE (LOWER(c.name) = LOWER(:category) OR CAST(t.category_id AS TEXT) = :category)
   AND t.type = 'DEBIT'
   AND t.status IN ('CONFIRMED', 'MODIFIED')
   AND t.timestamp >= :startTime
@@ -296,7 +299,7 @@ SELECT t.*, c.name AS category_name, c.color AS category_color, c.icon AS catego
 FROM transactions t
 LEFT JOIN categories c ON t.category_id = c.id
 LEFT JOIN accounts a ON t.account_id = a.id
-WHERE (c.name = :category OR CAST(t.category_id AS TEXT) = :category)
+WHERE (LOWER(c.name) = LOWER(:category) OR CAST(t.category_id AS TEXT) = :category)
   AND t.type = 'DEBIT'
   AND t.status IN ('CONFIRMED', 'MODIFIED')
   AND t.timestamp >= :startTime
@@ -401,6 +404,10 @@ WHERE is_merged = 0;
 
 deleteAll:
 DELETE FROM transactions WHERE 1 = 1;
+
+reassignCategory:
+UPDATE transactions SET category_id = :fallbackId WHERE category_id = :targetId;
+
 
 
 

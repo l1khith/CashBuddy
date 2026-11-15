@@ -1,0 +1,5 @@
+• Dynamic Custom Category Domains: Create, edit, and reassign custom expense and income domains.
+• Recurrence Engine: True dimensionless CV calculation for accurate subscription and habit detection.
+• Deduplication Guard: Tier-2 Jaro-Winkler similarity guard prevents false transaction merges.
+• On-Device Learning: Self-calibrating likelihood ratios and trained offline receipt OCR.
+• Performance: Baseline profiles for fast app launch and zero-network privacy verification.

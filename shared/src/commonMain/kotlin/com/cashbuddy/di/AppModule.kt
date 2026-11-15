@@ -23,6 +23,8 @@ import com.cashbuddy.domain.repository.DebugLogRepository
 import com.cashbuddy.domain.repository.LearnedTokenRepository
 import com.cashbuddy.presentation.debug.DebugLogViewModel
 import com.cashbuddy.domain.repository.MerchantRuleRepository
+import com.cashbuddy.domain.repository.MergeTransactionStore
+import com.cashbuddy.domain.repository.DataResetStore
 import com.cashbuddy.domain.repository.RawMessageRepository
 import com.cashbuddy.domain.repository.SettingsRepository
 import com.cashbuddy.domain.repository.SignalObservationRepository
@@ -31,6 +33,7 @@ import com.cashbuddy.domain.repository.TransactionRepository
 import com.cashbuddy.domain.usecase.BatchCategorizeUseCase
 import com.cashbuddy.domain.usecase.CalculateBalanceUseCase
 import com.cashbuddy.domain.usecase.ConfirmTransactionUseCase
+import com.cashbuddy.domain.usecase.DetectAndStoreRecurrencesUseCase
 import com.cashbuddy.domain.usecase.ExportDataUseCase
 import com.cashbuddy.domain.usecase.ImportDataUseCase
 import com.cashbuddy.domain.usecase.GetDateRangeSummaryUseCase
@@ -43,6 +46,7 @@ import com.cashbuddy.domain.usecase.RejectTransactionUseCase
 import com.cashbuddy.presentation.review.ReviewReducer
 import com.cashbuddy.presentation.addtransaction.AddTransactionViewModel
 import com.cashbuddy.presentation.budget.BudgetViewModel
+import com.cashbuddy.presentation.categories.ManageCategoriesViewModel
 import com.cashbuddy.presentation.home.HomeViewModel
 import com.cashbuddy.presentation.personalization.PersonalizationViewModel
 import com.cashbuddy.presentation.review.ReviewViewModel
@@ -51,7 +55,6 @@ import com.cashbuddy.presentation.stats.StatsViewModel
 import com.cashbuddy.presentation.transactions.TransactionDetailViewModel
 import com.cashbuddy.presentation.transactions.TransactionListViewModel
 import kotlinx.coroutines.CoroutineDispatcher
-import kotlinx.coroutines.Dispatchers
 import org.koin.core.module.dsl.factoryOf
 import org.koin.core.module.dsl.singleOf
 import org.koin.core.module.dsl.viewModel
@@ -61,7 +64,10 @@ import org.koin.dsl.module
 
 val appModule = module {
     // Coroutine Dispatcher for Repositories
-    single<CoroutineDispatcher> { Dispatchers.Default }
+    // Audit fix P2: Dispatchers.Default is CPU-thread-confined; on Android, SQLite/JDBC-style
+    // driver calls made from Default threads can starve the CPU pool. Use the platform
+    // IO dispatcher (Android: Dispatchers.IO; iOS: dedicated background dispatcher).
+    single<CoroutineDispatcher> { com.cashbuddy.platform.ioDispatcher }
 
     // Pure Kotlin Core Engines (Multiplatform)
     single { CategoryEngine() }
@@ -73,6 +79,11 @@ val appModule = module {
     single { com.cashbuddy.core.prob.FieldConfidenceEstimator() }
     single { com.cashbuddy.core.prob.PolicyEngine() }
     single { com.cashbuddy.core.prob.DedupEngine }
+    // Atomic duplicate-merge writes (audit fix B1/B2): mark-merged + merge_log + balance
+    // revert must be one driver-level transaction.
+    single<MergeTransactionStore> { com.cashbuddy.data.repository.SqlDelightMergeStore(database = get(), dispatcher = get()) }
+    // Atomic clear-all writes (audit fix P1-C).
+    single<DataResetStore> { com.cashbuddy.data.repository.SqlDelightDataResetStore(database = get(), dispatcher = get()) }
     single { DuplicateReconciler(get(), get()) }
     single { com.cashbuddy.core.prob.AccountRegistry(get()) }
     single<com.cashbuddy.domain.repository.RecurringPatternRepository> { com.cashbuddy.data.repository.RecurringPatternRepositoryImpl(db = get(), dispatcher = get()) }
@@ -103,6 +114,7 @@ val appModule = module {
             budgetAlertScheduler = getOrNull(),
             recurringPatternRepo = getOrNull(),
             anomalyNotifier = getOrNull(),
+            calibrator = getOrNull(),
             ingestStore = com.cashbuddy.data.repository.TransactionIngestStore(database = get(), dispatcher = get())
         )
     }
@@ -118,6 +130,7 @@ val appModule = module {
     singleOf(::LearnedTokenRepositoryImpl) bind LearnedTokenRepository::class
 
     // Use Cases
+    factoryOf(::DetectAndStoreRecurrencesUseCase)
     factoryOf(::CalculateBalanceUseCase)
     factoryOf(::GetRecentTransactionsUseCase)
     factoryOf(::GetTransactionsByDateRangeWithLimitUseCase)
@@ -137,13 +150,17 @@ val appModule = module {
             repository = get(),
             merchantRuleRepository = get(),
             categoryEngine = get(),
-            learnedTokenRepository = get()
+            learnedTokenRepository = get(),
+            debugLogRepository = getOrNull(),
+            calibrator = getOrNull()
         )
     }
     factory {
         RejectTransactionUseCase(
             repository = get(),
-            learnedTokenRepository = get()
+            learnedTokenRepository = get(),
+            debugLogRepository = getOrNull(),
+            calibrator = getOrNull()
         )
     }
     factory {
@@ -164,13 +181,14 @@ val appModule = module {
     viewModelOf(::HomeViewModel)
     viewModelOf(::ReviewViewModel)
     viewModelOf(::TransactionListViewModel)
-    viewModel { (id: Long) -> TransactionDetailViewModel(id, get(), get(), get(), get(), get()) }
-    viewModelOf(::StatsViewModel)
+    viewModel { (id: Long) -> TransactionDetailViewModel(id, get(), get(), get(), get(), getOrNull(), getOrNull()) }
+    viewModel { StatsViewModel(get(), get(), get(), getOrNull()) }
     viewModel {
         BudgetViewModel(
             budgetRepository = get(),
             categoryRepository = get(),
-            budgetEngine = get()
+            budgetEngine = get(),
+            transactionRepository = getOrNull()
         )
     }
     viewModel { (category: String, period: String) ->
@@ -181,8 +199,11 @@ val appModule = module {
             budgetEngine = get()
         )
     }
-    viewModel { SettingsViewModel(get(), get(), get(), get(), get(), getOrNull(), getOrNull(), getOrNull(), getOrNull(), getOrNull(), getOrNull()) }
+    single<com.cashbuddy.platform.PlatformDiagnosticsProvider> { com.cashbuddy.platform.PlatformDiagnosticsProvider() }
+
+    viewModel { SettingsViewModel(get(), get(), get(), get(), get(), getOrNull(), getOrNull(), getOrNull(), getOrNull(), getOrNull(), getOrNull(), getOrNull(), getOrNull(), getOrNull()) }
     viewModel { PersonalizationViewModel(get(), get(), get(), get(), getOrNull(), getOrNull()) }
+    viewModelOf(::ManageCategoriesViewModel)
     viewModelOf(::AddTransactionViewModel)
     viewModel { DebugLogViewModel(get(), get(), getOrNull()) }
 }

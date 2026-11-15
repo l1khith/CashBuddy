@@ -45,6 +45,10 @@ getAll:
 SELECT * FROM recurring_pattern
 ORDER BY last_updated DESC;
 
+findByMerchant:
+SELECT * FROM recurring_pattern
+WHERE merchant_normalized = :merchantNormalized;
+
 findByMerchantAndAmount:
 SELECT * FROM recurring_pattern
 WHERE merchant_normalized = :merchantNormalized AND amount_paise = :amountPaise
@@ -56,7 +60,3 @@ WHERE id = :id;
 
 deleteAll:
 DELETE FROM recurring_pattern;
-
-deleteStale:
-DELETE FROM recurring_pattern
-WHERE last_updated < :staleBefore;

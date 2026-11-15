@@ -70,6 +70,8 @@ class ImportDataUseCase(
             ?: categories.firstOrNull()?.id
             ?: 15L
 
+        val parsedTransactions = mutableListOf<com.cashbuddy.domain.model.Transaction>()
+
         for (line in lines) {
             val trimmed = line.trim()
             if (trimmed.isBlank()) continue
@@ -134,11 +136,15 @@ class ImportDataUseCase(
                     updatedAt = now
                 )
 
-                transactionRepository.insert(tx)
-                success++
+                parsedTransactions.add(tx)
             } catch (e: Exception) {
                 failed++
             }
+        }
+
+        if (parsedTransactions.isNotEmpty()) {
+            val insertedIds = transactionRepository.insertAll(parsedTransactions)
+            success = insertedIds.size
         }
 
         return ImportResult(totalProcessed = total, successCount = success, failedCount = failed)

@@ -6,10 +6,16 @@ import com.cashbuddy.db.AppDatabase
 import com.cashbuddy.domain.model.Transaction
 import com.cashbuddy.domain.model.TransactionStatus
 import com.cashbuddy.domain.model.TransactionType
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.flow.firstOrNull
+import kotlinx.coroutines.withTimeout
 import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertTrue
 
 /**
  * Unit tests verifying [TransactionRepositoryImpl] queries against an in-memory SQLDelight database.
@@ -127,13 +133,21 @@ class SqlDelightTransactionRepositoryTest {
         repository.markMerged(mergedId, survivorId = 1L)
 
         // Sum should only be 150.0 + 250.0 = 400.0
-        val total = repository.sumAll(start, end, TransactionType.DEBIT)
+        val total = database.transactionsQueries.sumAll(
+            type = TransactionType.DEBIT.name,
+            startTime = start,
+            endTime = end
+        ).executeAsOne()
         assertEquals(400.0, total)
     }
 
     @Test
     fun testSumAllReturnsZeroWhenEmpty() = runBlocking {
-        val total = repository.sumAll(1_000L, 5_000L, TransactionType.DEBIT)
+        val total = database.transactionsQueries.sumAll(
+            type = TransactionType.DEBIT.name,
+            startTime = 1_000L,
+            endTime = 5_000L
+        ).executeAsOne()
         assertEquals(0.0, total)
     }
 
@@ -302,5 +316,156 @@ class SqlDelightTransactionRepositoryTest {
         repository.updatePaymentMethod(titleCaseCardId, "UPI")
         assertEquals(1_800.0, repository.sumActualSpent(start, end))
         assertEquals(5_250.0, repository.sumCardOutstanding(start, end))
+    }
+
+    @Test
+    fun testReactiveHistoryFlowsAndUpdatesEmitOnDeleteAndUpdate() = runBlocking {
+        val tx1Id = repository.insert(
+            Transaction(
+                amount = 400.0,
+                type = TransactionType.DEBIT,
+                merchant = "Cafe",
+                categoryId = 1L,
+                sourceApp = "UPI",
+                rawText = "Paid 400",
+                confidence = 0.95f,
+                status = TransactionStatus.CONFIRMED,
+                timestamp = 1_000L
+            )
+        )
+        val tx2Id = repository.insert(
+            Transaction(
+                amount = 600.0,
+                type = TransactionType.DEBIT,
+                merchant = "Books",
+                categoryId = 2L,
+                sourceApp = "UPI",
+                rawText = "Paid 600",
+                confidence = 0.95f,
+                status = TransactionStatus.CONFIRMED,
+                timestamp = 2_000L
+            )
+        )
+
+        val pageSnapshots = mutableListOf<List<Long>>()
+        val summarySnapshots = mutableListOf<Double>()
+        var updateSignals = 0
+
+        val initialLoaded = CompletableDeferred<Unit>()
+        val afterUpdate = CompletableDeferred<Unit>()
+        val afterDelete = CompletableDeferred<Unit>()
+
+        val pageJob = launch(Dispatchers.Default) {
+            repository.getHistoryPageFlow(limit = 50L).collect { page ->
+                pageSnapshots.add(page.map { it.id })
+                if (page.size == 2 && !initialLoaded.isCompleted) {
+                    initialLoaded.complete(Unit)
+                } else if (page.size == 1 && !afterDelete.isCompleted) {
+                    afterDelete.complete(Unit)
+                }
+            }
+        }
+        val summaryJob = launch(Dispatchers.Default) {
+            repository.getHistorySummaryFlow().collect { summary ->
+                summarySnapshots.add(summary.totalDebit)
+                if (summary.totalDebit == 1250.0 && !afterUpdate.isCompleted) {
+                    afterUpdate.complete(Unit)
+                }
+            }
+        }
+        val updatesJob = launch(Dispatchers.Default) {
+            repository.transactionUpdates.collect {
+                updateSignals++
+            }
+        }
+
+        try {
+            withTimeout(5_000L) { initialLoaded.await() }
+            assertEquals(listOf(tx2Id, tx1Id), pageSnapshots.last())
+
+            // Update tx1 amount from 400 to 650 -> totalDebit becomes 650 + 600 = 1250
+            val existingTx1 = repository.getHistoryPage().first { it.id == tx1Id }
+            repository.update(existingTx1.copy(amount = 650.0))
+            withTimeout(5_000L) { afterUpdate.await() }
+            assertEquals(1250.0, summarySnapshots.last())
+
+            // Delete tx2 -> page emits only [tx1Id], totalDebit drops to 650
+            repository.deleteById(tx2Id)
+            withTimeout(5_000L) { afterDelete.await() }
+            assertEquals(listOf(tx1Id), pageSnapshots.last())
+            assertTrue(updateSignals >= 2)
+        } finally {
+            pageJob.cancel()
+            summaryJob.cancel()
+            updatesJob.cancel()
+        }
+    }
+
+    /**
+     * Audit fix 1.5: deleting a merge SURVIVOR must not orphan its merged duplicates.
+     * Duplicates are restored to visible standalone transactions and their merge-time
+     * balance revert is re-applied — all consistent in one commit.
+     */
+    @Test
+    fun testDeleteSurvivorRestoresMergedDuplicatesAndBalance() = runBlocking {
+        // Account with ₹5000
+        database.accountsQueries.insert(
+            name = "Primary Bank", type = "BANK", number = null, bank = null,
+            balance = 5000.0, currency = "INR", is_active = true, sort_order = 1L,
+            created_at = 0L, updated_at = 0L
+        )
+
+        val survivorId = repository.insert(
+            Transaction(
+                amount = 100.0,
+                type = TransactionType.DEBIT,
+                merchant = "Survivor Store",
+                categoryId = 1L,
+                accountId = 1L,
+                sourceApp = "UPI",
+                rawText = "Paid ₹100",
+                confidence = 0.95f,
+                status = TransactionStatus.CONFIRMED,
+                timestamp = 10_000L
+            )
+        )
+        val dupId = repository.insert(
+            Transaction(
+                amount = 18.0,
+                type = TransactionType.DEBIT,
+                merchant = "BMTC",
+                categoryId = 1L,
+                accountId = 1L,
+                sourceApp = "screenshot",
+                rawText = "₹18 Paid to BMTC",
+                confidence = 0.85f,
+                status = TransactionStatus.CONFIRMED,
+                timestamp = 10_000L
+            )
+        )
+        // Insert triggers deducted both confirmed debits: 5000 - 100 - 18 = 4882
+        assertEquals(4882.0, database.accountsQueries.getById(1L).executeAsOne().balance, 0.001)
+
+        // Merge dup into survivor (reconciler/store semantics: balance revert +18)
+        repository.markMerged(id = dupId, survivorId = survivorId)
+        database.transactionsQueries.insertMergeLog(survivor_id = survivorId, merged_id = dupId, merged_at = 20_000L)
+        database.accountsQueries.applyBalanceDelta(delta = 18.0, updatedAt = 20_000L, id = 1L)
+        assertEquals(4900.0, database.accountsQueries.getById(1L).executeAsOne().balance, 0.001)
+
+        // Delete the survivor
+        repository.deleteById(survivorId)
+
+        // Survivor gone
+        assertEquals(null, repository.getById(survivorId).firstOrNull())
+        // Duplicate restored to a visible standalone transaction
+        val restoredDup = repository.getById(dupId).firstOrNull()
+        assertTrue(restoredDup != null)
+        assertEquals(false, restoredDup.isMerged)
+        assertEquals(null, restoredDup.mergedIntoId)
+        // Audit log cleaned up
+        assertEquals(0L, repository.getMergeLogCount())
+        // Balance: dup impact re-applied (-18), survivor impact reverted by delete trigger (+100)
+        // 4900 - 18 + 100 = 4982
+        assertEquals(4982.0, database.accountsQueries.getById(1L).executeAsOne().balance, 0.001)
     }
 }
