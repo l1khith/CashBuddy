@@ -29,12 +29,12 @@ Target Location: `shared/src/commonMain/sqldelight/com/paisapal/db/`
 │    updated_at:INT│      │    confidence:REAL│
 └─────────────────┘       │    status:TEXT    │       ┌─────────────────┐
                           │    notes: TEXT    │       │    budgets      │
-                          │    timestamp:INT  │       ├─────────────────┤
-                          │    created_at:INT │       │ PK id: INTEGER  │
-                          │    updated_at:INT │       │ FK category_id:INT│
-                          └─────────────────┘       │    amount: REAL │
-                                    │               │    period: TEXT │
-                                    │               │    start_date:INT│
+                          │    is_merged: INT │       ├─────────────────┤
+                          │    merged_into:INT│       │ PK id: INTEGER  │
+                          │    timestamp:INT  │       │ FK category_id:INT│
+                          │    created_at:INT │       │    amount: REAL │
+                          │    updated_at:INT │       │    period: TEXT │
+                          └─────────────────┘       │    start_date:INT│
                                     │               │    end_date: INT │
                                     │               │    is_active: INT│
                                     │               │    alert_thr:REAL│
@@ -42,20 +42,16 @@ Target Location: `shared/src/commonMain/sqldelight/com/paisapal/db/`
                                     │               └─────────────────┘
                                     │
 ┌─────────────────┐       ┌─────────┴───────┐       ┌─────────────────┐
-│     goals       │       │    settings     │       │  merchant_rules │
+│ recurring_patt. │       │    settings     │       │  merchant_rules │
 ├─────────────────┤       ├─────────────────┤       ├─────────────────┤
 │ PK id: INTEGER  │       │ PK key: TEXT    │       │ PK id: INTEGER  │
-│    name: TEXT   │       │    value: TEXT  │       │    pattern: TEXT│
-│    target: REAL │       │    updated_at:INT│      │ FK category_id:INT│
-│    current: REAL│       └─────────────────┘       │    is_regex: INT │
-│    deadline: INT│                                 │    priority: INT │
-│    category_id:INT│                               │    match_cnt:INT │
-│    icon: TEXT   │                                 │    created_at:INT│
-│    color: TEXT  │                                 └─────────────────┘
-│    status: TEXT │
-│    created_at:INT│
-│    updated_at:INT│
-└─────────────────┘
+│    merchant:TEXT│       │    value: TEXT  │       │    pattern: TEXT│
+│    amount: REAL │       │    updated_at:INT│      │ FK category_id:INT│
+│    period: TEXT │       └─────────────────┘       │    is_regex: INT │
+│    period_hours:│                                 │    priority: INT │
+│    cv: REAL     │                                 │    match_cnt:INT │
+│    confidence:  │                                 │    created_at:INT│
+└─────────────────┘                                 └─────────────────┘
 ```
 
 ---
@@ -369,37 +365,11 @@ deleteById:
 DELETE FROM budgets WHERE id = ?;
 ```
 
-### 3.6 `goals.sq`
+### 3.6 Migration `4.sqm` & Orphaned Schema Deprecation
+In migration `4.sqm`, the orphaned `goals` table is dropped from existing installs, and `goals.sq` has been permanently deleted from the codebase to align with the core non-negotiable scope:
 ```sql
-import kotlin.Long;
-
-CREATE TABLE goals (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    name TEXT NOT NULL,
-    target_amount REAL NOT NULL,
-    current_amount REAL NOT NULL DEFAULT 0.0,
-    deadline INTEGER AS Long,
-    category_id INTEGER,
-    icon TEXT NOT NULL DEFAULT 'flag',
-    color TEXT NOT NULL DEFAULT '#2ECC71',
-    status TEXT NOT NULL DEFAULT 'ACTIVE', -- 'ACTIVE', 'COMPLETED', 'CANCELLED'
-    created_at INTEGER AS Long NOT NULL,
-    updated_at INTEGER AS Long NOT NULL,
-    FOREIGN KEY (category_id) REFERENCES categories(id)
-);
-
-getAll:
-SELECT * FROM goals ORDER BY created_at DESC;
-
-insert:
-INSERT INTO goals (name, target_amount, current_amount, deadline, category_id, icon, color, status, created_at, updated_at)
-VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
-
-updateProgress:
-UPDATE goals SET current_amount = ?, status = ?, updated_at = ? WHERE id = ?;
-
-deleteById:
-DELETE FROM goals WHERE id = ?;
+-- 4.sqm: Drop orphaned goals table
+DROP TABLE IF EXISTS goals;
 ```
 
 ### 3.7 `settings.sq`

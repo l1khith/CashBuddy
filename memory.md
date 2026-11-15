@@ -61,6 +61,41 @@
 - **Decision**: `BudgetEngine.statusesFor(budgets, now)` fetches the period's transactions ONCE per DISTINCT period and derives every budget from the shared list via a single `computeStatus` core whose filters exactly mirror `sumAll`/`sumByCategory`/`getByDateRange` SQL semantics. Single-budget `statusFor` shares the same core.
 - **Consequence**: Test fakes for `TransactionRepository` used with BudgetEngine MUST implement `getByDateRange` faithfully (timestamp range + `is_merged = 0`), not return empty lists.
 
+### ADR-011: Point-Process Dimensionless Recurrence Detection & CV Gate (2026-11)
+- **Context**: `RecurrenceDetector` previously stored the dimensional Fano factor ($F = \frac{\sigma^2}{\mu}$ in hours) into the dimensionless `cv` column. For monthly (720h) patterns, this inflated stored values by up to 720×, causing downstream recurring habit filters to falsely reject legitimate monthly patterns. Furthermore, the CV gate combined an OR condition instead of an AND condition.
+- **Decision**:
+  1. Calculate true dimensionless Coefficient of Variation directly from inter-arrival times (IAT):
+     $$\text{CV} = \frac{\sqrt{\text{Var}}}{\mu} = \frac{\sigma}{\mu}$$
+  2. Persist `iatResult.cv` into the `recurring_pattern` table.
+  3. Enforce the strict invariant gate:
+     $$\text{isPeriodic} \iff \text{CV} \le 0.30 \;\land\; \text{detectedPeriod} \ne \text{null}$$
+
+### ADR-012: Tier-2 Jaro-Winkler Similarity Dedup Guard (2026-11)
+- **Context**: `DedupEngine` Tier-2 duplicate resolution previously merged any two transactions within $\pm 5$ minutes sharing identical paise amounts using `candidates.first()`, even when the merchants were completely distinct (e.g., ₹100 at Swiggy and ₹100 at Uber).
+- **Decision**: Guard Tier-2 duplicate resolution with strict merchant verification:
+  1. Exact merchant match (case-insensitive), OR
+  2. Jaro-Winkler string similarity $\ge 0.70$, OR
+  3. One merchant is blank/unknown fallback.
+  Transactions with distinct merchants are never merged; `DedupEngine` returns `Decision.Insert`.
+
+### ADR-013: Empirical Likelihood Ratio Self-Calibration with Dual Feedback Loops (2026-11)
+- **Context**: `LikelihoodCalibrator.observe()` was previously unreferenced, preventing on-device calibration of signal likelihood ratios from accumulating empirical ground-truth.
+- **Decision**:
+  1. Blend base likelihood ratios with empirical likelihood ratios once $\ge 50$ signal observations accumulate:
+     $$\text{Sensitivity} = \frac{\text{TP}}{\max(1, \text{TP} + \text{FN})}, \quad \text{FPR} = \frac{\text{FP}}{\max(1, \text{FP} + \text{TN})}$$
+     $$\text{LR}_{\text{empirical}} = \min\left(100.0, \max\left(0.01, \frac{\text{Sensitivity}}{\max(0.001, \text{FPR})}\right)\right)$$
+     $$\text{LR}_{\text{calibrated}} = 0.3 \cdot \text{LR}_{\text{base}} + 0.7 \cdot \text{LR}_{\text{empirical}}$$
+  2. Active dual feedback loops:
+     - `MessagePipeline.observeSignals()` captures auto-outcomes (auto-confirm $\to$ TP, non-transaction ignore $\to$ TN).
+     - `TransactionActionUseCases` captures manual user ground truth (confirm $\to$ TP, reject $\to$ FP).
+
+### ADR-014: Dynamic Custom Category Domains & Safe Reassignment (2026-11)
+- **Context**: Users previously could not create, customize, or delete custom expense/income categories, and deleting categories risked orphaned foreign keys or transaction data corruption.
+- **Decision**:
+  1. Implement `ManageCategoriesScreen` and `ManageCategoriesViewModel` with full Material 3 custom category management (name, color, icon, type).
+  2. Differentiate System categories (`is_system = 1`, protected from deletion/renaming) from Custom categories (`is_system = 0`).
+  3. Enforce safe category reassignment: when a custom category is deleted, all existing transactions in that category are safely reassigned to Uncategorized (ID 0) in the same transaction.
+
 ---
 
 ## 4. Open Decisions Deferred to Product Owner (2026-11 Audit Follow-up)

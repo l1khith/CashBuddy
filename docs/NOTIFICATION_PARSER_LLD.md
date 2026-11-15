@@ -15,43 +15,46 @@ The **Notification Parser Engine** ([NotificationParser.kt](file:///c:/Users/ail
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│  LAYER 1: SOURCE VALIDATION                                                 │
-│  • Curated Set allowlist of 50+ banking & payment package names             │
-│  • Immediate rejection of non-banking application broadcasts                │
+│  LAYER 1: CONTENT-FIRST PROBABILISTIC GATING                                │
+│  • 100% Content-First Naive Bayes scoring; zero hardcoded package allowlists│
+│  • Dynamic source identification via package + text signatures              │
 └─────────────────────────────────────┬───────────────────────────────────────┘
                                       │
                                       ▼
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│  LAYER 2: CONTENT CLASSIFICATION & DISCARD                                  │
-│  • Discard OTP alerts ("one time password", "verification code", "valid for")│
-│  • Discard promotions ("cashback up to", "pre-approved", "win cash")        │
+│  LAYER 2: DISCARD & DISAMBIGUATION                                          │
+│  • Filter OTP alerts ("one time password", "verification code", "valid for")│
+│  • Filter promotions ("cashback up to", "pre-approved", "win cash")        │
 └─────────────────────────────────────┬───────────────────────────────────────┘
                                       │
                                       ▼
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│  LAYER 3: ENTITY EXTRACTION (REGEX ENGINE)                                  │
-│  • Amount: Prefixed/suffixed ₹, Rs, INR with comma sanitization             │
+│  LAYER 3: ENTITY EXTRACTION (REGEX & TOKEN ENGINE)                          │
+│  • Amount: Prefixed/suffixed ₹, Rs, INR with paise normalization            │
 │  • Transaction Type: Debit vs. Credit keyword detection                     │
-│  • Merchant Name: Regex anchor patterns + app package name fallback         │
+│  • Merchant Name: Regex anchor patterns + brand extraction fallback         │
 │  • Account Last-4: Extracted from card/account references ("XX1234")        │
+│  • UTR / RRN: Reference number extraction for duplicate binding             │
 └─────────────────────────────────────┬───────────────────────────────────────┘
                                       │
                                       ▼
 ┌─────────────────────────────────────────────────────────────────────────────┐
 │  LAYER 4: CATEGORIZATION VIA CATEGORY ENGINE                                │
-│  • Tier 1: User-learned corrections (Confidence: 1.0)                       │
-│  • Tier 2: 300+ Curated Indian merchant keyword dictionary (Confidence: 0.90)│
-│  • Tier 3: Unknown Fallback (Confidence: 0.50)                              │
+│  • Tier 1: User-learned merchant corrections (Priority: 100, Conf: 1.0)     │
+│  • Tier 2: Dynamic category matching (System & Custom category domains)     │
+│  • Tier 3: Zero-Map fallback to Uncategorized (ID 0)                        │
 └─────────────────────────────────────┬───────────────────────────────────────┘
                                       │
                                       ▼
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│  LAYER 5: FRAUD & ANOMALY GUARD                                             │
-│  • Velocity rate limiter: Sliding 1-minute window (max 5 tx/min)            │
-│  • Confidence Scoring: Sum of entity weights (0.0 to 1.0)                   │
+│  LAYER 5: DEDUPLICATION, ANOMALY & HUMAN-IN-THE-LOOP                        │
+│  • Multi-Tier Dedup: ±5 min window, amount matching + Jaro-Winkler (≥ 0.70)│
+│  • Anomaly Detection: Modified Z-Score (MAD > 3.5, 90-day window, n ≥ 10)   │
+│  • Recurrence Engine: Inter-Arrival Time (IAT) CV ≤ 0.30 habit detection    │
+│  • Self-Calibration Loop: Beta-Binomial likelihood updates (N ≥ 50)         │
 │  • Status Assignment:                                                       │
 │    - CONFIRMED if confidence >= 0.85 AND amount < ₹10,000                   │
-│    - PENDING (triggers Review Inbox notification) otherwise                 │
+│    - PENDING (routes to Review Inbox) if confidence < 0.85 OR amount ≥ ₹10k │
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
 
