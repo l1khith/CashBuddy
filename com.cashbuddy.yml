@@ -1,0 +1,27 @@
+Categories:
+  - Finance
+  - Security
+
+License: Apache-2.0
+AuthorName: l1khith
+SourceCode: https://github.com/l1khith/CashBuddy
+IssueTracker: https://github.com/l1khith/CashBuddy/issues
+
+RepoType: git
+Repo: https://github.com/l1khith/CashBuddy.git
+
+Builds:
+  - versionName: 1.0.6
+    versionCode: 7
+    commit: v1.0.6
+    subdir: androidApp
+    gradle:
+      - fdroid
+    output: build/outputs/apk/fdroid/release/androidApp-fdroid-release-unsigned.apk
+    prebuild:
+      - sed -i -e '/playImplementation/d' build.gradle.kts
+
+AutoUpdateMode: Version
+UpdateCheckMode: Tags
+CurrentVersion: 1.0.6
+CurrentVersionCode: 7
