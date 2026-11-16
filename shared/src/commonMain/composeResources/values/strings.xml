@@ -261,6 +261,10 @@
     <string name="settings_ocr_title">Screenshot Receipt OCR</string>
     <string name="settings_ocr_desc">Screenshot OCR uses ML Kit on the Play Store build and Tesseract on the F-Droid build. Both run entirely on-device.</string>
     <string name="settings_ocr_active">Active</string>
+    <string name="settings_auto_confirm_title">Auto-Log Confirmed Transactions</string>
+    <string name="settings_auto_confirm_desc">Automatically log high-confidence payments directly as Confirmed. If turned off or above limit, payments are routed to Review Inbox as Pending.</string>
+    <string name="settings_auto_confirm_limit_label">Auto-Log Limit: ₹%1$s</string>
+    <string name="settings_auto_confirm_off_status">Manual Review Only (Zero Auto-Log)</string>
     <string name="settings_section_security">Security &amp; Biometrics</string>
     <string name="settings_biometric_lock_title">Biometric Lock</string>
     <string name="settings_biometric_lock_desc">Require fingerprint / face unlock on launch</string>
