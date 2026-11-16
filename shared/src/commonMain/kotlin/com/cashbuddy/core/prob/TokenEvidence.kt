@@ -87,8 +87,12 @@ class TokenEvidenceExtractor(
             }
         }
 
+        // Clamp aggregated log-odds to [-3.0, +3.0] to prevent logit explosion
+        // (equivalent to likelihood ratio bounded between ~0.05 and ~20.0).
+        val clampedLogOdds = sumLogOdds.coerceIn(-3.0, 3.0)
+
         return TokenEvidence(
-            tokenLogOdds = sumLogOdds,
+            tokenLogOdds = clampedLogOdds,
             tokenCount = count,
             strongestToken = strongestToken,
             strongestLR = strongestLR

@@ -115,7 +115,8 @@ val appModule = module {
             recurringPatternRepo = getOrNull(),
             anomalyNotifier = getOrNull(),
             calibrator = getOrNull(),
-            ingestStore = com.cashbuddy.data.repository.TransactionIngestStore(database = get(), dispatcher = get())
+            ingestStore = com.cashbuddy.data.repository.TransactionIngestStore(database = get(), dispatcher = get()),
+            learnedTokenRepository = getOrNull()
         )
     }
 

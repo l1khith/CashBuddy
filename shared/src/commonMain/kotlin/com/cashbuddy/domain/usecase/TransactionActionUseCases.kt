@@ -102,13 +102,14 @@ class ConfirmTransactionUseCase(
 ) {
     suspend operator fun invoke(id: Long) {
         val tx = repository.getById(id).firstOrNull()
+        val wasAlreadyConfirmed = tx?.status == TransactionStatus.CONFIRMED
         repository.updateStatus(id, TransactionStatus.CONFIRMED)
 
-        // Phase 3 Loop: Record tokens into Zero-Map learned_token table
-        if (tx != null && tx.rawText.isNotBlank()) {
+        // Phase 3 Loop: Record tokens into Zero-Map learned_token table (idempotent: only if newly confirmed)
+        if (!wasAlreadyConfirmed && tx != null && tx.rawText.isNotBlank()) {
             val tokens = com.cashbuddy.core.prob.Tokenizer.tokenize(tx.rawText)
             if (tokens.isNotEmpty()) {
-                learnedTokenRepository?.record(isTransaction = true, tokens = tokens)
+                learnedTokenRepository?.record(isTransaction = true, tokens = tokens, rawId = "tx_$id")
             }
         }
 
@@ -157,7 +158,7 @@ class RejectTransactionUseCase(
         if (tx != null && tx.rawText.isNotBlank()) {
             val tokens = com.cashbuddy.core.prob.Tokenizer.tokenize(tx.rawText)
             if (tokens.isNotEmpty()) {
-                learnedTokenRepository?.record(isTransaction = false, tokens = tokens)
+                learnedTokenRepository?.record(isTransaction = false, tokens = tokens, rawId = "reject_$id")
             }
         }
 
@@ -184,13 +185,15 @@ class ModifyTransactionUseCase(
         oldCategoryName: String? = null,
         newCategoryName: String? = null
     ) {
+        val oldTx = repository.getById(transaction.id).firstOrNull()
+        val wasAlreadyConfirmed = oldTx?.status == TransactionStatus.CONFIRMED
         repository.update(transaction)
 
-        // Phase 3 Loop: Record tokens as valid transaction
-        if (transaction.rawText.isNotBlank()) {
+        // Phase 3 Loop: Record tokens as valid transaction (idempotent: only if not already confirmed)
+        if (!wasAlreadyConfirmed && transaction.rawText.isNotBlank()) {
             val tokens = com.cashbuddy.core.prob.Tokenizer.tokenize(transaction.rawText)
             if (tokens.isNotEmpty()) {
-                learnedTokenRepository?.record(isTransaction = true, tokens = tokens)
+                learnedTokenRepository?.record(isTransaction = true, tokens = tokens, rawId = "modify_${transaction.id}")
             }
         }
 
@@ -247,6 +250,7 @@ private suspend fun recordClassificationFeedback(
 }
 
 private fun isValidMerchantName(name: String): Boolean {
-    val trimmed = name.trim()
-    return trimmed.length >= 2 && !trimmed.equals("Unknown", ignoreCase = true)
+    // Generic labels ("Unknown Merchant", "UPI Merchant", "bank", …) must never
+    // seed a learned merchant rule or a CategoryEngine user rule.
+    return !com.cashbuddy.core.MerchantLabels.isGeneric(name) && name.trim().length >= 2
 }
