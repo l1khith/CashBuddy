@@ -99,7 +99,7 @@ class ProbabilisticClassifier(
         apply("recent_same_merchant", evidence.recentSameMerchant, LikelihoodRatios.RECENT_SAME_MERCHANT)
         apply("burst_detected", evidence.burstDetected, LikelihoodRatios.BURST_DETECTED)
 
-        if (evidence.tokenLogOdds != 0.0) {
+        if (evidence.tokenCount > 0) {
             logit += evidence.tokenLogOdds
             contributions.add(Contribution("learned_tokens", evidence.tokenLogOdds, exp(evidence.tokenLogOdds)))
         }

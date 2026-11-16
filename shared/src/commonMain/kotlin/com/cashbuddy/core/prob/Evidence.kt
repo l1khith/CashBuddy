@@ -31,7 +31,8 @@ data class Evidence(
     val burstDetected: Boolean = false,
 
     // Learned token Naive Bayes log-odds
-    val tokenLogOdds: Double = 0.0
+    val tokenLogOdds: Double = 0.0,
+    val tokenCount: Int = 0
 ) {
     fun toJson(): String = jsonInstance.encodeToString(this)
 

@@ -46,6 +46,11 @@ class RecentStateRepository(private val maxEntries: Int = 20) {
      * Conditionally requires EITHER the merchant to match OR the source package to match,
      * so two independent transactions (e.g. Rapido ₹50 and Zomato ₹50) are NOT penalized.
      */
+    companion object {
+        /** Two amounts closer than this (₹) count as "similar" for duplicate-suspicion evidence. */
+        const val AMOUNT_SIMILARITY_TOLERANCE_RUPEES = 1.0
+    }
+
     fun recentSimilarAmount(
         newAmount: Double,
         newMerchant: String?,
@@ -54,7 +59,7 @@ class RecentStateRepository(private val maxEntries: Int = 20) {
         windowMs: Long = 5 * 60_000L
     ): Boolean {
         return all().any { tx ->
-            abs(tx.amount - newAmount) < 1.0 &&
+            abs(tx.amount - newAmount) < AMOUNT_SIMILARITY_TOLERANCE_RUPEES &&
             abs(now - tx.timestamp) < windowMs &&
             (
                 (!newMerchant.isNullOrBlank() && tx.merchant?.equals(newMerchant, ignoreCase = true) == true) ||

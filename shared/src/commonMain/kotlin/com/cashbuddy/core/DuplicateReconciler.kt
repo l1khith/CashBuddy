@@ -42,10 +42,6 @@ class DuplicateReconciler(
         val survivorIds: List<Long>
     )
 
-    private val utrRegex = Regex(
-        """(?i)\b(?:UPI\s+(?:transaction\s+id|ref(?:\s+no|\s+id|\s+number)?)|Transaction\s+ID|UTR)[:\s]+([A-Za-z0-9]{8,35})"""
-    )
-
     private val dateRegex = Regex(
         """(?i)\b([0-3]?[0-9]\s*(?:st|nd|rd|th)?\s+(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Sept|October|Nov|Dec)[a-z]*\s*,?\s*(?:20\d\d)?\s*(?:at|,)?\s*[0-1]?[0-9]:[0-5][0-9]\s*(?:am|pm)?)\b"""
     )
@@ -127,17 +123,15 @@ class DuplicateReconciler(
         ) ?: group.first()
     }
 
+    private val MONTH_REPLACE_REGEX = Regex("""(?i)\b(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*""")
+    private val COMPANY_SUFFIX_REGEX = Regex("""(?i)\b(?:private\s+limited|pvt\s+ltd|pvt|ltd|limited)\b""")
+
     private fun hasDetailedLayout(tx: Transaction): Boolean {
-        val text = tx.rawText
-        return text.contains("UPI transaction ID", ignoreCase = true) ||
-                text.contains("UTR", ignoreCase = true) ||
-                text.contains("Banking name", ignoreCase = true) ||
-                text.contains("Google transaction ID", ignoreCase = true) ||
-                text.contains("Transaction ID", ignoreCase = true)
+        return com.cashbuddy.core.prob.Regexes.UTR.containsMatchIn(tx.rawText)
     }
 
     private fun extractUtr(text: String): String? {
-        val match = utrRegex.find(text) ?: return null
+        val match = com.cashbuddy.core.prob.Regexes.UTR.find(text) ?: return null
         return match.groups[1]?.value?.trim()
     }
 
@@ -154,30 +148,17 @@ class DuplicateReconciler(
     }
 
     private fun normalizeDate(raw: String): String {
-        return raw.lowercase()
-            .replace("september", "sep")
-            .replace("sept", "sep")
-            .replace("october", "oct")
-            .replace("november", "nov")
-            .replace("december", "dec")
-            .replace("january", "jan")
-            .replace("february", "feb")
-            .replace("march", "mar")
-            .replace("april", "apr")
-            .replace("june", "jun")
-            .replace("july", "jul")
-            .replace("august", "aug")
-            .replace(" at ", "")
-            .replace(Regex("[^a-z0-9]"), "")
+        val monthStandardized = MONTH_REPLACE_REGEX.replace(raw.lowercase()) { match ->
+            match.groupValues[1]
+        }
+        return monthStandardized
+            .replace(Regex("""[^a-z0-9]"""), "")
     }
 
     private fun normalizeMerchant(s: String): String {
         return s.trim()
             .lowercase()
-            .replace("pvt ltd", "")
-            .replace("private limited", "")
-            .replace("ltd", "")
-            .replace("india", "")
+            .replace(COMPANY_SUFFIX_REGEX, "")
             .trim()
     }
 

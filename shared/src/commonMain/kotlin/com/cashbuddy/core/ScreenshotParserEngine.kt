@@ -9,6 +9,24 @@ package com.cashbuddy.core
 class ScreenshotParserEngine(
     private val categoryEngine: CategoryEngine = CategoryEngine()
 ) {
+    companion object {
+        /** Base confidence for a successfully parsed screenshot receipt. */
+        private const val BASE_CONFIDENCE = 0.85f
+
+        /** Per-bonus confidence bump (UTR found, app identified). */
+        private const val BONUS_CONFIDENCE = 0.05f
+
+        /** Known-category confidence floor. */
+        private const val KNOWN_CATEGORY_CONFIDENCE = 0.90f
+
+        /** Hard ceiling on screenshot-parse confidence (never fully auto-trusts OCR). */
+        private const val MAX_CONFIDENCE = 0.99f
+
+        /** Sanity clamp on OCR-extracted amounts (₹1 .. ₹5,00,000). */
+        private const val MIN_AMOUNT = 1.0
+        private const val MAX_AMOUNT = 500_000.0
+    }
+
 
     private val amountRegex = Regex(
         """(?i)(?:₹|Rs\.?|INR)\s*([0-9]{1,3}(?:,[0-9]{2,3})*(?:\.[0-9]{1,2})?|[0-9]+(?:\.[0-9]{1,2})?)"""
@@ -63,11 +81,11 @@ class ScreenshotParserEngine(
         }
 
         // 7. Calculate Confidence
-        var confidence = 0.85f
-        if (utrOrRef != null) confidence += 0.05f
-        if (appName != null) confidence += 0.05f
-        if (category != "Unknown") confidence = maxOf(confidence, 0.90f)
-        confidence = minOf(confidence, 0.99f)
+        var confidence = BASE_CONFIDENCE
+        if (utrOrRef != null) confidence += BONUS_CONFIDENCE
+        if (appName != null) confidence += BONUS_CONFIDENCE
+        if (category != "Unknown") confidence = maxOf(confidence, KNOWN_CATEGORY_CONFIDENCE)
+        confidence = minOf(confidence, MAX_CONFIDENCE)
 
         return ScreenshotTransaction(
             amount = amount,
@@ -156,14 +174,13 @@ class ScreenshotParserEngine(
 
         val lines = text.lines().map { it.trim() }.filter { it.isNotEmpty() }
 
-        // Strategy 4: Line immediately following an isolated currency glyph (e.g. ML Kit reading '₹' as 'M', '₹', 'F', 'T', '?')
+        // Strategy 4: Line immediately following an isolated currency glyph
+        val currencyGlyphRegex = Regex("""^(?:₹|Rs[.:]?|INR|[$€£¥])$""", RegexOption.IGNORE_CASE)
         for (i in lines.indices) {
             val l = lines[i]
-            if (l.equals("₹") || l.equals("M", ignoreCase = true) || l.equals("F", ignoreCase = true) ||
-                l.equals("Rs", ignoreCase = true) || l.equals("INR", ignoreCase = true) || l == "?" || l == "•"
-            ) {
+            if (currencyGlyphRegex.matches(l)) {
                 val next = lines.getOrNull(i + 1)?.replace(",", "")?.toDoubleOrNull()
-                if (next != null && next in 1.0..500000.0) {
+                if (next != null && next in MIN_AMOUNT..MAX_AMOUNT) {
                     return next
                 }
             }
@@ -171,16 +188,18 @@ class ScreenshotParserEngine(
 
         // Strategy 5: Standalone line with a numeric amount (with or without comma separators e.g. "1,149" or "1,149.00")
         val lower = text.lowercase()
-        val hasPaymentContext = lower.contains("completed") || lower.contains("successful") ||
-                lower.contains("confirmed") || lower.contains("paid") || lower.contains("payment") ||
-                lower.contains("banking name") || lower.contains("upi") || lower.contains("pay again")
+        val hasPaymentContext = com.cashbuddy.core.prob.Regexes.SUCCESS.containsMatchIn(lower) ||
+                com.cashbuddy.core.prob.Regexes.DEBIT.containsMatchIn(lower) ||
+                com.cashbuddy.core.prob.Regexes.CREDIT.containsMatchIn(lower) ||
+                com.cashbuddy.core.prob.Regexes.UTR.containsMatchIn(lower) ||
+                lower.contains("upi")
         if (hasPaymentContext) {
             for (line in lines) {
                 val clean = line.removePrefix("?").removePrefix("=").removePrefix("*")
                     .removePrefix("M").removePrefix("m").removePrefix("₹").trim()
                 if (clean.isNotEmpty() && clean.all { it.isDigit() || it == ',' || it == '.' }) {
                     val num = clean.replace(",", "").toDoubleOrNull()
-                    if (num != null && num in 1.0..500000.0) {
+                    if (num != null && num in MIN_AMOUNT..MAX_AMOUNT) {
                         return num
                     }
                 }
@@ -191,23 +210,15 @@ class ScreenshotParserEngine(
     }
 
     private fun detectTxType(text: String): TransactionType {
-        val lower = text.lowercase()
-        val isCredit = lower.contains("received from") ||
-            lower.contains("payment received") ||
-            lower.contains("money received") ||
-            lower.contains("credited to your") ||
-            lower.contains("received into") ||
-            (lower.contains("credited to") && !lower.contains("debited from")) ||
-            lower.contains("deposited to") ||
-            lower.contains("refund received") ||
-            lower.contains("cashback received")
-
-        return if (isCredit) {
+        return if (com.cashbuddy.core.prob.Regexes.CREDIT.containsMatchIn(text)) {
             TransactionType.CREDIT
         } else {
             TransactionType.DEBIT
         }
     }
+
+    private val merchantHeaderLineRegex = Regex("""(?i)^(?:received(?:\s+from)?|from:?|paid\s+to|payment\s+(?:to|of)|sent\s+to|to:?|.*successfully\s+to)$""")
+    private val merchantInlineRegex = Regex("""(?i)^(?:received\s+from|paid\s+to|payment\s+to|sent\s+to|to:?)\s+(.+)""")
 
     private fun extractMerchant(text: String): String {
         // Strategy 0: "Banking name: BMTC" / "Merchant name: ..."
@@ -225,13 +236,8 @@ class ScreenshotParserEngine(
         // Strategy 1: Line right after or on "Received from", "Paid to", "To:", "Payment to", etc.
         for (i in lines.indices) {
             val line = lines[i]
-            val lower = line.lowercase()
 
-            if (lower == "received from" || lower == "received" || lower == "from" || lower == "from:" ||
-                lower == "paid to" || lower == "payment to" || lower == "payment of" ||
-                lower == "sent to" || lower == "to" || lower == "to:" ||
-                lower.endsWith("successfully to")
-            ) {
+            if (merchantHeaderLineRegex.matches(line)) {
                 val nextLine = lines.getOrNull(i + 1)
                 if (nextLine != null) {
                     val candidate = cleanMerchantLine(nextLine)
@@ -241,25 +247,9 @@ class ScreenshotParserEngine(
                 }
             }
 
-            // Inline checks: "Received from John", "Paid to Chai Point", "To: BMTC", etc.
-            if (lower.startsWith("received from ")) {
-                val candidate = cleanMerchantLine(line.substring(14))
-                if (candidate.isNotEmpty() && !isSystemLabel(candidate)) return candidate
-            }
-            if (lower.startsWith("paid to ")) {
-                val candidate = cleanMerchantLine(line.substring(8))
-                if (candidate.isNotEmpty() && !isSystemLabel(candidate)) return candidate
-            }
-            if (lower.startsWith("to: ")) {
-                val candidate = cleanMerchantLine(line.substring(4))
-                if (candidate.isNotEmpty() && !isSystemLabel(candidate)) return candidate
-            }
-            if (lower.startsWith("to ")) {
-                val candidate = cleanMerchantLine(line.substring(3))
-                if (candidate.isNotEmpty() && !isSystemLabel(candidate)) return candidate
-            }
-            if (lower.startsWith("payment to ")) {
-                val candidate = cleanMerchantLine(line.substring(11))
+            val inlineMatch = merchantInlineRegex.matchEntire(line)
+            if (inlineMatch != null) {
+                val candidate = cleanMerchantLine(inlineMatch.groupValues[1])
                 if (candidate.isNotEmpty() && !isSystemLabel(candidate)) return candidate
             }
         }
@@ -293,7 +283,7 @@ class ScreenshotParserEngine(
             }
         }
 
-        return "UPI Merchant"
+        return com.cashbuddy.core.MerchantLabels.UPI_MERCHANT
     }
 
     private fun extractUtr(text: String): String? {
@@ -331,25 +321,19 @@ class ScreenshotParserEngine(
 
     private fun isSystemLabel(s: String): Boolean {
         val lower = s.lowercase().trim()
-        return lower == "completed" ||
-            lower == "successful" ||
+        return com.cashbuddy.core.prob.Regexes.SUCCESS.containsMatchIn(lower) ||
             lower == "failed" ||
             lower == "pending" ||
-            lower == "paid to" ||
-            lower == "received from" ||
-            lower == "credited to" ||
-            lower == "view history" ||
-            lower == "share receipt" ||
-            lower == "transfer details" ||
-            lower == "transaction details" ||
-            lower.startsWith("upi transaction id") ||
-            lower.startsWith("transaction id") ||
-            lower.startsWith("phonepe transaction id") ||
-            lower.startsWith("google transaction id") ||
-            lower.startsWith("utr") ||
+            lower.contains("details") ||
+            lower.contains("history") ||
+            lower.contains("receipt") ||
             lower.startsWith("powered by") ||
-            lower.startsWith("₹") ||
-            lower.startsWith("rs")
+            com.cashbuddy.core.prob.Regexes.UTR.containsMatchIn(lower) ||
+            com.cashbuddy.core.prob.Regexes.ACCOUNT.containsMatchIn(lower) ||
+            com.cashbuddy.core.prob.Regexes.DEBIT.containsMatchIn(lower) ||
+            com.cashbuddy.core.prob.Regexes.CREDIT.containsMatchIn(lower) ||
+            com.cashbuddy.core.prob.Regexes.AMOUNT.containsMatchIn(lower) ||
+            com.cashbuddy.core.prob.Regexes.AMOUNT_SUFFIX.containsMatchIn(lower)
     }
 }
 

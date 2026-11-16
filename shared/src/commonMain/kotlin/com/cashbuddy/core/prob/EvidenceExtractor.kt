@@ -8,14 +8,6 @@ class EvidenceExtractor(
     private val tokenEvidenceExtractor: TokenEvidenceExtractor? = null
 ) {
     companion object {
-        private val DEBIT_VERBS = Regex("""(?i)\b(debited|withdrawn|spent|paid(?!\s+(?:to\s+)?you\b)|sent(?!\s+you\b)|transferred(?!\s+to\s+you\b)|deducted|charged)\b""")
-        private val CREDIT_VERBS = Regex("""(?i)\b(credited|deposited|received|refunded|cashback|paid\s+(?:to\s+)?you|sent\s+you|transferred\s+to\s+you)\b""")
-        private val TRANSACTION_VERBS = Regex("""(?i)\b(debited|withdrawn|spent|paid|sent|deducted|transferred|charged|credited|deposited|received|refunded|payment|txn|transaction)\b""")
-
-        private val PAYMENT_RAILS = setOf(
-            "phonepe", "paytm", "gpay", "google pay", "bhim", "upi", "netbanking", "mobikwik", "cred", "bank"
-        )
-
         private const val CURR = """(?:₹|Rs[.:]?|INR|[$€£¥]|USD|EUR|GBP|CAD|AUD|AED|SGD|JPY)"""
 
         private val FORBIDDEN_SHAPES = listOf(
@@ -35,9 +27,9 @@ class EvidenceExtractor(
             Regex("""$CURR\s*\d[\d,.]*[kKlL]?\s*(?:per\s+(?:annum|month|year)|a\s+year|annually|salary|stipend)\b""", RegexOption.IGNORE_CASE)
         )
 
-        private val CURRENCY_NEAR_PAID = Regex(
-            """(?i)\bpaid\b[^.!?\n]{0,30}(?:₹|Rs\.?|INR|\$|€|£)|(?:₹|Rs\.?|INR|\$|€|£)[^.!?\n]{0,30}\bpaid\b"""
-        )
+        fun amountHasForbiddenShape(text: String): Boolean =
+            FORBIDDEN_SHAPES.any { it.containsMatchIn(text) }
+
 
         private val DECIMAL_PROTECT_REGEX = Regex("""(\d)\.(\d)""")
         private val CURRENCY_ABBREV_REGEX = Regex("""(?i)\b(rs|re|inr)\.""")
@@ -49,8 +41,7 @@ class EvidenceExtractor(
         private val RECIPIENT_REGEX = Regex("""(?i)(?:paid|sent|transferred|payment(?:\s+of)?)\s+(?:(?:₹|Rs[.:]?|INR|[$€£¥])\s*[\d,.]+\s+)?to\s+([A-Za-z0-9\s&'-]{2,30}?)(?:\s*\(|\s+is\b|\s+was\b|\s+on\b|\s+ref\b|\s+via\b|\s+using\b|\s+bal\b|\s+avl\b|\s+upi\b|\s+successfully\b|\n|\.|\z)""")
         private val RECEIVED_REGEX = Regex("""(?i)\b(?:received\s+(?:(?:₹|Rs[.:]?|INR|[$€£¥])\s*[\d,.]+\s+)?from|received\s+from)\s+([A-Za-z0-9\s&'-]{2,30}?)(?:\s+via|\s+using|\s+on|\s+ref|\s+upi|\s+bal|\s+avl|\n|\.|\z)""")
         private val PREFIX_REGEX = Regex("""(?i)(?:towards|for|at|to)\s+([A-Za-z0-9\s&'-]{2,30}?)(?:\s*\(|\s+is\b|\s+was\b|\s+on|\s+ref|\s+via|\s+using|\s+bal|\s+avl|\s+upi|\n|\.|\z)""")
-        private val ALPHANUMERIC_TOKEN_REGEX = Regex("[^a-z0-9]")
-        private val APP_PREFIX_CLEAN_REGEX = Regex("""(?i)^(?:google\s+pay|gpay|phonepe|paytm|bhim|cred)\s*[:·-]?\s*""")
+        private val APP_PREFIX_CLEAN_REGEX = Regex("""(?i)^[a-z0-9\s]{2,20}\s*[:·-]\s*""")
     }
 
     fun sentences(text: String): List<String> {
@@ -70,21 +61,21 @@ class EvidenceExtractor(
     fun amountAndDebitSameSentence(text: String): Boolean {
         return sentences(text).any { s ->
             (Regexes.AMOUNT.containsMatchIn(s) || Regexes.AMOUNT_SUFFIX.containsMatchIn(s)) &&
-            DEBIT_VERBS.containsMatchIn(s)
+            Regexes.DEBIT.containsMatchIn(s)
         }
     }
 
     fun amountAndCreditSameSentence(text: String): Boolean {
         return sentences(text).any { s ->
             (Regexes.AMOUNT.containsMatchIn(s) || Regexes.AMOUNT_SUFFIX.containsMatchIn(s)) &&
-            CREDIT_VERBS.containsMatchIn(s)
+            Regexes.CREDIT.containsMatchIn(s)
         }
     }
 
     fun amountInTransactionContext(text: String): Boolean {
         return sentences(text).any { s ->
             (Regexes.AMOUNT.containsMatchIn(s) || Regexes.AMOUNT_SUFFIX.containsMatchIn(s)) &&
-            TRANSACTION_VERBS.containsMatchIn(s)
+            (Regexes.DEBIT.containsMatchIn(s) || Regexes.CREDIT.containsMatchIn(s) || s.contains("payment", ignoreCase = true) || s.contains("txn", ignoreCase = true))
         }
     }
 
@@ -126,7 +117,9 @@ class EvidenceExtractor(
         val calcRecentSimilar = recentStateRepository?.recentSimilarAmount(amt, merch, raw.packageName, now) ?: recentSameAmount
         val calcRecentMerchant = recentStateRepository?.recentSameMerchant(merch, now) ?: recentSameMerchant
         val calcBurst = recentStateRepository?.burstDetected(now) ?: velocityHigh
-        val tokenLogOdds = tokenEvidenceExtractor?.extractSync(fullText)?.tokenLogOdds ?: 0.0
+        val tokenEvidence = tokenEvidenceExtractor?.extractSync(fullText)
+        val tokenLogOdds = tokenEvidence?.tokenLogOdds ?: 0.0
+        val tokenCount = tokenEvidence?.tokenCount ?: 0
 
         return Evidence(
             hasAmount = hasAmount,
@@ -147,7 +140,8 @@ class EvidenceExtractor(
             recentSimilarAmount = calcRecentSimilar,
             recentSameMerchant = calcRecentMerchant,
             burstDetected = calcBurst,
-            tokenLogOdds = tokenLogOdds
+            tokenLogOdds = tokenLogOdds,
+            tokenCount = tokenCount
         )
     }
 
@@ -307,7 +301,6 @@ class EvidenceExtractor(
     private fun isValidMerchantCandidate(candidate: String): Boolean {
         val trimmed = candidate.trim()
         if (trimmed.length < 2 || trimmed.length > 50) return false
-        if (PAYMENT_RAILS.contains(trimmed.lowercase())) return false
 
         // A merchant name must contain at least one letter.
         // Pure digit sequences, phone numbers, OTPs, or dates (e.g. "8879635472", "18002333") are not merchants.
