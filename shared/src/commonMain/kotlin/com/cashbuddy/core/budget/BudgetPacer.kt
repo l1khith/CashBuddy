@@ -45,6 +45,9 @@ object BudgetPacer {
 
     /**
      * Projects month-end total spend using linear regression / pacing: dailyAverage * totalDaysInMonth.
+     * NOTE: the default of 30 is only a fallback — production callers (BudgetPacer.calculatePacing)
+     * must pass the actual number of days in the period's month, or the projection drifts on
+     * 28/31-day months.
      */
     fun projectMonthEndTotal(dailyAverage: Double, totalDaysInMonth: Int = 30): Double {
         return dailyAverage * totalDaysInMonth.toDouble()

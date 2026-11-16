@@ -7,6 +7,12 @@ import com.cashbuddy.core.prob.Regexes
 
 object ClipboardMonitor {
 
+    /** NPCI RRN / UTR reference numbers are 12 digits; shorter matches are not refs. */
+    private const val MIN_UTR_LENGTH = 8
+
+    /** Guard against treating pasted documents/URLs as reference numbers. */
+    private const val MAX_CLIP_LENGTH = 500
+
     private val standalone12DigitRegex = Regex("""^\d{12}$""")
     private var lastProcessedUtr: String? = null
 
@@ -48,7 +54,7 @@ object ClipboardMonitor {
      */
     fun extractUtrFromText(text: String): String? {
         val trimmed = text.trim()
-        if (trimmed.isBlank() || trimmed.length > 500) return null
+        if (trimmed.isBlank() || trimmed.length > MAX_CLIP_LENGTH) return null
 
         val utr = when {
             // Standalone 12-digit NPCI RRN (copied by Google Pay / PhonePe / standard bank apps)
@@ -60,7 +66,7 @@ object ClipboardMonitor {
             }
         }
 
-        if (utr.isNullOrBlank() || utr.length < 8) return null
+        if (utr.isNullOrBlank() || utr.length < MIN_UTR_LENGTH) return null
         return utr
     }
 
