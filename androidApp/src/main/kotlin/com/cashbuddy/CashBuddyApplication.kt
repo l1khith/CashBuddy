@@ -40,6 +40,24 @@ class CashBuddyApplication : Application() {
             modules(appModule, androidModule, platformModule, assistantModule)
         }
 
+        // Load the trained transaction gate off the main thread so the first notification
+        // does not pay for artifact parsing. Ingest falls back to the legacy likelihood
+        // table if the artifact is missing or fails its contract check.
+        val gateProvider = get<com.cashbuddy.core.prob.gate.GateModelProvider>()
+        applicationScope.launch {
+            val gate = gateProvider.warmUp()
+            if (gate == null) {
+                Log.w("CashBuddy", "Gate artifact unavailable: ${gateProvider.failureReason()}")
+            } else {
+                Log.i(
+                    "CashBuddy",
+                    "Gate ${gate.weights.modelVersion} loaded " +
+                        "(threshold=${gate.weights.threshold}, " +
+                        "ngrams=${gate.weights.ngrams.entries}, degraded=${gate.degradedReason})"
+                )
+            }
+        }
+
         // Setup notification channels for Assistant features
         com.cashbuddy.notification.NotificationHelper.createChannels(this)
 

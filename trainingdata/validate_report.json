@@ -1,0 +1,256 @@
+{
+  "passed": true,
+  "checks": [
+    {
+      "check": "manifest_exists",
+      "ok": true,
+      "detail": "trainingdata\\manifest.json"
+    },
+    {
+      "check": "combined_count",
+      "ok": true,
+      "detail": "40000 vs 40000"
+    },
+    {
+      "check": "positive_count",
+      "ok": true,
+      "detail": "20000 vs 20000"
+    },
+    {
+      "check": "negative_count",
+      "ok": true,
+      "detail": "20000 vs 20000"
+    },
+    {
+      "check": "split_count_sum",
+      "ok": true,
+      "detail": "40000 vs 40000"
+    },
+    {
+      "check": "ids_unique",
+      "ok": true,
+      "detail": "0 duplicates"
+    },
+    {
+      "check": "label_matches_flag",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "positive_amount_verbatim",
+      "ok": true,
+      "detail": "0 bad rows; e.g. []"
+    },
+    {
+      "check": "positive_amount_positive",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "positive_status",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "positive_txn_type",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "positive_category_valid",
+      "ok": true,
+      "detail": "Counter({'Education': 1334, 'Bills & Utilities': 1334, 'Gift': 1334, 'Food & Dining': 1334, 'Entertainment': 1334, 'Shopping': 1333, 'Healthcare': 1333, 'Investments': 1333, 'Housing': 1333, 'Insurance': 1333, 'Uncategorized': 1333, 'Transportation': 1333, 'Investment Returns': 1333, 'Salary': 1333, 'Refund': 1333})"
+    },
+    {
+      "check": "income_category_credit",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "negative_amount_null",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "negative_amount_text_null",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "negative_category_null",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "negative_type_valid",
+      "ok": true,
+      "detail": "Counter({'PROMO': 3000, 'CHAT_SUMMARY': 2800, 'SOCIAL': 2300, 'OTP': 2000, 'GENERIC': 1400, 'BALANCE_ONLY': 1400, 'FAILED_TXN': 1400, 'BANK_PROMO': 1200, 'NEWS_JOB': 1200, 'PENDING_TXN': 700, 'STATEMENT': 600, 'COLLECT_REQUEST': 500, 'CREDIT_SCORE': 400, 'MANDATE': 400, 'REVERSED': 400, 'REWARD': 300})"
+    },
+    {
+      "check": "negative_financial_present",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "texts_non_empty",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "no_text_leak_across_splits",
+      "ok": true,
+      "detail": "0 shared texts"
+    },
+    {
+      "check": "merchant_train_test_disjoint",
+      "ok": true,
+      "detail": "0 collisions"
+    },
+    {
+      "check": "merchant_val_test_disjoint",
+      "ok": true,
+      "detail": "0 collisions"
+    },
+    {
+      "check": "template_train_test_disjoint",
+      "ok": true,
+      "detail": "0 collisions"
+    },
+    {
+      "check": "template_val_test_disjoint",
+      "ok": true,
+      "detail": "0 collisions"
+    },
+    {
+      "check": "category_coverage_train",
+      "ok": true,
+      "detail": "missing=[]"
+    },
+    {
+      "check": "negative_type_coverage_train",
+      "ok": true,
+      "detail": "missing=[]"
+    },
+    {
+      "check": "category_coverage_val",
+      "ok": true,
+      "detail": "missing=[]"
+    },
+    {
+      "check": "negative_type_coverage_val",
+      "ok": true,
+      "detail": "missing=[]"
+    },
+    {
+      "check": "category_coverage_test",
+      "ok": true,
+      "detail": "missing=[]"
+    },
+    {
+      "check": "negative_type_coverage_test",
+      "ok": true,
+      "detail": "missing=[]"
+    },
+    {
+      "check": "source_type_valid",
+      "ok": true,
+      "detail": "Counter({'BANK_SMS': 19094, 'UPI_APP': 6147, 'APP_NOTIFICATION': 4643, 'MESSAGING': 2800, 'BANK_APP': 1914, 'SCREENSHOT': 1848, 'CARD_ALERT': 1576, 'MESSAGING_FORWARD': 773, 'EMAIL': 657, 'ATM': 278, 'WALLET': 270})"
+    },
+    {
+      "check": "currency_inr",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "duplicate_links_valid",
+      "ok": true,
+      "detail": "0 bad links"
+    },
+    {
+      "check": "duplicate_groups_sane",
+      "ok": true,
+      "detail": "0 singleton groups"
+    },
+    {
+      "check": "amount_bucket_coverage",
+      "ok": true,
+      "detail": "Counter({'100-999': 7301, '1k-9.9k': 6745, '10k-99.9k': 3930, '<100': 1706, '100k+': 318})"
+    },
+    {
+      "check": "credit_share",
+      "ok": true,
+      "detail": "Counter({'DEBIT': 14667, 'CREDIT': 5333})"
+    },
+    {
+      "check": "file_hashes",
+      "ok": true,
+      "detail": ""
+    }
+  ],
+  "stats": {
+    "rows": 40000,
+    "positives": 20000,
+    "negatives": 20000,
+    "unique_texts": 40000,
+    "by_split": {
+      "train": 28000,
+      "val": 6000,
+      "test": 6000
+    },
+    "amount_buckets": {
+      "1k-9.9k": 6745,
+      "10k-99.9k": 3930,
+      "100-999": 7301,
+      "<100": 1706,
+      "100k+": 318
+    },
+    "categories": {
+      "Bills & Utilities": 1334,
+      "Education": 1334,
+      "Entertainment": 1334,
+      "Food & Dining": 1334,
+      "Gift": 1334,
+      "Healthcare": 1333,
+      "Housing": 1333,
+      "Insurance": 1333,
+      "Investment Returns": 1333,
+      "Investments": 1333,
+      "Refund": 1333,
+      "Salary": 1333,
+      "Shopping": 1333,
+      "Transportation": 1333,
+      "Uncategorized": 1333
+    },
+    "negative_types": {
+      "BALANCE_ONLY": 1400,
+      "BANK_PROMO": 1200,
+      "CHAT_SUMMARY": 2800,
+      "COLLECT_REQUEST": 500,
+      "CREDIT_SCORE": 400,
+      "FAILED_TXN": 1400,
+      "GENERIC": 1400,
+      "MANDATE": 400,
+      "NEWS_JOB": 1200,
+      "OTP": 2000,
+      "PENDING_TXN": 700,
+      "PROMO": 3000,
+      "REVERSED": 400,
+      "REWARD": 300,
+      "SOCIAL": 2300,
+      "STATEMENT": 600
+    },
+    "sources": {
+      "APP_NOTIFICATION": 4643,
+      "ATM": 278,
+      "BANK_APP": 1914,
+      "BANK_SMS": 19094,
+      "CARD_ALERT": 1576,
+      "EMAIL": 657,
+      "MESSAGING": 2800,
+      "MESSAGING_FORWARD": 773,
+      "SCREENSHOT": 1848,
+      "UPI_APP": 6147,
+      "WALLET": 270
+    }
+  }
+}

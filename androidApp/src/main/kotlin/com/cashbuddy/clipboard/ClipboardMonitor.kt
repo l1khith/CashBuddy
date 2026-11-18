@@ -21,32 +21,36 @@ object ClipboardMonitor {
      * Returns extracted UTR if present and not previously processed; otherwise null.
      */
     fun checkClipboard(context: Context): String? {
-        val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager
-            ?: return null
+        try {
+            val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager
+                ?: return null
 
-        if (!clipboard.hasPrimaryClip()) return null
+            if (!clipboard.hasPrimaryClip()) return null
 
-        val description = clipboard.primaryClipDescription
-        if (description != null &&
-            !description.hasMimeType(ClipDescription.MIMETYPE_TEXT_PLAIN) &&
-            !description.hasMimeType(ClipDescription.MIMETYPE_TEXT_HTML)
-        ) {
+            val description = clipboard.primaryClipDescription
+            if (description != null &&
+                !description.hasMimeType(ClipDescription.MIMETYPE_TEXT_PLAIN) &&
+                !description.hasMimeType(ClipDescription.MIMETYPE_TEXT_HTML)
+            ) {
+                return null
+            }
+
+            val clip = clipboard.primaryClip ?: return null
+            if (clip.itemCount == 0) return null
+
+            val text = clip.getItemAt(0)?.text?.toString() ?: return null
+            val utr = extractUtrFromText(text) ?: return null
+
+            // Prevent repeat triggers for the same clipboard content
+            if (utr.equals(lastProcessedUtr, ignoreCase = true)) {
+                return null
+            }
+
+            lastProcessedUtr = utr
+            return utr
+        } catch (_: Throwable) {
             return null
         }
-
-        val clip = clipboard.primaryClip ?: return null
-        if (clip.itemCount == 0) return null
-
-        val text = clip.getItemAt(0)?.text?.toString() ?: return null
-        val utr = extractUtrFromText(text) ?: return null
-
-        // Prevent repeat triggers for the same clipboard content
-        if (utr.equals(lastProcessedUtr, ignoreCase = true)) {
-            return null
-        }
-
-        lastProcessedUtr = utr
-        return utr
     }
 
     /**

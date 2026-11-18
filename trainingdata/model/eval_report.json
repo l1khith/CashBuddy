@@ -1,0 +1,363 @@
+{
+  "model_version": "gate-2026.11.18",
+  "dataset_manifest_sha256": "08772f947bb12be4d191254d067b3de8b40919a084404980bc71a09d9bff650b",
+  "rows": {
+    "train": 28000,
+    "val": 6000,
+    "test": 6000
+  },
+  "training": {
+    "C": 1.0,
+    "ngrams": true,
+    "nonzero_weights": 14638,
+    "calibration": {
+      "a": 6.26750939,
+      "b": -0.16493471
+    },
+    "bias_adjust": -12.30462575
+  },
+  "threshold": {
+    "value": 0.08456909,
+    "target_fpr": 0.01
+  },
+  "metrics": {
+    "pr_auc": 0.999097,
+    "roc_auc": 0.999054,
+    "brier": 0.013596,
+    "ece": 0.014235,
+    "tp": 2974,
+    "tn": 2843,
+    "fp": 157,
+    "fn": 26,
+    "recall": 0.991333,
+    "fpr": 0.052333,
+    "precision": 0.949856,
+    "accuracy": 0.9695
+  },
+  "baseline_18_signals": {
+    "threshold": 0.00017429,
+    "pr_auc": 0.992342,
+    "tp": 2754,
+    "tn": 2730,
+    "fp": 270,
+    "fn": 246,
+    "recall": 0.918,
+    "fpr": 0.09,
+    "precision": 0.910714,
+    "accuracy": 0.914
+  },
+  "slices": {
+    "source_type": {
+      "APP_NOTIFICATION": {
+        "n": 795,
+        "positives": 0,
+        "negatives": 795,
+        "fpr": 0.0
+      },
+      "ATM": {
+        "n": 38,
+        "positives": 38,
+        "negatives": 0,
+        "recall": 1.0
+      },
+      "BANK_APP": {
+        "n": 264,
+        "positives": 264,
+        "negatives": 0,
+        "recall": 1.0
+      },
+      "BANK_SMS": {
+        "n": 3147,
+        "positives": 1587,
+        "negatives": 1560,
+        "recall": 1.0,
+        "fpr": 0.100641
+      },
+      "CARD_ALERT": {
+        "n": 235,
+        "positives": 235,
+        "negatives": 0,
+        "recall": 1.0
+      },
+      "MESSAGING": {
+        "n": 420,
+        "positives": 0,
+        "negatives": 420,
+        "fpr": 0.0
+      },
+      "MESSAGING_FORWARD": {
+        "n": 249,
+        "positives": 249,
+        "negatives": 0,
+        "recall": 1.0
+      },
+      "SCREENSHOT": {
+        "n": 260,
+        "positives": 260,
+        "negatives": 0,
+        "recall": 1.0
+      },
+      "UPI_APP": {
+        "n": 556,
+        "positives": 331,
+        "negatives": 225,
+        "recall": 0.954683,
+        "fpr": 0.0
+      },
+      "WALLET": {
+        "n": 36,
+        "positives": 36,
+        "negatives": 0,
+        "recall": 0.694444
+      }
+    },
+    "difficulty": {
+      "easy": {
+        "n": 2440,
+        "positives": 1600,
+        "negatives": 840,
+        "recall": 0.990625,
+        "fpr": 0.0
+      },
+      "hard": {
+        "n": 1983,
+        "positives": 249,
+        "negatives": 1734,
+        "recall": 1.0,
+        "fpr": 0.090542
+      },
+      "medium": {
+        "n": 1317,
+        "positives": 891,
+        "negatives": 426,
+        "recall": 0.987654,
+        "fpr": 0.0
+      },
+      "ocr": {
+        "n": 260,
+        "positives": 260,
+        "negatives": 0,
+        "recall": 1.0
+      }
+    },
+    "txn_type": {
+      "CREDIT": {
+        "n": 800,
+        "positives": 800,
+        "negatives": 0,
+        "recall": 1.0
+      },
+      "DEBIT": {
+        "n": 2854,
+        "positives": 2200,
+        "negatives": 654,
+        "recall": 0.988182,
+        "fpr": 0.240061
+      },
+      "NONE": {
+        "n": 2346,
+        "positives": 0,
+        "negatives": 2346,
+        "fpr": 0.0
+      }
+    },
+    "negative_type": {
+      "BALANCE_ONLY": {
+        "n": 210,
+        "positives": 0,
+        "negatives": 210,
+        "fpr": 0.0
+      },
+      "BANK_PROMO": {
+        "n": 180,
+        "positives": 0,
+        "negatives": 180,
+        "fpr": 0.0
+      },
+      "CHAT_SUMMARY": {
+        "n": 420,
+        "positives": 0,
+        "negatives": 420,
+        "fpr": 0.0
+      },
+      "COLLECT_REQUEST": {
+        "n": 75,
+        "positives": 0,
+        "negatives": 75,
+        "fpr": 0.0
+      },
+      "CREDIT_SCORE": {
+        "n": 60,
+        "positives": 0,
+        "negatives": 60,
+        "fpr": 0.0
+      },
+      "FAILED_TXN": {
+        "n": 210,
+        "positives": 0,
+        "negatives": 210,
+        "fpr": 0.747619
+      },
+      "GENERIC": {
+        "n": 210,
+        "positives": 0,
+        "negatives": 210,
+        "fpr": 0.0
+      },
+      "MANDATE": {
+        "n": 60,
+        "positives": 0,
+        "negatives": 60,
+        "fpr": 0.0
+      },
+      "NEWS_JOB": {
+        "n": 180,
+        "positives": 0,
+        "negatives": 180,
+        "fpr": 0.0
+      },
+      "OTP": {
+        "n": 300,
+        "positives": 0,
+        "negatives": 300,
+        "fpr": 0.0
+      },
+      "PENDING_TXN": {
+        "n": 105,
+        "positives": 0,
+        "negatives": 105,
+        "fpr": 0.0
+      },
+      "POSITIVE": {
+        "n": 3000,
+        "positives": 3000,
+        "negatives": 0,
+        "recall": 0.991333
+      },
+      "PROMO": {
+        "n": 450,
+        "positives": 0,
+        "negatives": 450,
+        "fpr": 0.0
+      },
+      "REVERSED": {
+        "n": 60,
+        "positives": 0,
+        "negatives": 60,
+        "fpr": 0.0
+      },
+      "REWARD": {
+        "n": 45,
+        "positives": 0,
+        "negatives": 45,
+        "fpr": 0.0
+      },
+      "SOCIAL": {
+        "n": 345,
+        "positives": 0,
+        "negatives": 345,
+        "fpr": 0.0
+      },
+      "STATEMENT": {
+        "n": 90,
+        "positives": 0,
+        "negatives": 90,
+        "fpr": 0.0
+      }
+    }
+  },
+  "reliability": [
+    {
+      "bin": "0.0-0.1",
+      "count": 2878,
+      "confidence": 0.001,
+      "accuracy": 0.0097
+    },
+    {
+      "bin": "0.1-0.2",
+      "count": 23,
+      "confidence": 0.1421,
+      "accuracy": 0.2609
+    },
+    {
+      "bin": "0.2-0.3",
+      "count": 28,
+      "confidence": 0.2492,
+      "accuracy": 0.0714
+    },
+    {
+      "bin": "0.3-0.4",
+      "count": 18,
+      "confidence": 0.3484,
+      "accuracy": 0.0556
+    },
+    {
+      "bin": "0.4-0.5",
+      "count": 24,
+      "confidence": 0.4553,
+      "accuracy": 0.125
+    },
+    {
+      "bin": "0.5-0.6",
+      "count": 19,
+      "confidence": 0.5519,
+      "accuracy": 0.1053
+    },
+    {
+      "bin": "0.6-0.7",
+      "count": 25,
+      "confidence": 0.6493,
+      "accuracy": 0.28
+    },
+    {
+      "bin": "0.7-0.8",
+      "count": 19,
+      "confidence": 0.7282,
+      "accuracy": 0.3158
+    },
+    {
+      "bin": "0.8-0.9",
+      "count": 20,
+      "confidence": 0.8528,
+      "accuracy": 0.4
+    },
+    {
+      "bin": "0.9-1.0",
+      "count": 1579,
+      "confidence": 0.9974,
+      "accuracy": 0.9943
+    }
+  ],
+  "feature_weights": {
+    "amount_in_context": 2.75806957,
+    "amount_debit_sent": 14.67069075,
+    "amount_credit_sent": 2.20413856,
+    "amount_forbidden_shape": 0.39183194,
+    "amount": 0.88911957,
+    "account": 168.73634997,
+    "utr": 3201.30608045,
+    "bank_sender": 0.62898128,
+    "upi_handle": 1.0,
+    "balance": 0.9764681,
+    "merchant_pkg": 0.00920428,
+    "success": 5.87425223,
+    "OTP": 0.58512123,
+    "promo": 0.3805149,
+    "offer": 0.34458473,
+    "recent_similar_amount": 1.0,
+    "recent_same_merchant": 1.0,
+    "burst_detected": 1.0,
+    "failure": 0.14390051,
+    "failure_in_context": 0.14482941
+  },
+  "ngrams": {
+    "enabled": true,
+    "buckets": 262144,
+    "hash": "fnv1a32",
+    "scale": 4096,
+    "file": "gate_ngrams.bin",
+    "entries": 13850,
+    "bytes": 83108,
+    "sha256": "7acbca7f0ca7a020eefe4b3b7ff7ae0aef5aba0cc07dd857537084f2a96a93cd"
+  }
+}

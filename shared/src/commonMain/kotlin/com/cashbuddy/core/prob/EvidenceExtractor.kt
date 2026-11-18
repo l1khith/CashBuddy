@@ -101,6 +101,7 @@ class EvidenceExtractor(
         val hasUpiHandle = Regexes.UPI_HANDLE.containsMatchIn(fullText)
         val hasBalance = Regexes.BALANCE.containsMatchIn(tLower)
         val hasSuccess = Regexes.SUCCESS.containsMatchIn(tLower)
+        val hasFailure = Regexes.FAILURE.containsMatchIn(tLower)
         val senderLooksBank = SenderFingerprint.isBankLike(raw.senderId ?: raw.title)
         val fromMerchantPackage = source == NotificationSource.MERCHANT_APP ||
                 (raw.packageName != null && isMerchantPackageHint(raw.packageName))
@@ -141,7 +142,8 @@ class EvidenceExtractor(
             recentSameMerchant = calcRecentMerchant,
             burstDetected = calcBurst,
             tokenLogOdds = tokenLogOdds,
-            tokenCount = tokenCount
+            tokenCount = tokenCount,
+            hasFailureWord = hasFailure
         )
     }
 
@@ -159,8 +161,8 @@ class EvidenceExtractor(
         // and template concatenation would yield "com.android..".
         if (p == "android" || p.startsWith("android.")) return false
         if (p.startsWith("com.android.")) return false
-        val brand = DynamicMerchantResolver.extractBrandFromPackage(pkg)
-        return !brand.isNullOrBlank() && brand.length >= 3
+        val brand = DynamicMerchantResolver.extractBrandFromPackage(pkg) ?: return false
+        return brand.length >= 3 && !com.cashbuddy.core.MerchantLabels.isGeneric(brand)
     }
 
     fun extractAmount(text: String): Double? {
@@ -283,18 +285,15 @@ class EvidenceExtractor(
             }
         }
 
-        // 8. Fallback to package brand if available (e.g. "com.smartq" -> "Smartq")
-        if (!packageName.isNullOrBlank()) {
-            val pkgBrand = packageName.lowercase()
-                .split('.', '_', '-')
-                .filter { it.length >= 3 && it != "com" && it != "app" && it != "apps" && it != "android" && it != "user" }
-                .lastOrNull()
+        // 8. Fallback to package brand if valid non-generic merchant app
+        if (!packageName.isNullOrBlank() && isMerchantPackageHint(packageName)) {
+            val pkgBrand = DynamicMerchantResolver.extractBrandFromPackage(packageName)
             if (!pkgBrand.isNullOrBlank() && isValidMerchantCandidate(pkgBrand)) {
-                return pkgBrand.replaceFirstChar { if (it.isLowerCase()) it.titlecase() else it.toString() }
+                return pkgBrand
             }
         }
 
-        // 9. If no explicit merchant/recipient could be extracted, return null to let user label it in Review Inbox
+        // 9. If no explicit merchant/recipient could be extracted from text, return null to let user label it in Review Inbox
         return null
     }
 
@@ -311,6 +310,8 @@ class EvidenceExtractor(
         val digitsOnly = trimmed.filter { it.isDigit() }
         val lettersOnly = trimmed.filter { it.isLetter() }
         if (lettersOnly.isEmpty() || digitsOnly.length >= 10 && lettersOnly.length <= 2) return false
+
+        if (com.cashbuddy.core.MerchantLabels.isGeneric(trimmed)) return false
 
         return true
     }

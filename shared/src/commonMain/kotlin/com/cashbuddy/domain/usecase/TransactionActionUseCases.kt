@@ -250,7 +250,7 @@ private suspend fun recordClassificationFeedback(
 }
 
 private fun isValidMerchantName(name: String): Boolean {
-    // Generic labels ("Unknown Merchant", "UPI Merchant", "bank", …) must never
+    // Generic labels ("Unknown Merchant", "UPI Merchant", "Messaging", "bank", …) must never
     // seed a learned merchant rule or a CategoryEngine user rule.
     return !com.cashbuddy.core.MerchantLabels.isGeneric(name) && name.trim().length >= 2
 }

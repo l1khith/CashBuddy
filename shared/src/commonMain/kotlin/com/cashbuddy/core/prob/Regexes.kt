@@ -21,4 +21,18 @@ object Regexes {
     val PROMO = Regex("""(?i)\b(congratulations|pre-approved|win cash|apply now|apply for|apply|earn|special offer|voucher)\b""")
     val OFFER = Regex("""(?i)\b(offer|discount|deal|cashback up to)\b""")
     val SUCCESS = Regex("""(?i)\b(successful|completed|success|confirmed|done)\b""")
+
+    /**
+     * Failure / negation vocabulary. Financial noise is dominated by declined, failed and
+     * reversed alerts that reuse the same amount + account + reference layout as a real
+     * transaction, so the words alone are weak evidence; the reason this exists as an
+     * explicit signal is that unseen phrasings ("could not be completed", "no amount
+     * debited") are invisible to a bag-of-ngrams model that never saw that exact template.
+     * This is a FEATURE, never a gate: the trained weights decide how much it counts.
+     */
+    val FAILURE = Regex(
+        """(?i)\b(failed|failure|declined|unsuccessful|not\s+successful|rejected|reversed|cancell?ed|""" +
+            """could\s+not|couldn'?t|unable\s+to|not\s+processed|not\s+completed|no\s+amount|""" +
+            """not\s+debited|not\s+charged|insufficient\s+(?:balance|funds))\b"""
+    )
 }

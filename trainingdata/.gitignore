@@ -1,0 +1,13 @@
+# Generated data (deterministic: rebuild with generate_dataset.py)
+combined.jsonl
+positive_bank_transactions.jsonl
+negative_false_flags.jsonl
+splits/
+
+# Local scratch
+__pycache__/
+*.pyc
+_smoke/
+_validate_stdout.txt
+
+# Fitted model artifacts and docs ARE committed

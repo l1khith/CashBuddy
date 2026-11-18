@@ -394,14 +394,26 @@ class MainActivity : FragmentActivity() {
 
     override fun onResume() {
         super.onResume()
-        if (authState == AuthState.AUTHENTICATED) {
+        if (hasWindowFocus() && authState == AuthState.AUTHENTICATED) {
+            checkClipboardForUtr()
+        }
+    }
+
+    override fun onWindowFocusChanged(hasFocus: Boolean) {
+        super.onWindowFocusChanged(hasFocus)
+        if (hasFocus && authState == AuthState.AUTHENTICATED) {
             checkClipboardForUtr()
         }
     }
 
     private fun checkClipboardForUtr() {
-        com.cashbuddy.clipboard.ClipboardMonitor.checkClipboard(this)?.let { utr ->
-            pendingClipboardUtr = utr
+        if (!hasWindowFocus()) return
+        try {
+            com.cashbuddy.clipboard.ClipboardMonitor.checkClipboard(this)?.let { utr ->
+                pendingClipboardUtr = utr
+            }
+        } catch (_: Throwable) {
+            // Silently ignore if OS denies clipboard access before window manager grants focus
         }
     }
 

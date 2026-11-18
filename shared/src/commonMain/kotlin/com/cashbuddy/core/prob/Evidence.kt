@@ -7,17 +7,17 @@ import kotlinx.serialization.json.Json
 
 @Serializable
 data class Evidence(
-    val hasAmount: Boolean,
-    val hasAccount: Boolean,
-    val hasUtr: Boolean,
-    val hasOtp: Boolean,
-    val hasPromo: Boolean,
-    val hasOffer: Boolean,
-    val hasUpiHandle: Boolean,
-    val hasBalanceMention: Boolean,
-    val hasSuccessWord: Boolean,
-    val senderLooksBank: Boolean,
-    val fromMerchantPackage: Boolean,
+    val hasAmount: Boolean = false,
+    val hasAccount: Boolean = false,
+    val hasUtr: Boolean = false,
+    val hasOtp: Boolean = false,
+    val hasPromo: Boolean = false,
+    val hasOffer: Boolean = false,
+    val hasUpiHandle: Boolean = false,
+    val hasBalanceMention: Boolean = false,
+    val hasSuccessWord: Boolean = false,
+    val senderLooksBank: Boolean = false,
+    val fromMerchantPackage: Boolean = false,
 
     // Contextual sentence-scoped signals
     val amountInTransactionContext: Boolean = false,
@@ -32,7 +32,12 @@ data class Evidence(
 
     // Learned token Naive Bayes log-odds
     val tokenLogOdds: Double = 0.0,
-    val tokenCount: Int = 0
+    val tokenCount: Int = 0,
+
+    // Failure / negation marker on an otherwise transaction-shaped alert. Declined and
+    // reversed messages reuse the amount + account + reference layout of a real debit, so
+    // the trained gate needs this signal to separate them from successful transactions.
+    val hasFailureWord: Boolean = false
 ) {
     fun toJson(): String = jsonInstance.encodeToString(this)
 

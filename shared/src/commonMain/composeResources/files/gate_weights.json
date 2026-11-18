@@ -1,0 +1,47 @@
+{
+  "model_version": "gate-2026.11.18",
+  "schema_version": 1,
+  "trained_at_utc": "2026-11-18T17:49:53.126584+00:00",
+  "dataset_manifest_sha256": "08772f947bb12be4d191254d067b3de8b40919a084404980bc71a09d9bff650b",
+  "prior": 0.2,
+  "intercept": -13.69092011,
+  "bias_adjust": -12.30462575,
+  "threshold": 0.08456909,
+  "calibration": {
+    "kind": "platt",
+    "a": 6.26750939,
+    "b": -0.16493471
+  },
+  "features": {
+    "amount_in_context": 2.75806957,
+    "amount_debit_sent": 14.67069075,
+    "amount_credit_sent": 2.20413856,
+    "amount_forbidden_shape": 0.39183194,
+    "amount": 0.88911957,
+    "account": 168.73634997,
+    "utr": 3201.30608045,
+    "bank_sender": 0.62898128,
+    "upi_handle": 1.0,
+    "balance": 0.9764681,
+    "merchant_pkg": 0.00920428,
+    "success": 5.87425223,
+    "OTP": 0.58512123,
+    "promo": 0.3805149,
+    "offer": 0.34458473,
+    "recent_similar_amount": 1.0,
+    "recent_same_merchant": 1.0,
+    "burst_detected": 1.0,
+    "failure": 0.14390051,
+    "failure_in_context": 0.14482941
+  },
+  "ngrams": {
+    "enabled": true,
+    "buckets": 262144,
+    "hash": "fnv1a32",
+    "scale": 4096,
+    "file": "gate_ngrams.bin",
+    "entries": 13850,
+    "bytes": 83108,
+    "sha256": "7acbca7f0ca7a020eefe4b3b7ff7ae0aef5aba0cc07dd857537084f2a96a93cd"
+  }
+}

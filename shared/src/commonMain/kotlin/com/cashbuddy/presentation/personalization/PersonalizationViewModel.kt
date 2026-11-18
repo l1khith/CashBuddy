@@ -28,7 +28,7 @@ import kotlinx.coroutines.launch
 
 @Immutable
 data class PersonalizationUiState(
-    val accuracyRate: Int = 96,
+    val accuracyRate: Int? = null,
     val correctionsCount: Long = 0,
     val rawSamplesCount: Long = 0,
     val learnedMerchantsCount: Long = 0,
@@ -88,11 +88,11 @@ class PersonalizationViewModel(
             ) { stats, txCount ->
                 val total = txCount.toInt()
                 val numCorrections = stats.correctionsCount.toInt()
-                val accuracy = if (total > 0) {
+                val accuracy = if (total > 0 && numCorrections > 0) {
                     val acc = ((total - numCorrections).toDouble() / total * 100).toInt()
-                    acc.coerceIn(75, 100)
+                    acc.coerceIn(50, 100)
                 } else {
-                    96
+                    null // Baseline: No feedback collected yet
                 }
 
                 val rulesCount = merchantRuleRepository.getCount()
@@ -155,9 +155,12 @@ class PersonalizationViewModel(
             _uiState.update { it.copy(isTraining = true) }
             try {
                 val result = batchCategorizeUseCase()
-                _messageEffect.emit(
+                val message = if (result.reEvaluatedCount == 0) {
+                    "All transactions are already categorized and confirmed! No pending items."
+                } else {
                     "Re-evaluated ${result.reEvaluatedCount} items: ${result.newlyCategorizedCount} categorized (${result.autoConfirmedCount} auto-confirmed)"
-                )
+                }
+                _messageEffect.emit(message)
             } catch (e: Throwable) {
                 _messageEffect.emit("Training batch failed: ${e.message}")
             } finally {

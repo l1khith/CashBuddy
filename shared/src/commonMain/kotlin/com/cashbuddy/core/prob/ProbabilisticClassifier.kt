@@ -1,6 +1,7 @@
 // NO-NETWORK
 package com.cashbuddy.core.prob
 
+import com.cashbuddy.core.prob.gate.GateModelProvider
 import com.cashbuddy.domain.model.TransactionType
 import kotlin.math.exp
 import kotlin.math.ln
@@ -42,7 +43,14 @@ data class ClassificationResult(
 class ProbabilisticClassifier(
     private val calibrator: Calibrator = NoOpCalibrator,
     private val evidenceExtractor: EvidenceExtractor = EvidenceExtractor(),
-    private val fieldConfidenceEstimator: FieldConfidenceEstimator = FieldConfidenceEstimator()
+    private val fieldConfidenceEstimator: FieldConfidenceEstimator = FieldConfidenceEstimator(),
+    /**
+     * Trained gate artifact. When present (production), scores come from the artifact's
+     * likelihood ratios + hashed n-grams. When null or unreachable (tests, corrupt bundle,
+     * first launch before the file is extractable) the legacy [LikelihoodRatios] table keeps
+     * the app functional instead of failing closed.
+     */
+    private val gateModelProvider: GateModelProvider? = null
 ) {
 
     /**
@@ -72,32 +80,41 @@ class ProbabilisticClassifier(
 
         val contributions = mutableListOf<Contribution>()
 
-        suspend fun apply(name: String, present: Boolean, baseLR: Double) {
-            if (!present) return
-            val lr = calibrator.calibratedLR(name, baseLR)
-            val delta = ln(lr)
-            logit += delta
-            contributions.add(Contribution(name, delta, lr))
-        }
+        val gate = gateModelProvider?.model()
+        if (gate != null) {
+            // Trained path: every weight, including the intercept shift, comes from the
+            // artifact. The n-gram block is scored inside the model.
+            val gateScore = gate.score(evidence, rawText)
+            logit = gateScore.logit
+            contributions.addAll(gateScore.contributions)
+        } else {
+            suspend fun apply(name: String, present: Boolean, baseLR: Double) {
+                if (!present) return
+                val lr = calibrator.calibratedLR(name, baseLR)
+                val delta = ln(lr)
+                logit += delta
+                contributions.add(Contribution(name, delta, lr))
+            }
 
-        apply("amount_in_context", evidence.amountInTransactionContext, LikelihoodRatios.AMOUNT_IN_CONTEXT)
-        apply("amount_debit_sent", evidence.amountAndDebitSameSentence, LikelihoodRatios.AMOUNT_AND_DEBIT_SAME_SENT)
-        apply("amount_credit_sent", evidence.amountAndCreditSameSentence, LikelihoodRatios.AMOUNT_AND_CREDIT_SAME_SENT)
-        apply("amount_forbidden_shape", evidence.amountHasForbiddenShape, LikelihoodRatios.AMOUNT_FORBIDDEN_SHAPE)
-        apply("amount", evidence.hasAmount && !evidence.amountInTransactionContext, LikelihoodRatios.AMOUNT_ANYWHERE)
-        apply("account", evidence.hasAccount, LikelihoodRatios.ACCOUNT_PRESENT)
-        apply("utr", evidence.hasUtr, LikelihoodRatios.UTR_PRESENT)
-        apply("bank_sender", evidence.senderLooksBank, LikelihoodRatios.BANK_SENDER_HINT)
-        apply("upi_handle", evidence.hasUpiHandle, LikelihoodRatios.UPI_HANDLE_PRESENT)
-        apply("balance", evidence.hasBalanceMention, LikelihoodRatios.BALANCE_MENTIONED)
-        apply("merchant_pkg", evidence.fromMerchantPackage, LikelihoodRatios.MERCHANT_APP_PACKAGE)
-        apply("success", evidence.hasSuccessWord, LikelihoodRatios.SUCCESS_WORD)
-        apply("OTP", evidence.hasOtp, LikelihoodRatios.OTP_KEYWORD)
-        apply("promo", evidence.hasPromo, LikelihoodRatios.PROMO_KEYWORD)
-        apply("offer", evidence.hasOffer, LikelihoodRatios.OFFER_KEYWORD)
-        apply("recent_similar_amount", evidence.recentSimilarAmount, LikelihoodRatios.RECENT_SIMILAR_AMOUNT)
-        apply("recent_same_merchant", evidence.recentSameMerchant, LikelihoodRatios.RECENT_SAME_MERCHANT)
-        apply("burst_detected", evidence.burstDetected, LikelihoodRatios.BURST_DETECTED)
+            apply("amount_in_context", evidence.amountInTransactionContext, LikelihoodRatios.AMOUNT_IN_CONTEXT)
+            apply("amount_debit_sent", evidence.amountAndDebitSameSentence, LikelihoodRatios.AMOUNT_AND_DEBIT_SAME_SENT)
+            apply("amount_credit_sent", evidence.amountAndCreditSameSentence, LikelihoodRatios.AMOUNT_AND_CREDIT_SAME_SENT)
+            apply("amount_forbidden_shape", evidence.amountHasForbiddenShape, LikelihoodRatios.AMOUNT_FORBIDDEN_SHAPE)
+            apply("amount", evidence.hasAmount && !evidence.amountInTransactionContext, LikelihoodRatios.AMOUNT_ANYWHERE)
+            apply("account", evidence.hasAccount, LikelihoodRatios.ACCOUNT_PRESENT)
+            apply("utr", evidence.hasUtr, LikelihoodRatios.UTR_PRESENT)
+            apply("bank_sender", evidence.senderLooksBank, LikelihoodRatios.BANK_SENDER_HINT)
+            apply("upi_handle", evidence.hasUpiHandle, LikelihoodRatios.UPI_HANDLE_PRESENT)
+            apply("balance", evidence.hasBalanceMention, LikelihoodRatios.BALANCE_MENTIONED)
+            apply("merchant_pkg", evidence.fromMerchantPackage, LikelihoodRatios.MERCHANT_APP_PACKAGE)
+            apply("success", evidence.hasSuccessWord, LikelihoodRatios.SUCCESS_WORD)
+            apply("OTP", evidence.hasOtp, LikelihoodRatios.OTP_KEYWORD)
+            apply("promo", evidence.hasPromo, LikelihoodRatios.PROMO_KEYWORD)
+            apply("offer", evidence.hasOffer, LikelihoodRatios.OFFER_KEYWORD)
+            apply("recent_similar_amount", evidence.recentSimilarAmount, LikelihoodRatios.RECENT_SIMILAR_AMOUNT)
+            apply("recent_same_merchant", evidence.recentSameMerchant, LikelihoodRatios.RECENT_SAME_MERCHANT)
+            apply("burst_detected", evidence.burstDetected, LikelihoodRatios.BURST_DETECTED)
+        }
 
         if (evidence.tokenCount > 0) {
             logit += evidence.tokenLogOdds

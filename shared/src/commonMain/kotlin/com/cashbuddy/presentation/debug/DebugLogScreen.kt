@@ -627,6 +627,7 @@ private fun DebugLogRowCard(
                             EvidenceChip("success", evidence.hasSuccessWord)
                             EvidenceChip("bankSender", evidence.senderLooksBank)
                             EvidenceChip("merchantPkg", evidence.fromMerchantPackage)
+                            EvidenceChip("failure", evidence.hasFailureWord)
                             EvidenceChip("recentAmt", evidence.recentSimilarAmount)
                             EvidenceChip("sameMerchant", evidence.recentSameMerchant)
                             EvidenceChip("burst", evidence.burstDetected)
