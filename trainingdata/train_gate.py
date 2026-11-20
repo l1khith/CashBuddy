@@ -10,9 +10,21 @@ Usage:
     python trainingdata/train_gate.py --data trainingdata --out trainingdata/model --deploy
 
 Artifacts:
-    gate_weights.json   likelihood ratios, bias, prior, threshold, calibration
+    gate_weights.json   likelihood ratios, bias, prior, threshold, feature scaling
     gate_ngrams.bin     pruned hashed n-gram weights (optional)
     eval_report.json    test metrics, slices, confusion matrix
+
+Calibration: the deployed artifact uses NO Platt scaling. Platt fitted on the balanced
+validation split multiplied the strongest signals (account ~168x, utr ~3201x), which both
+destroyed the meaning of "likelihood ratio" and pushed app-style receipts (no A/c, no UTR)
+far below the PolicyEngine bands. The only calibration that ships is the prior shift:
+`bias_adjust` is the trained intercept, and the runtime adds `priorLogit` on top.
+
+Feature scaling: the 20 deterministic signals are scaled by `--feature-scale` while fitting.
+Because L2 regularisation shrinks rare binary columns towards zero, the `failure` signal had
+too little weight to beat the positive n-grams of a failed-transaction message. Fitting on
+`scale * x` and exporting `scale * w` (so the runtime still consumes raw booleans) reduces
+that shrinkage without touching the n-gram block.
 """
 
 from __future__ import annotations
@@ -62,6 +74,7 @@ FEATURES = (
     "burst_detected",
     "failure",
     "failure_in_context",
+    "pending_in_context",
 )
 
 NGRAM_BUCKETS = 1 << 18
@@ -95,7 +108,7 @@ UPI_HANDLE = re.compile(r"(?i)\b[a-z0-9._-]+@[a-z]+\b")
 BALANCE = re.compile(r"(?i)(?:avl\s*bal|available\s+balance|bal)\s*[:₹$€£¥]?\s*\d")
 DEBIT = re.compile(
     r"(?i)\b(debited|paid(?!\s+(?:to\s+)?you\b)|spent|sent(?!\s+you\b)|"
-    r"transferred(?!\s+to\s+you\b)|withdrawn|charged|purchase at)\b"
+    r"transferred(?!\s+to\s+you\b)|withdrawn|charged|purchase at|payment)\b"
 )
 CREDIT = re.compile(
     r"(?i)\b(credited|received|deposited|added|refunded|cashback|"
@@ -112,6 +125,10 @@ FAILURE = re.compile(
     r"(?i)\b(failed|failure|declined|unsuccessful|not\s+successful|rejected|reversed|"
     r"cancell?ed|could\s+not|couldn'?t|unable\s+to|not\s+processed|not\s+completed|"
     r"no\s+amount|not\s+debited|not\s+charged|insufficient\s+(?:balance|funds))\b"
+)
+PENDING = re.compile(
+    r"(?i)\b(pending|processing|on\s+hold|awaiting\s+confirmation|under\s+process|"
+    r"in\s+progress)\b"
 )
 
 CURR = r"(?:₹|Rs[.:]?|INR|[$€£¥]|USD|EUR|GBP|CAD|AUD|AED|SGD|JPY)"
@@ -226,6 +243,7 @@ def extract_features(row: dict) -> dict[str, int]:
     lower = text.lower()
     in_context = amount_in_transaction_context(text)
     failure = bool(FAILURE.search(lower))
+    pending = bool(PENDING.search(lower))
     sender = row.get("sender_id") or row.get("title")
     values = {
         "amount_in_context": int(in_context),
@@ -248,6 +266,7 @@ def extract_features(row: dict) -> dict[str, int]:
         "burst_detected": 0,
         "failure": int(failure),
         "failure_in_context": int(failure and in_context),
+        "pending_in_context": int(pending and in_context),
     }
     return values
 
@@ -267,7 +286,8 @@ def fnv1a32(token: str) -> int:
     return h
 
 
-def ngram_buckets(text: str) -> set[int]:
+def ngram_tokens(text: str) -> set[str]:
+    """Tokens produced by Kotlin `GateTokenizer.buckets` before hashing."""
     normalized = text.lower()
     normalized = DIGITS.sub(" num ", normalized)
     normalized = CURRENCY_WORDS.sub(" cur ", normalized)
@@ -283,7 +303,16 @@ def ngram_buckets(text: str) -> set[int]:
         for size in (3, 4, 5):
             for start in range(len(padded) - size + 1):
                 tokens.add("c:" + padded[start:start + size])
-    return {fnv1a32(token) & NGRAM_MASK for token in tokens}
+    return tokens
+
+
+def ngram_buckets(text: str, mask: int = NGRAM_MASK) -> set[int]:
+    """Tokenise exactly like Kotlin `GateTokenizer.buckets`.
+
+    `mask` must be `artifact.buckets - 1`; the default keeps the historical 2^18 space
+    used by the signal+ngram model.
+    """
+    return {fnv1a32(token) & mask for token in ngram_tokens(text)}
 
 
 # --- Data loading ------------------------------------------------------------
@@ -299,7 +328,7 @@ def load_jsonl(path: Path) -> list[dict]:
     return rows
 
 
-def build_matrix(rows: list[dict], use_ngrams: bool):
+def build_matrix(rows: list[dict], use_ngrams: bool, feature_scale: float = 1.0):
     feature_rows: list[int] = []
     feature_cols: list[int] = []
     feature_vals: list[float] = []
@@ -313,7 +342,7 @@ def build_matrix(rows: list[dict], use_ngrams: bool):
             if values[name]:
                 feature_rows.append(index)
                 feature_cols.append(offset)
-                feature_vals.append(1.0)
+                feature_vals.append(feature_scale)
         if use_ngrams:
             buckets = ngram_buckets(full_text(row))
         else:
@@ -340,8 +369,8 @@ def labels(rows: list[dict]) -> np.ndarray:
 # --- Training ----------------------------------------------------------------
 
 
-def fit(train_rows: list[dict], use_ngrams: bool, C: float):
-    matrix, _, _ = build_matrix(train_rows, use_ngrams)
+def fit(train_rows: list[dict], use_ngrams: bool, C: float, feature_scale: float):
+    matrix, _, _ = build_matrix(train_rows, use_ngrams, feature_scale)
     y = labels(train_rows)
     model = LogisticRegression(
         C=C,
@@ -380,10 +409,8 @@ def choose_threshold(y: np.ndarray, scores: np.ndarray, target_fpr: float) -> fl
     return float(thresholds[best])
 
 
-def fit_platt(y: np.ndarray, raw_logits: np.ndarray) -> tuple[float, float]:
-    platt = LogisticRegression(C=1e6, solver="lbfgs", max_iter=1000)
-    platt.fit(raw_logits.reshape(-1, 1), y)
-    return float(platt.coef_[0][0]), float(platt.intercept_[0])
+def sigmoid(values: np.ndarray) -> np.ndarray:
+    return 1.0 / (1.0 + np.exp(-values))
 
 
 def metrics_at(y: np.ndarray, scores: np.ndarray, threshold: float) -> dict:
@@ -404,12 +431,32 @@ def metrics_at(y: np.ndarray, scores: np.ndarray, threshold: float) -> dict:
     }
 
 
-def calibrate_and_scale(
-    y_val: np.ndarray, val_logits: np.ndarray
-) -> tuple[float, float, float]:
-    """Return (a, b, raw_intercept_delta) for sigmoid(a * logit + b)."""
-    a, b = fit_platt(y_val, val_logits)
-    return a, b, 0.0
+def runtime_signal_keys() -> list[str] | None:
+    """Read GateSignal enum order from Kotlin so the artifact cannot drift from the app."""
+    path = (
+        REPO / "shared" / "src" / "commonMain" / "kotlin" / "com" / "cashbuddy"
+        / "core" / "prob" / "gate" / "GateWeights.kt"
+    )
+    if not path.exists():
+        return None
+    source = path.read_text(encoding="utf-8")
+    block = source.split("enum class GateSignal", 1)
+    if len(block) != 2:
+        return None
+    return re.findall(r'\(\s*"([a-zA-Z_]+)"\s*,', block[1])
+
+
+def check_runtime_contract(runtime_keys: list[str] | None) -> None:
+    if runtime_keys is None:
+        print("! GateWeights.kt not found; skipping trainer/runtime signal check")
+        return
+    if runtime_keys != list(FEATURES):
+        raise SystemExit(
+            "trainer/runtime signal mismatch:\n"
+            f"  trainer: {list(FEATURES)}\n"
+            f"  runtime: {runtime_keys}"
+        )
+    print(f"runtime contract ok: {len(FEATURES)} signals match GateWeights.kt")
 
 
 def slice_metrics(rows: list[dict], y: np.ndarray, scores: np.ndarray, threshold: float) -> dict:
@@ -493,6 +540,8 @@ def main() -> None:
     parser.add_argument("--data", type=Path, default=HERE)
     parser.add_argument("--out", type=Path, default=HERE / "model")
     parser.add_argument("--C", type=float, default=1.0)
+    parser.add_argument("--feature-scale", type=float, default=2.0,
+                        help="fit the 20 deterministic signals at this scale (runtime uses raw booleans)")
     parser.add_argument("--target-fpr", type=float, default=0.01)
     parser.add_argument("--ngram-top-k", type=int, default=20000)
     parser.add_argument("--no-ngrams", action="store_true")
@@ -511,33 +560,34 @@ def main() -> None:
     test_rows = load_jsonl(data / "splits" / "test.jsonl")
     print(f"rows: train={len(train_rows)} val={len(val_rows)} test={len(test_rows)}")
 
-    model, _ = fit(train_rows, use_ngrams, args.C)
-    coef = model.coef_[0].astype(np.float64)
+    check_runtime_contract(runtime_signal_keys())
+
+    model, _ = fit(train_rows, use_ngrams, args.C, args.feature_scale)
+    coef_fit = model.coef_[0].astype(np.float64)
     intercept_train = float(model.intercept_[0])
     if use_ngrams:
-        coef = prune_ngrams(coef, args.ngram_top_k)
-    print(f"nonzero weights: {int(np.count_nonzero(coef))} "
+        coef_fit = prune_ngrams(coef_fit, args.ngram_top_k)
+
+    # The fit saw `feature_scale * x`. The runtime sees raw booleans, so the exported
+    # signal weights must absorb the scale exactly once.
+    coef_runtime = coef_fit.copy()
+    coef_runtime[:len(FEATURES)] *= args.feature_scale
+    print(f"nonzero weights: {int(np.count_nonzero(coef_runtime))} "
           f"(ngram cap {args.ngram_top_k if use_ngrams else 0})")
 
     prior_logit = math.log(DEPLOY_PRIOR / (1.0 - DEPLOY_PRIOR))
     intercept_deploy = intercept_train + prior_logit
+    bias_adjust = intercept_train
 
-    val_matrix, _, _ = build_matrix(val_rows, use_ngrams)
+    val_matrix, _, _ = build_matrix(val_rows, use_ngrams, args.feature_scale)
     y_val = labels(val_rows)
-    raw_val_logits = logits(val_matrix, coef, intercept_deploy)
-    a, b = fit_platt(y_val, raw_val_logits)
+    val_scores = sigmoid(logits(val_matrix, coef_fit, intercept_deploy))
 
-    final_coef = a * coef
-    final_intercept = a * intercept_deploy + b
-    bias_adjust = final_intercept - prior_logit
-
-    test_matrix, _, _ = build_matrix(test_rows, use_ngrams)
+    test_matrix, _, _ = build_matrix(test_rows, use_ngrams, args.feature_scale)
     y_test = labels(test_rows)
-    test_logits = logits(test_matrix, final_coef, final_intercept)
-    test_scores = 1.0 / (1.0 + np.exp(-test_logits))
+    test_scores = sigmoid(logits(test_matrix, coef_fit, intercept_deploy))
 
-    threshold = choose_threshold(y_val, 1.0 / (1.0 + np.exp(-(a * raw_val_logits + b))),
-                                 args.target_fpr)
+    threshold = choose_threshold(y_val, val_scores, args.target_fpr)
     threshold = float(np.clip(threshold, 1e-6, 1.0 - 1e-6))
 
     full_metrics = metrics_at(y_test, test_scores, threshold)
@@ -547,18 +597,17 @@ def main() -> None:
     calib = reliability(y_test, test_scores)
 
     # Baseline: the same fit without n-gram contributions.
-    feature_coef = final_coef[:len(FEATURES)].copy()
-    baseline_logits = test_matrix[:, :len(FEATURES)] @ feature_coef + final_intercept
-    baseline_scores = 1.0 / (1.0 + np.exp(-baseline_logits))
-    baseline_threshold = choose_threshold(
-        y_val, 1.0 / (1.0 + np.exp(-((
-            val_matrix[:, :len(FEATURES)] @ feature_coef + final_intercept)))), args.target_fpr)
+    baseline_scores = sigmoid(
+        test_matrix[:, :len(FEATURES)] @ coef_fit[:len(FEATURES)] + intercept_deploy)
+    baseline_val_scores = sigmoid(
+        val_matrix[:, :len(FEATURES)] @ coef_fit[:len(FEATURES)] + intercept_deploy)
+    baseline_threshold = choose_threshold(y_val, baseline_val_scores, args.target_fpr)
     baseline_metrics = metrics_at(y_test, baseline_scores, baseline_threshold)
     baseline_pr_auc = float(average_precision_score(y_test, baseline_scores))
 
     lr_weights = {}
     for index, name in enumerate(FEATURES):
-        logit_weight = float(np.clip(final_coef[index], FEATURE_LOGIT_MIN, FEATURE_LOGIT_MAX))
+        logit_weight = float(np.clip(coef_runtime[index], FEATURE_LOGIT_MIN, FEATURE_LOGIT_MAX))
         lr_weights[name] = round(math.exp(logit_weight), 8)
 
     ngram_info = {"enabled": False}
@@ -570,7 +619,7 @@ def main() -> None:
             "scale": NGRAM_SCALE,
             "file": "gate_ngrams.bin",
         }
-        ngram_info.update(write_ngrams(out / "gate_ngrams.bin", final_coef))
+        ngram_info.update(write_ngrams(out / "gate_ngrams.bin", coef_runtime))
 
     manifest_path = data / "manifest.json"
     manifest_sha = (hashlib.sha256(manifest_path.read_bytes()).hexdigest()
@@ -583,10 +632,16 @@ def main() -> None:
         "trained_at_utc": datetime.now(timezone.utc).isoformat(),
         "dataset_manifest_sha256": manifest_sha,
         "prior": DEPLOY_PRIOR,
-        "intercept": round(final_intercept, 8),
+        "intercept": round(intercept_deploy, 8),
         "bias_adjust": round(bias_adjust, 8),
         "threshold": round(threshold, 8),
-        "calibration": {"kind": "platt", "a": round(a, 8), "b": round(b, 8)},
+        # Documentation only: the runtime applies raw booleans, the trainer absorbed the
+        # scale into `features`. No Platt/temperature calibration ships.
+        "calibration": {"kind": "none"},
+        "feature_scaling": {
+            "scale": args.feature_scale,
+            "note": "features[] already include this factor; the runtime must not apply it again",
+        },
         "features": lr_weights,
         "ngrams": ngram_info,
     }
@@ -599,9 +654,10 @@ def main() -> None:
         "rows": {"train": len(train_rows), "val": len(val_rows), "test": len(test_rows)},
         "training": {
             "C": args.C,
+            "feature_scale": args.feature_scale,
             "ngrams": use_ngrams,
-            "nonzero_weights": int(np.count_nonzero(final_coef)),
-            "calibration": {"a": round(a, 8), "b": round(b, 8)},
+            "calibration": "none",
+            "nonzero_weights": int(np.count_nonzero(coef_runtime)),
             "bias_adjust": round(bias_adjust, 8),
         },
         "threshold": {

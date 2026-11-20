@@ -1,38 +1,41 @@
 {
-  "model_version": "gate-2026.11.18",
+  "model_version": "gate-2026.11.19",
   "schema_version": 1,
-  "trained_at_utc": "2026-11-18T17:49:53.126584+00:00",
-  "dataset_manifest_sha256": "08772f947bb12be4d191254d067b3de8b40919a084404980bc71a09d9bff650b",
+  "trained_at_utc": "2026-11-19T13:18:56.104244+00:00",
+  "dataset_manifest_sha256": "1241f22da3e3e03cc81c31638170c374b1c345563e966e0c948d694a80039c86",
   "prior": 0.2,
-  "intercept": -13.69092011,
-  "bias_adjust": -12.30462575,
-  "threshold": 0.08456909,
+  "intercept": -1.51637694,
+  "bias_adjust": -0.13008257,
+  "threshold": 0.75450949,
   "calibration": {
-    "kind": "platt",
-    "a": 6.26750939,
-    "b": -0.16493471
+    "kind": "none"
+  },
+  "feature_scaling": {
+    "scale": 2.0,
+    "note": "features[] already include this factor; the runtime must not apply it again"
   },
   "features": {
-    "amount_in_context": 2.75806957,
-    "amount_debit_sent": 14.67069075,
-    "amount_credit_sent": 2.20413856,
-    "amount_forbidden_shape": 0.39183194,
-    "amount": 0.88911957,
-    "account": 168.73634997,
-    "utr": 3201.30608045,
-    "bank_sender": 0.62898128,
-    "upi_handle": 1.0,
-    "balance": 0.9764681,
-    "merchant_pkg": 0.00920428,
-    "success": 5.87425223,
-    "OTP": 0.58512123,
-    "promo": 0.3805149,
-    "offer": 0.34458473,
+    "amount_in_context": 3.16214682,
+    "amount_debit_sent": 5.07865564,
+    "amount_credit_sent": 1.21256902,
+    "amount_forbidden_shape": 0.37451429,
+    "amount": 2.90264961,
+    "account": 4.49647516,
+    "utr": 7.20660988,
+    "bank_sender": 0.38531467,
+    "upi_handle": 1.20347181,
+    "balance": 1.0,
+    "merchant_pkg": 0.65921071,
+    "success": 3.61304232,
+    "OTP": 0.62983484,
+    "promo": 0.58535188,
+    "offer": 0.34531764,
     "recent_similar_amount": 1.0,
     "recent_same_merchant": 1.0,
     "burst_detected": 1.0,
-    "failure": 0.14390051,
-    "failure_in_context": 0.14482941
+    "failure": 0.16128421,
+    "failure_in_context": 0.18100943,
+    "pending_in_context": 0.85142167
   },
   "ngrams": {
     "enabled": true,
@@ -40,8 +43,8 @@
     "hash": "fnv1a32",
     "scale": 4096,
     "file": "gate_ngrams.bin",
-    "entries": 13850,
-    "bytes": 83108,
-    "sha256": "7acbca7f0ca7a020eefe4b3b7ff7ae0aef5aba0cc07dd857537084f2a96a93cd"
+    "entries": 13190,
+    "bytes": 79148,
+    "sha256": "a850840cf05a7f85b83794107c2ac85be5220c3419bdecf7b9e691d94763fae7"
   }
 }

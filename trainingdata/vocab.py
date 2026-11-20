@@ -98,6 +98,22 @@ GENERIC_APPS = [
     App("JioTV", "com.jio.tv", "media"),
 ]
 
+# Apps that push their own payment receipt after a checkout. These matter for the gate
+# because their notifications have NO account number and NO UTR — the exact shape that the
+# bank-SMS-dominated part of the dataset used to teach the model to reject.
+MERCHANT_APPS = [
+    App("Swiggy", "in.swiggy.android", "food"),
+    App("Zomato", "com.application.zomato", "food"),
+    App("Blinkit", "com.grofers.customerapp", "grocery"),
+    App("Zepto", "com.zeptoconsumerapp", "grocery"),
+    App("BigBasket", "com.bigbasket.mobileapp", "grocery"),
+    App("Domino's", "com.Dominos", "food"),
+    App("Uber", "com.ubercab", "travel"),
+    App("Ola", "com.olacabs.customer", "travel"),
+    App("Flipkart", "com.flipkart.android", "shopping"),
+    App("Myntra", "com.myntra.android", "shopping"),
+]
+
 MERCHANT_TABLE: dict[str, list[tuple[str, str]]] = {
     "Food & Dining": [
         ("swiggy", "Swiggy"), ("zomato", "Zomato"), ("blinkit", "Blinkit"),

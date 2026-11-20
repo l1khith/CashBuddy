@@ -281,6 +281,44 @@ N("gen_07", "generic", "{app}: Update {version} available. Tap to install.",
 N("gen_08", "generic", "{app}: {count} new episodes available.",
   negative_type="GENERIC", difficulty="easy")
 
+# --- Merchant app order status / cart noise ----------------------------------
+# Merchant apps push plenty of messages that mention an amount but are not a payment:
+# order confirmations (cash on delivery), cart reminders, delivery updates and rating
+# prompts. They are deliberately kept in the negative set so `merchant_pkg` cannot be
+# learned as "this package means money moved" — the wording has to decide.
+N("ost_01", "merchant_app",
+  "{app}: Your order of ₹{amt} has been placed. Pay on delivery.",
+  negative_type="ORDER_STATUS", merchant_kind="none", difficulty="hard",
+  bounds=(99, 5000))
+N("ost_02", "merchant_app",
+  "{app}: Order #{count} is out for delivery. Total payable ₹{amt}.",
+  negative_type="ORDER_STATUS", merchant_kind="none", difficulty="hard",
+  bounds=(99, 5000))
+N("ost_03", "merchant_app",
+  "{app}: Your order is confirmed. Order total ₹{amt}. Arriving by {time}.",
+  negative_type="ORDER_STATUS", merchant_kind="none", difficulty="hard",
+  bounds=(99, 5000))
+N("ost_04", "merchant_app",
+  "{app}: Items in your cart are waiting. Complete your ₹{amt} order today.",
+  negative_type="ORDER_STATUS", merchant_kind="none", difficulty="hard",
+  bounds=(99, 5000))
+N("ost_05", "merchant_app",
+  "{app}: Payment pending for your order of ₹{amt}. Pay now to confirm.",
+  negative_type="ORDER_STATUS", merchant_kind="none", difficulty="hard",
+  bounds=(99, 5000))
+N("ost_06", "merchant_app",
+  "{app}: How was your recent order of ₹{amt}? Rate your experience.",
+  negative_type="ORDER_STATUS", merchant_kind="none", difficulty="hard",
+  bounds=(99, 5000))
+N("ost_07", "merchant_app",
+  "{app}: Get {pct}% off on your next order above ₹{amt}. Offer ends {date}.",
+  negative_type="ORDER_STATUS", merchant_kind="none", difficulty="hard",
+  bounds=(99, 5000), promo=True)
+N("ost_08", "merchant_app",
+  "{app}: Your order of ₹{amt} has been cancelled. Refund, if any, will follow.",
+  negative_type="ORDER_STATUS", merchant_kind="none", difficulty="hard",
+  bounds=(99, 5000), status="CANCELLED")
+
 # --- Failed transactions ------------------------------------------------------
 N("fail_01", "bank_sms",
   "{bank}: Txn of Rs.{amt} to {merchant} failed on {date}. "

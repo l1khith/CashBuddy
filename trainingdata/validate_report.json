@@ -4,7 +4,7 @@
     {
       "check": "manifest_exists",
       "ok": true,
-      "detail": "trainingdata\\manifest.json"
+      "detail": "C:\\Users\\ailik\\AndroidStudioProjects\\CashBuddy\\trainingdata\\manifest.json"
     },
     {
       "check": "combined_count",
@@ -59,7 +59,7 @@
     {
       "check": "positive_category_valid",
       "ok": true,
-      "detail": "Counter({'Education': 1334, 'Bills & Utilities': 1334, 'Gift': 1334, 'Food & Dining': 1334, 'Entertainment': 1334, 'Shopping': 1333, 'Healthcare': 1333, 'Investments': 1333, 'Housing': 1333, 'Insurance': 1333, 'Uncategorized': 1333, 'Transportation': 1333, 'Investment Returns': 1333, 'Salary': 1333, 'Refund': 1333})"
+      "detail": "Counter({'Entertainment': 1334, 'Bills & Utilities': 1334, 'Food & Dining': 1334, 'Education': 1334, 'Gift': 1334, 'Healthcare': 1333, 'Uncategorized': 1333, 'Insurance': 1333, 'Investments': 1333, 'Shopping': 1333, 'Refund': 1333, 'Housing': 1333, 'Investment Returns': 1333, 'Salary': 1333, 'Transportation': 1333})"
     },
     {
       "check": "income_category_credit",
@@ -84,7 +84,7 @@
     {
       "check": "negative_type_valid",
       "ok": true,
-      "detail": "Counter({'PROMO': 3000, 'CHAT_SUMMARY': 2800, 'SOCIAL': 2300, 'OTP': 2000, 'GENERIC': 1400, 'BALANCE_ONLY': 1400, 'FAILED_TXN': 1400, 'BANK_PROMO': 1200, 'NEWS_JOB': 1200, 'PENDING_TXN': 700, 'STATEMENT': 600, 'COLLECT_REQUEST': 500, 'CREDIT_SCORE': 400, 'MANDATE': 400, 'REVERSED': 400, 'REWARD': 300})"
+      "detail": "Counter({'CHAT_SUMMARY': 2800, 'PROMO': 2700, 'OTP': 2000, 'SOCIAL': 2000, 'FAILED_TXN': 1400, 'BALANCE_ONLY': 1400, 'BANK_PROMO': 1200, 'NEWS_JOB': 1200, 'GENERIC': 1100, 'ORDER_STATUS': 900, 'PENDING_TXN': 700, 'STATEMENT': 600, 'COLLECT_REQUEST': 500, 'REVERSED': 400, 'MANDATE': 400, 'CREDIT_SCORE': 400, 'REWARD': 300})"
     },
     {
       "check": "negative_financial_present",
@@ -154,12 +154,37 @@
     {
       "check": "source_type_valid",
       "ok": true,
-      "detail": "Counter({'BANK_SMS': 19094, 'UPI_APP': 6147, 'APP_NOTIFICATION': 4643, 'MESSAGING': 2800, 'BANK_APP': 1914, 'SCREENSHOT': 1848, 'CARD_ALERT': 1576, 'MESSAGING_FORWARD': 773, 'EMAIL': 657, 'ATM': 278, 'WALLET': 270})"
+      "detail": "Counter({'BANK_SMS': 17309, 'UPI_APP': 7260, 'APP_NOTIFICATION': 6654, 'MESSAGING': 2800, 'BANK_APP': 1657, 'SCREENSHOT': 1359, 'CARD_ALERT': 1137, 'MESSAGING_FORWARD': 763, 'EMAIL': 576, 'WALLET': 244, 'ATM': 241})"
     },
     {
       "check": "currency_inr",
       "ok": true,
       "detail": ""
+    },
+    {
+      "check": "reference_free_positives",
+      "ok": true,
+      "detail": "3974 positives with neither account nor UTR; {'APP_NOTIFICATION': 1630, 'UPI_APP': 2344}"
+    },
+    {
+      "check": "app_notification_positives",
+      "ok": true,
+      "detail": "Counter({'BANK_SMS': 8132, 'UPI_APP': 5042, 'APP_NOTIFICATION': 1630, 'BANK_APP': 1452, 'SCREENSHOT': 1359, 'CARD_ALERT': 1137, 'MESSAGING_FORWARD': 763, 'WALLET': 244, 'ATM': 241})"
+    },
+    {
+      "check": "reference_free_positives_train",
+      "ok": true,
+      "detail": "2970 reference-free positives"
+    },
+    {
+      "check": "reference_free_positives_val",
+      "ok": true,
+      "detail": "470 reference-free positives"
+    },
+    {
+      "check": "reference_free_positives_test",
+      "ok": true,
+      "detail": "534 reference-free positives"
     },
     {
       "check": "duplicate_links_valid",
@@ -174,7 +199,7 @@
     {
       "check": "amount_bucket_coverage",
       "ok": true,
-      "detail": "Counter({'100-999': 7301, '1k-9.9k': 6745, '10k-99.9k': 3930, '<100': 1706, '100k+': 318})"
+      "detail": "Counter({'100-999': 7486, '1k-9.9k': 6715, '10k-99.9k': 3824, '<100': 1667, '100k+': 308})"
     },
     {
       "check": "credit_share",
@@ -198,11 +223,11 @@
       "test": 6000
     },
     "amount_buckets": {
-      "1k-9.9k": 6745,
-      "10k-99.9k": 3930,
-      "100-999": 7301,
-      "<100": 1706,
-      "100k+": 318
+      "100-999": 7486,
+      "1k-9.9k": 6715,
+      "<100": 1667,
+      "10k-99.9k": 3824,
+      "100k+": 308
     },
     "categories": {
       "Bills & Utilities": 1334,
@@ -228,29 +253,30 @@
       "COLLECT_REQUEST": 500,
       "CREDIT_SCORE": 400,
       "FAILED_TXN": 1400,
-      "GENERIC": 1400,
+      "GENERIC": 1100,
       "MANDATE": 400,
       "NEWS_JOB": 1200,
+      "ORDER_STATUS": 900,
       "OTP": 2000,
       "PENDING_TXN": 700,
-      "PROMO": 3000,
+      "PROMO": 2700,
       "REVERSED": 400,
       "REWARD": 300,
-      "SOCIAL": 2300,
+      "SOCIAL": 2000,
       "STATEMENT": 600
     },
     "sources": {
-      "APP_NOTIFICATION": 4643,
-      "ATM": 278,
-      "BANK_APP": 1914,
-      "BANK_SMS": 19094,
-      "CARD_ALERT": 1576,
-      "EMAIL": 657,
+      "APP_NOTIFICATION": 6654,
+      "ATM": 241,
+      "BANK_APP": 1657,
+      "BANK_SMS": 17309,
+      "CARD_ALERT": 1137,
+      "EMAIL": 576,
       "MESSAGING": 2800,
-      "MESSAGING_FORWARD": 773,
-      "SCREENSHOT": 1848,
-      "UPI_APP": 6147,
-      "WALLET": 270
+      "MESSAGING_FORWARD": 763,
+      "SCREENSHOT": 1359,
+      "UPI_APP": 7260,
+      "WALLET": 244
     }
   }
 }

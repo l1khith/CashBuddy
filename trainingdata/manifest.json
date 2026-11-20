@@ -2,7 +2,7 @@
   "dataset": "cashbuddy_gate_synthetic",
   "dataset_version": "1.0.0",
   "schema_version": "1.0.0",
-  "generated_at_utc": "2026-11-18T17:46:11.213512+00:00",
+  "generated_at_utc": "2026-11-19T13:13:38.140575+00:00",
   "seed": 42,
   "generator": "trainingdata/generate_dataset.py",
   "template_versions": {
@@ -18,7 +18,7 @@
         "total": 28000,
         "positives": 14000,
         "negatives": 14000,
-        "templates": 114,
+        "templates": 134,
         "merchants": 129,
         "unique_texts": 28000
       },
@@ -26,7 +26,7 @@
         "total": 6000,
         "positives": 3000,
         "negatives": 3000,
-        "templates": 38,
+        "templates": 42,
         "merchants": 35,
         "unique_texts": 6000
       },
@@ -34,7 +34,7 @@
         "total": 6000,
         "positives": 3000,
         "negatives": 3000,
-        "templates": 38,
+        "templates": 42,
         "merchants": 52,
         "unique_texts": 6000
       }
@@ -63,72 +63,73 @@
       "COLLECT_REQUEST": 500,
       "CREDIT_SCORE": 400,
       "FAILED_TXN": 1400,
-      "GENERIC": 1400,
+      "GENERIC": 1100,
       "MANDATE": 400,
       "NEWS_JOB": 1200,
+      "ORDER_STATUS": 900,
       "OTP": 2000,
       "PENDING_TXN": 700,
-      "PROMO": 3000,
+      "PROMO": 2700,
       "REVERSED": 400,
       "REWARD": 300,
-      "SOCIAL": 2300,
+      "SOCIAL": 2000,
       "STATEMENT": 600
     },
     "by_source_type": {
-      "APP_NOTIFICATION": 4643,
-      "ATM": 278,
-      "BANK_APP": 1914,
-      "BANK_SMS": 19094,
-      "CARD_ALERT": 1576,
-      "EMAIL": 657,
+      "APP_NOTIFICATION": 6654,
+      "ATM": 241,
+      "BANK_APP": 1657,
+      "BANK_SMS": 17309,
+      "CARD_ALERT": 1137,
+      "EMAIL": 576,
       "MESSAGING": 2800,
-      "MESSAGING_FORWARD": 773,
-      "SCREENSHOT": 1848,
-      "UPI_APP": 6147,
-      "WALLET": 270
+      "MESSAGING_FORWARD": 763,
+      "SCREENSHOT": 1359,
+      "UPI_APP": 7260,
+      "WALLET": 244
     },
     "by_difficulty": {
-      "easy": 16213,
-      "hard": 11581,
-      "medium": 10358,
-      "ocr": 1848
+      "easy": 13596,
+      "hard": 12204,
+      "medium": 12841,
+      "ocr": 1359
     }
   },
   "quality": {
     "unique_texts": 40000,
-    "duplicate_groups": 1469,
-    "duplicate_companions": 1469
+    "duplicate_groups": 1401,
+    "duplicate_companions": 1401
   },
   "files": {
     "positive_bank_transactions.jsonl": {
       "rows": 20000,
-      "bytes": 18375285,
-      "sha256": "f3cac955fdc0f93722345037d19e471d6306237b8a1622f1dccbc57618649353"
+      "bytes": 17982167,
+      "sha256": "849c31afd860bbdb3c492a26a66c5c8e4166583a06410b66b89a05ac953c5a2c"
     },
     "negative_false_flags.jsonl": {
       "rows": 20000,
-      "bytes": 16796184,
-      "sha256": "950cf1533701d5d0df754cd067bcf15e9297d7160d50fcfe7fc0d70ff27e4835"
+      "bytes": 16797423,
+      "sha256": "cf82038d1908d26645f8eac5901aa795ed9e404fe0859ee563fa6ac60558181f"
     },
     "combined.jsonl": {
       "rows": 40000,
-      "bytes": 35171469,
-      "sha256": "e86aecaf86953dfd884b55874851cf0f23f555a892a4fc01ad81fc81e51ebe2f"
+      "bytes": 34779590,
+      "sha256": "9d008a052b40bca9cd8db461046e5200e21d7e3a3a87d12a25e29534a355b70b"
     },
     "splits/train.jsonl": {
       "rows": 28000,
-      "bytes": 24619834,
-      "sha256": "b70c8c2b00a902859b620d0fbd69456508d0addad0449f8a209e421802e4e6d2"
+      "bytes": 24348768,
+      "sha256": "58abecb618436561f494dcebf6d6e4544a850089a7783847834d56f529f0edf8"
     },
     "splits/val.jsonl": {
       "rows": 6000,
-      "bytes": 5278183,
-      "sha256": "9923f034f2fb6e2971b24709ac8a25752626b7049292454b1cc477ca66a66dab"
+      "bytes": 5228614,
+      "sha256": "c2ff0f2f8b7e114ace9d467a1dafc4983b2fb851ad8075e23f7b9377366ecd26"
     },
     "splits/test.jsonl": {
       "rows": 6000,
-      "bytes": 5273452,
-      "sha256": "6e84b5b2dee5ac8900c23592daf99e33c6666b3783242656ac081f9d702627ae"
+      "bytes": 5202208,
+      "sha256": "478f8034db0fd84e6a7e30805e9fce282d372623b28307763b8c314f43b5fa45"
     }
   }
 }

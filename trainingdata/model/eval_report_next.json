@@ -1,0 +1,554 @@
+{
+  "model_version": "gate-text-2026.11.19",
+  "dataset_manifest_sha256": "1241f22da3e3e03cc81c31638170c374b1c345563e966e0c948d694a80039c86",
+  "estimator": {
+    "kind": "nb",
+    "buckets": 65536,
+    "C": null,
+    "smooth": 8.0,
+    "temperature": 0.352086,
+    "family_weights": true,
+    "prior": 0.2,
+    "threshold": 0.999999,
+    "target_fpr": 0.01,
+    "nonzero_buckets": 15563,
+    "signal_features": "neutral (all 1.0)"
+  },
+  "rows": {
+    "train": 28000,
+    "val": 6000,
+    "test": 6000
+  },
+  "metrics": {
+    "test": {
+      "tp": 2642,
+      "tn": 2982,
+      "fp": 18,
+      "fn": 358,
+      "recall": 0.880667,
+      "fpr": 0.006,
+      "precision": 0.993233,
+      "accuracy": 0.937333,
+      "pr_auc": 0.982349,
+      "roc_auc": 0.97722,
+      "brier": 0.041474,
+      "recall_at_0.65": 0.936667,
+      "recall_at_0.90": 0.935667,
+      "negatives_at_0.30": 0.025667,
+      "negatives_at_0.65": 0.020667
+    },
+    "val": {
+      "tp": 2555,
+      "tn": 2967,
+      "fp": 33,
+      "fn": 445,
+      "recall": 0.851667,
+      "fpr": 0.011,
+      "precision": 0.987249,
+      "accuracy": 0.920333,
+      "pr_auc": 0.991262,
+      "roc_auc": 0.991775,
+      "recall_at_0.65": 0.974333,
+      "recall_at_0.90": 0.970667,
+      "negatives_at_0.30": 0.064667,
+      "negatives_at_0.65": 0.064667
+    }
+  },
+  "slices_test": {
+    "atm": {
+      "n": 46,
+      "positives": 46,
+      "p10": 1.0,
+      "p50": 1.0,
+      "above_threshold": 1.0,
+      "recall_at_0.65": 1.0
+    },
+    "bal": {
+      "n": 210,
+      "positives": 0,
+      "p10": 0.0,
+      "p50": 0.0,
+      "above_threshold": 0.0
+    },
+    "bapp": {
+      "n": 212,
+      "positives": 212,
+      "p10": 1.0,
+      "p50": 1.0,
+      "above_threshold": 1.0,
+      "recall_at_0.65": 1.0
+    },
+    "bill": {
+      "n": 21,
+      "positives": 21,
+      "p10": 1.0,
+      "p50": 1.0,
+      "above_threshold": 1.0,
+      "recall_at_0.65": 1.0
+    },
+    "bpromo": {
+      "n": 180,
+      "positives": 0,
+      "p10": 0.0,
+      "p50": 0.0,
+      "above_threshold": 0.0
+    },
+    "bsms_cr": {
+      "n": 245,
+      "positives": 245,
+      "p10": 0.9491,
+      "p50": 1.0,
+      "above_threshold": 0.7551,
+      "recall_at_0.65": 0.9347
+    },
+    "bsms_dr": {
+      "n": 430,
+      "positives": 430,
+      "p10": 1.0,
+      "p50": 1.0,
+      "above_threshold": 0.886,
+      "recall_at_0.65": 1.0
+    },
+    "card": {
+      "n": 218,
+      "positives": 218,
+      "p10": 1.0,
+      "p50": 1.0,
+      "above_threshold": 1.0,
+      "recall_at_0.65": 1.0
+    },
+    "chat": {
+      "n": 420,
+      "positives": 0,
+      "p10": 0.0,
+      "p50": 0.0,
+      "above_threshold": 0.0429
+    },
+    "chg": {
+      "n": 40,
+      "positives": 40,
+      "p10": 1.0,
+      "p50": 1.0,
+      "above_threshold": 1.0,
+      "recall_at_0.65": 1.0
+    },
+    "coll": {
+      "n": 75,
+      "positives": 0,
+      "p10": 0.0,
+      "p50": 0.0,
+      "above_threshold": 0.0
+    },
+    "fail": {
+      "n": 210,
+      "positives": 0,
+      "p10": 0.0,
+      "p50": 0.001,
+      "above_threshold": 0.0
+    },
+    "gen": {
+      "n": 165,
+      "positives": 0,
+      "p10": 0.0,
+      "p50": 0.0,
+      "above_threshold": 0.0
+    },
+    "gift": {
+      "n": 65,
+      "positives": 65,
+      "p10": 1.0,
+      "p50": 1.0,
+      "above_threshold": 1.0,
+      "recall_at_0.65": 1.0
+    },
+    "hin": {
+      "n": 32,
+      "positives": 32,
+      "p10": 1.0,
+      "p50": 1.0,
+      "above_threshold": 1.0,
+      "recall_at_0.65": 1.0
+    },
+    "inv": {
+      "n": 62,
+      "positives": 62,
+      "p10": 1.0,
+      "p50": 1.0,
+      "above_threshold": 1.0,
+      "recall_at_0.65": 1.0
+    },
+    "mand": {
+      "n": 60,
+      "positives": 0,
+      "p10": 0.0,
+      "p50": 0.0,
+      "above_threshold": 0.0
+    },
+    "mapp": {
+      "n": 173,
+      "positives": 173,
+      "p10": 0.0,
+      "p50": 0.0,
+      "above_threshold": 0.0,
+      "recall_at_0.65": 0.0
+    },
+    "msg": {
+      "n": 299,
+      "positives": 299,
+      "p10": 1.0,
+      "p50": 1.0,
+      "above_threshold": 0.9097,
+      "recall_at_0.65": 1.0
+    },
+    "news": {
+      "n": 180,
+      "positives": 0,
+      "p10": 0.0,
+      "p50": 0.0,
+      "above_threshold": 0.0
+    },
+    "ocr": {
+      "n": 193,
+      "positives": 193,
+      "p10": 1.0,
+      "p50": 1.0,
+      "above_threshold": 1.0,
+      "recall_at_0.65": 1.0
+    },
+    "ost": {
+      "n": 135,
+      "positives": 0,
+      "p10": 0.0,
+      "p50": 0.0,
+      "above_threshold": 0.0
+    },
+    "otp": {
+      "n": 300,
+      "positives": 0,
+      "p10": 0.0,
+      "p50": 0.0,
+      "above_threshold": 0.0
+    },
+    "pend": {
+      "n": 105,
+      "positives": 0,
+      "p10": 0.0,
+      "p50": 0.0,
+      "above_threshold": 0.0
+    },
+    "promo": {
+      "n": 405,
+      "positives": 0,
+      "p10": 0.0,
+      "p50": 0.0,
+      "above_threshold": 0.0
+    },
+    "ref": {
+      "n": 62,
+      "positives": 62,
+      "p10": 1.0,
+      "p50": 1.0,
+      "above_threshold": 1.0,
+      "recall_at_0.65": 1.0
+    },
+    "rev": {
+      "n": 60,
+      "positives": 0,
+      "p10": 0.0,
+      "p50": 0.0,
+      "above_threshold": 0.0
+    },
+    "rew": {
+      "n": 45,
+      "positives": 0,
+      "p10": 0.0,
+      "p50": 0.0,
+      "above_threshold": 0.0
+    },
+    "sal": {
+      "n": 67,
+      "positives": 67,
+      "p10": 1.0,
+      "p50": 1.0,
+      "above_threshold": 1.0,
+      "recall_at_0.65": 1.0
+    },
+    "score": {
+      "n": 60,
+      "positives": 0,
+      "p10": 0.0,
+      "p50": 0.0,
+      "above_threshold": 0.0
+    },
+    "social": {
+      "n": 300,
+      "positives": 0,
+      "p10": 0.0,
+      "p50": 0.0,
+      "above_threshold": 0.0
+    },
+    "stmt": {
+      "n": 90,
+      "positives": 0,
+      "p10": 0.0,
+      "p50": 0.0,
+      "above_threshold": 0.0
+    },
+    "trf": {
+      "n": 185,
+      "positives": 185,
+      "p10": 1.0,
+      "p50": 1.0,
+      "above_threshold": 1.0,
+      "recall_at_0.65": 1.0
+    },
+    "upi_notif": {
+      "n": 361,
+      "positives": 361,
+      "p10": 1.0,
+      "p50": 1.0,
+      "above_threshold": 0.8781,
+      "recall_at_0.65": 0.9972
+    },
+    "upi_p2m": {
+      "n": 207,
+      "positives": 207,
+      "p10": 1.0,
+      "p50": 1.0,
+      "above_threshold": 0.9758,
+      "recall_at_0.65": 1.0
+    },
+    "upi_p2p": {
+      "n": 50,
+      "positives": 50,
+      "p10": 1.0,
+      "p50": 1.0,
+      "above_threshold": 1.0,
+      "recall_at_0.65": 1.0
+    },
+    "wal": {
+      "n": 32,
+      "positives": 32,
+      "p10": 1.0,
+      "p50": 1.0,
+      "above_threshold": 1.0,
+      "recall_at_0.65": 1.0
+    }
+  },
+  "ngrams": {
+    "enabled": true,
+    "buckets": 65536,
+    "hash": "fnv1a32",
+    "scale": 4096,
+    "file": "gate_ngrams_next.bin",
+    "entries": 15563,
+    "bytes": 93386,
+    "sha256": "54419cca517983c5c90ea7157b43b4e2d594bf38862ef55f9cadb6e52da16e94"
+  },
+  "top_tokens": {
+    "transaction": [
+      [
+        "b:upi_ref",
+        1.9784
+      ],
+      [
+        "c:^aler",
+        1.9503
+      ],
+      [
+        "c:alert",
+        1.9503
+      ],
+      [
+        "c:lert",
+        1.9502
+      ],
+      [
+        "w:alert",
+        1.9502
+      ],
+      [
+        "c:^ale",
+        1.9502
+      ],
+      [
+        "c:ert$",
+        1.9502
+      ],
+      [
+        "c:ert",
+        1.9502
+      ],
+      [
+        "b:num_bal",
+        1.7468
+      ],
+      [
+        "c:ft$",
+        1.7348
+      ],
+      [
+        "b:num_by",
+        1.704
+      ],
+      [
+        "w:id",
+        1.6681
+      ],
+      [
+        "b:num_paid",
+        1.6616
+      ],
+      [
+        "b:c_num",
+        1.6595
+      ],
+      [
+        "b:successful_cur",
+        1.6475
+      ],
+      [
+        "b:id_num",
+        1.6293
+      ],
+      [
+        "b:salary_of",
+        1.6219
+      ],
+      [
+        "b:card_alert",
+        1.6181
+      ],
+      [
+        "b:paid_to",
+        1.6033
+      ],
+      [
+        "b:sent_to",
+        1.587
+      ],
+      [
+        "c:rrn",
+        1.5844
+      ],
+      [
+        "b:bank_alert",
+        1.5832
+      ],
+      [
+        "c:^fd$",
+        1.5796
+      ],
+      [
+        "c:fd$",
+        1.5785
+      ],
+      [
+        "c:^fd",
+        1.5785
+      ]
+    ],
+    "noise": [
+      [
+        "c:ve$",
+        -2.0607
+      ],
+      [
+        "c:^app",
+        -1.9648
+      ],
+      [
+        "c:^ap",
+        -1.9628
+      ],
+      [
+        "b:txn_of",
+        -1.9394
+      ],
+      [
+        "w:app",
+        -1.9061
+      ],
+      [
+        "c:eve",
+        -1.9013
+      ],
+      [
+        "c:ins",
+        -1.8793
+      ],
+      [
+        "c:^min",
+        -1.8746
+      ],
+      [
+        "c:date$",
+        -1.8702
+      ],
+      [
+        "c:date",
+        -1.8702
+      ],
+      [
+        "c:dat",
+        -1.8702
+      ],
+      [
+        "c:pend",
+        -1.8402
+      ],
+      [
+        "c:now",
+        -1.8369
+      ],
+      [
+        "c:now$",
+        -1.8369
+      ],
+      [
+        "c:equ",
+        -1.8369
+      ],
+      [
+        "c:con",
+        -1.8254
+      ],
+      [
+        "b:in_app",
+        -1.8186
+      ],
+      [
+        "c:^now$",
+        -1.8141
+      ],
+      [
+        "w:now",
+        -1.8141
+      ],
+      [
+        "c:^now",
+        -1.8141
+      ],
+      [
+        "w:reve",
+        -1.7992
+      ],
+      [
+        "c:rev",
+        -1.7992
+      ],
+      [
+        "c:reve$",
+        -1.7992
+      ],
+      [
+        "b:reve_cur",
+        -1.7992
+      ],
+      [
+        "c:reve",
+        -1.7992
+      ]
+    ]
+  }
+}

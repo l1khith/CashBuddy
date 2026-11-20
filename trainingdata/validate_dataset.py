@@ -17,8 +17,9 @@ from vocab import ALL_CATEGORIES, INCOME_CATEGORIES  # noqa: E402
 
 NEG_TYPES = {
     "PROMO", "BANK_PROMO", "OTP", "BALANCE_ONLY", "STATEMENT", "CREDIT_SCORE",
-    "CHAT_SUMMARY", "SOCIAL", "NEWS_JOB", "GENERIC", "FAILED_TXN",
-    "PENDING_TXN", "REVERSED", "COLLECT_REQUEST", "MANDATE", "REWARD",
+    "CHAT_SUMMARY", "SOCIAL", "NEWS_JOB", "GENERIC", "ORDER_STATUS",
+    "FAILED_TXN", "PENDING_TXN", "REVERSED", "COLLECT_REQUEST", "MANDATE",
+    "REWARD",
 }
 SOURCE_TYPES = {
     "BANK_SMS", "BANK_APP", "CARD_ALERT", "ATM", "UPI_APP", "WALLET",
@@ -143,6 +144,26 @@ def validate(data: Path) -> dict:
           all(r["source_type"] in SOURCE_TYPES for r in combined),
           str(Counter(r["source_type"] for r in combined)))
     check("currency_inr", all(r["currency"] == "INR" for r in combined))
+
+    # The app listens to notification banners, not bank SMS. A model trained only on
+    # "A/c XX1234 ... Ref 987654321012" learns that a real payment must carry a reference,
+    # which is exactly the failure this check guards against.
+    bare_receipts = [
+        r for r in pos
+        if r["account_last4"] is None and r["utr"] is None
+    ]
+    bare_sources = Counter(r["source_type"] for r in bare_receipts)
+    check("reference_free_positives", len(bare_receipts) >= 1000,
+          f"{len(bare_receipts)} positives with neither account nor UTR; {dict(bare_sources)}")
+    check("app_notification_positives",
+          sum(1 for r in pos if r["source_type"] == "APP_NOTIFICATION") >= 500,
+          str(Counter(r["source_type"] for r in pos)))
+    for split, rows in splits.items():
+        bare = [r for r in rows
+                if r["is_transaction"] and r["account_last4"] is None
+                and r["utr"] is None]
+        check(f"reference_free_positives_{split}", len(bare) >= 150,
+              f"{len(bare)} reference-free positives")
 
     id_to_row = {r["id"]: r for r in combined}
     bad_dups = []

@@ -140,6 +140,65 @@ P("upi_p2p_04", "upi_p2p", "upi",
   "Paid ₹{amt} to {person} ({vpa}) via {app}. Txn ID {utr}.", style="title",
   fixed="Uncategorized", merchant_kind="person")
 
+# --- UPI app notifications (notification-tray shape) ---------------------------
+# These are the messages the app actually listens to: the UPI app's own banner, with NO
+# bank account number and NO UTR. They exist because the earlier dataset represented almost
+# every positive as a bank SMS with A/c + Ref, which taught the gate that a real payment
+# must carry a reference id. Real Google Pay / PhonePe / Paytm banners usually do not.
+P("upi_notif_01", "upi_notif", "upi",
+  "Paid ₹{amt} to {merchant}", style="title", difficulty="medium")
+P("upi_notif_02", "upi_notif", "upi",
+  "You paid ₹{amt} to {merchant}", style="title", difficulty="medium")
+P("upi_notif_03", "upi_notif", "upi",
+  "Payment of ₹{amt} to {merchant} is successful", style="title",
+  difficulty="medium")
+P("upi_notif_04", "upi_notif", "upi",
+  "Payment successful! ₹{amt} sent to {merchant}", style="title",
+  difficulty="medium")
+P("upi_notif_05", "upi_notif", "upi",
+  "₹{amt} paid to {merchant}. Completed", style="title", difficulty="medium")
+P("upi_notif_06", "upi_notif", "upi",
+  "₹{amt} to {merchant} · {date}", style="title", difficulty="medium")
+P("upi_notif_07", "upi_notif", "upi",
+  "Paid ₹{amt} to {merchant} ({vpa})", style="title", difficulty="medium")
+P("upi_notif_08", "upi_notif", "upi",
+  "{merchant} ko ₹{amt} bheja", style="title", difficulty="medium")
+P("upi_notif_09", "upi_notif", "upi",
+  "{merchant} ko ₹{amt} ka payment ho gaya", style="title", difficulty="medium")
+P("upi_notif_10", "upi_notif", "upi",
+  "Sent ₹{amt} to {person}", style="title", fixed="Uncategorized",
+  merchant_kind="person", difficulty="medium")
+P("upi_notif_11", "upi_notif", "upi",
+  "You received ₹{amt} from {person}", style="title", txn="CREDIT",
+  fixed="Gift", merchant_kind="person", difficulty="medium")
+P("upi_notif_12", "upi_notif", "upi",
+  "Refund of ₹{amt} from {merchant} processed", style="title", txn="CREDIT",
+  fixed="Refund", difficulty="medium")
+
+# --- Merchant app payment receipts ---------------------------------------------
+# Checkout receipts pushed by the merchant's own app. Also reference-free; the merchant is
+# derived from the package name at runtime. Only payment wording is used — "order placed"
+# is deliberately NOT a positive, because it can precede payment (COD) and would otherwise
+# teach the gate to log unbilled orders.
+P("mapp_01", "merchant_app", "merchant_app",
+  "Payment successful. ₹{amt} paid", difficulty="medium", merchant_kind="none")
+P("mapp_02", "merchant_app", "merchant_app",
+  "Your payment of ₹{amt} was successful", difficulty="medium",
+  merchant_kind="none")
+P("mapp_03", "merchant_app", "merchant_app",
+  "Payment of ₹{amt} confirmed. Thank you!", difficulty="medium",
+  merchant_kind="none")
+P("mapp_04", "merchant_app", "merchant_app",
+  "₹{amt} paid · Payment successful", difficulty="medium", merchant_kind="none")
+P("mapp_05", "merchant_app", "merchant_app",
+  "Order delivered · ₹{amt} paid", difficulty="medium", merchant_kind="none")
+P("mapp_06", "merchant_app", "merchant_app",
+  "Payment done: ₹{amt}", difficulty="medium", merchant_kind="none")
+P("mapp_07", "merchant_app", "merchant_app",
+  "Payment successful — ₹{amt}", difficulty="medium", merchant_kind="none")
+P("mapp_08", "merchant_app", "merchant_app",
+  "₹{amt} payment completed", difficulty="medium", merchant_kind="none")
+
 # --- Card spends --------------------------------------------------------------
 P("card_01", "card", "card",
   "{bank}: Rs.{amt} spent on Credit Card ending {acct} at {merchant} on {date}. "

@@ -36,6 +36,7 @@ from vocab import (  # noqa: E402
     CHAT_PREVIEWS_PLAIN, CHAT_SENDERS, CITIES, EXPENSE_CATEGORIES,
     GENERIC_APPS, HEADLINES, INCOME_CATEGORIES, INSTAGRAM_USERS, MERCHANT_TABLE,
     PEOPLE, SOCIAL_APPS, SONGS, ARTISTS, SUBJECTS, UPI_APPS, WALLET_APPS,
+    MERCHANT_APPS,
     build_merchants,
 )
 
@@ -46,16 +47,17 @@ SPLIT_RATIO = {"train": 0.70, "val": 0.15, "test": 0.15}
 SPLIT_PREFIX = {"train": "tr", "val": "va", "test": "te"}
 
 NEG_WEIGHTS = {
-    "PROMO": 3000,
+    "PROMO": 2700,
     "BANK_PROMO": 1200,
     "OTP": 2000,
     "BALANCE_ONLY": 1400,
     "STATEMENT": 600,
     "CREDIT_SCORE": 400,
     "CHAT_SUMMARY": 2800,
-    "SOCIAL": 2300,
+    "SOCIAL": 2000,
     "NEWS_JOB": 1200,
-    "GENERIC": 1400,
+    "GENERIC": 1100,
+    "ORDER_STATUS": 900,
     "FAILED_TXN": 1400,
     "PENDING_TXN": 700,
     "REVERSED": 400,
@@ -263,6 +265,9 @@ class Builder:
         if source == "upi":
             return dict(source_type="UPI_APP", package_name=app.package,
                         sender_id=None, title=app.name, bank=bank.name)
+        if source == "merchant_app":
+            return dict(source_type="APP_NOTIFICATION", package_name=app.package,
+                        sender_id=None, title=app.name, bank=None)
         if source == "wallet":
             return dict(source_type="WALLET", package_name=app.package,
                         sender_id=None, title=app.name, bank=bank.name)
@@ -409,6 +414,10 @@ class Builder:
         for _ in range(60):
             bank = rng.choice(BANKS)
             app = rng.choice(UPI_APPS)
+            if template["source"] == "wallet":
+                app = rng.choice(WALLET_APPS)
+            elif template["source"] == "merchant_app":
+                app = rng.choice(MERCHANT_APPS)
             dt = make_datetime(rng)
             amount, amt_text = make_amount(rng, category, template.get("bounds"))
             merchant = self._pick_merchant(template, category)
@@ -416,10 +425,6 @@ class Builder:
             built = self._base_slots(template, bank, app, dt, amount, amt_text,
                                      merchant, utr)
             fmt = template["fmt"]
-            if "{app}" in fmt and template["source"] == "wallet":
-                app = rng.choice(WALLET_APPS)
-                built = self._base_slots(template, bank, app, dt, amount,
-                                         amt_text, merchant, utr)
             text = fmt.format(**built["slots"])
             if text in self.used_texts:
                 continue
@@ -465,8 +470,10 @@ class Builder:
             amt_text = ctx["amt_text"]
             if t["source"] == "upi":
                 app = rng.choice(UPI_APPS)
-            if t["source"] == "wallet":
+            elif t["source"] == "wallet":
                 app = rng.choice(WALLET_APPS)
+            elif t["source"] == "merchant_app":
+                app = rng.choice(MERCHANT_APPS)
             utr = ctx["utr"] if rng.random() < 0.6 else make_utr(rng)
             built = self._base_slots(t, bank, app, dt, ctx["amount"], amt_text,
                                      ctx["merchant"], utr)
@@ -509,6 +516,8 @@ class Builder:
                 app = rng.choice(UPI_APPS)
             elif source == "wallet":
                 app = rng.choice(WALLET_APPS)
+            elif source == "merchant_app":
+                app = rng.choice(MERCHANT_APPS)
             elif source == "social":
                 app = rng.choice(SOCIAL_APPS)
             elif source == "generic":
