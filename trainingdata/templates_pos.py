@@ -64,6 +64,24 @@ P("bsms_dr_09", "bank_debit", "bank_sms",
 P("bsms_dr_10", "bank_debit", "bank_sms",
   "Txn of Rs.{amt} successful. A/c XX{acct} debited to {merchant}. "
   "{bank} Ref {utr}. Avl Bal Rs.{bal}.")
+P("bsms_dr_11", "bank_debit", "bank_sms",
+  "{bank} A/c *{acct} Debited Rs:{amt} on {date} by Mob Bk ref no {utr}, "
+  "Fvg: {merchant} Avl Bal Rs:{bal}. Not you?Call 1800{phone6}/SMS BLOCK {acct} to 8879365472")
+P("bsms_dr_12", "bank_debit", "bank_sms",
+  "{bank} Alert: Rs.{amt} debited from A/c XX{acct} at {merchant} on {date}. "
+  "Avl Bal Rs.{bal}. Never share OTP, PIN or CVV with anyone.", method="UPI")
+P("bsms_dr_13", "bank_debit", "bank_sms",
+  "{bank}: Rs.{amt} debited from A/c XX{acct} on {date} to {merchant}. "
+  "Avl Bal Rs.{bal}. Ref {utr}. Never Share OTP/PIN/CVV-{bank}")
+P("bsms_dr_14", "bank_debit", "bank_sms",
+  "Dr Rs.{amt} from {bank} A/c *{acct} to {merchant} on {date}. UPI:{utr}. "
+  "Bal Rs.{bal}. Do not share OTP/PIN.", method="UPI")
+P("bsms_dr_15", "bank_debit", "bank_sms",
+  "{bank} A/c *{acct} Dr Rs{amt} on {date} by MB {utr} Fv.{merchant}, "
+  "Bal Rs{bal}. Never Share OTP/Password with anyone.")
+P("bsms_dr_16", "bank_debit", "bank_sms",
+  "Your {bank} A/c XX{acct} debited INR {amt} on {date}. Info: {merchant}. "
+  "Bal INR {bal}. Never disclose OTP to anyone.")
 
 # --- Bank SMS: generic credits ------------------------------------------------
 P("bsms_cr_01", "bank_credit", "bank_sms",
@@ -81,6 +99,24 @@ P("bsms_cr_04", "bank_credit", "bank_sms",
 P("bsms_cr_05", "bank_credit", "bank_sms",
   "Cr Rs.{amt} to {bank} A/c *{acct} from {merchant} on {date}. UPI:{utr}. "
   "Bal Rs.{bal}.", txn="CREDIT")
+P("bsms_cr_06", "bank_credit", "bank_sms",
+  "{bank} A/c *{acct} Credited for Rs:{amt} on {date} by Mob Bk ref no {utr} "
+  "Avl Bal Rs:{bal}.Never Share OTP/PIN/CVV-{bank}", txn="CREDIT")
+P("bsms_cr_07", "bank_credit", "bank_sms",
+  "{bank}: Rs.{amt} credited to A/c XX{acct} on {date} by {merchant}. "
+  "Avl Bal Rs.{bal}. Ref {utr}. Never share OTP or PIN with anyone.", txn="CREDIT", method="NEFT")
+P("bsms_cr_08", "bank_credit", "bank_sms",
+  "Your {bank} A/c XX{acct} is credited with Rs.{amt} on {date} from {merchant}. "
+  "Bal Rs.{bal}. Ref {utr}. Do not share OTP.", txn="CREDIT", method="IMPS")
+P("bsms_cr_09", "bank_credit", "bank_sms",
+  "{bank} Alert: Credit of Rs.{amt} in A/c XX{acct} from {merchant}. "
+  "Date {date}. Ref {utr}. Bal Rs.{bal}. Never disclose OTP/PIN to anyone.", txn="CREDIT")
+P("bsms_cr_10", "bank_credit", "bank_sms",
+  "Cr Rs.{amt} to {bank} A/c *{acct} from {merchant} on {date}. UPI:{utr}. "
+  "Bal Rs.{bal}. Never Share OTP/PIN/CVV-{bank}", txn="CREDIT")
+P("bsms_cr_11", "bank_credit", "bank_sms",
+  "{bank}: A/c *{acct} credited by Rs.{amt} on {date}. Transfer from {merchant}. "
+  "Avl Bal Rs.{bal}. Not you? Call 1800{phone6}", txn="CREDIT")
 
 # --- Bank app notifications ---------------------------------------------------
 P("bapp_01", "bank_app", "bank_app",
@@ -139,6 +175,15 @@ P("upi_p2p_03", "upi_p2p", "upi",
 P("upi_p2p_04", "upi_p2p", "upi",
   "Paid ₹{amt} to {person} ({vpa}) via {app}. Txn ID {utr}.", style="title",
   fixed="Uncategorized", merchant_kind="person")
+P("upi_p2p_05", "upi_p2p", "upi",
+  "{app}: Received ₹{amt} from {person} ({vpa}). UPI Ref {utr}.",
+  txn="CREDIT", fixed="Gift", merchant_kind="person", style="title")
+P("upi_p2p_06", "upi_p2p", "upi",
+  "₹{amt} received from {person} on {app}. UPI Ref {utr}. In {bank} A/c {acct}.",
+  txn="CREDIT", fixed="Gift", merchant_kind="person", style="title")
+P("upi_p2p_07", "upi_p2p", "upi",
+  "{person} sent you ₹{amt} ({vpa}) on {app}. UPI transaction ID {utr}.",
+  txn="CREDIT", fixed="Gift", merchant_kind="person", style="title")
 
 # --- UPI app notifications (notification-tray shape) ---------------------------
 # These are the messages the app actually listens to: the UPI app's own banner, with NO
@@ -169,11 +214,103 @@ P("upi_notif_10", "upi_notif", "upi",
   "Sent ₹{amt} to {person}", style="title", fixed="Uncategorized",
   merchant_kind="person", difficulty="medium")
 P("upi_notif_11", "upi_notif", "upi",
-  "You received ₹{amt} from {person}", style="title", txn="CREDIT",
-  fixed="Gift", merchant_kind="person", difficulty="medium")
+  "{app}: Paid ₹{amt} to {merchant}", style="title", difficulty="medium")
 P("upi_notif_12", "upi_notif", "upi",
+  "{app}: ₹{amt} sent to {merchant}", style="title", difficulty="medium")
+P("upi_notif_13", "upi_notif", "upi",
+  "{app}: Sent ₹{amt} to {person}", style="title", fixed="Uncategorized",
+  merchant_kind="person", difficulty="medium")
+P("upi_notif_14", "upi_notif", "upi",
+  "{app}: You paid ₹{amt} to {merchant}", style="title", difficulty="medium")
+P("upi_notif_15", "upi_notif", "upi",
+  "Your amount deducted is Rs.{amt} to {merchant}. Transaction {utr} successfully processed.",
+  difficulty="medium")
+P("upi_notif_16", "upi_notif", "upi",
+  "Thank you for making a successful transaction at {merchant}. Your amount deducted is Rs.{amt}. Ref {utr}.",
+  difficulty="medium")
+
+# --- UPI Incoming payments (notification-tray shape) --------------------------
+P("upi_in_01", "upi_in", "upi",
+  "{person} sent you ₹{amt}", txn="CREDIT",
+  merchant_kind="person", difficulty="medium")
+P("upi_in_02", "upi_in", "upi",
+  "{app}: {person} sent you ₹{amt}", txn="CREDIT",
+  merchant_kind="person", difficulty="medium")
+P("upi_in_03", "upi_in", "upi",
+  "{person} sent you ₹{amt} on {app}", txn="CREDIT",
+  merchant_kind="person", difficulty="medium")
+P("upi_in_04", "upi_in", "upi",
+  "{person} paid you ₹{amt}", txn="CREDIT",
+  merchant_kind="person", difficulty="medium")
+P("upi_in_05", "upi_in", "upi",
+  "{app}: {person} paid you ₹{amt}", txn="CREDIT",
+  merchant_kind="person", difficulty="medium")
+P("upi_in_06", "upi_in", "upi",
+  "{person} paid you ₹{amt} on {app}", txn="CREDIT",
+  merchant_kind="person", difficulty="medium")
+P("upi_in_07", "upi_in", "upi",
+  "Received ₹{amt} from {person}", txn="CREDIT",
+  merchant_kind="person", difficulty="medium")
+P("upi_in_08", "upi_in", "upi",
+  "{app}: Received ₹{amt} from {person}", txn="CREDIT",
+  merchant_kind="person", difficulty="medium")
+P("upi_in_09", "upi_in", "upi",
+  "₹{amt} received from {person}", txn="CREDIT",
+  merchant_kind="person", difficulty="medium")
+P("upi_in_10", "upi_in", "upi",
+  "₹{amt} received on {app} from {person}", txn="CREDIT",
+  merchant_kind="person", difficulty="medium")
+P("upi_in_11", "upi_in", "upi",
+  "Payment of ₹{amt} received from {person}", txn="CREDIT",
+  merchant_kind="person", difficulty="medium")
+P("upi_in_12", "upi_in", "upi",
+  "You received ₹{amt} from {person}", style="title", txn="CREDIT",
+  merchant_kind="person", difficulty="medium")
+P("upi_in_13", "upi_in", "upi",
+  "{app}: You received ₹{amt} from {person}", style="title", txn="CREDIT",
+  merchant_kind="person", difficulty="medium")
+P("upi_in_14", "upi_in", "upi",
+  "You received ₹{amt} via UPI", txn="CREDIT",
+  merchant_kind="none", difficulty="medium")
+P("upi_in_15", "upi_in", "upi",
+  "{app}: You received ₹{amt} via UPI", txn="CREDIT",
+  merchant_kind="none", difficulty="medium")
+P("upi_in_16", "upi_in", "upi",
+  "₹{amt} deposited to your account", txn="CREDIT",
+  merchant_kind="none", difficulty="medium")
+P("upi_in_17", "upi_in", "upi",
+  "₹{amt} deposited in your {bank} account", txn="CREDIT",
+  merchant_kind="none", difficulty="medium")
+P("upi_in_18", "upi_in", "upi",
+  "{app}: ₹{amt} deposited to your bank account", txn="CREDIT",
+  merchant_kind="none", difficulty="medium")
+P("upi_in_19", "upi_in", "upi",
+  "You've been rewarded! {app} just deposited ₹{amt} in your bank account", txn="CREDIT",
+  merchant_kind="none", difficulty="medium")
+P("upi_in_20", "upi_in", "upi",
+  "Received ₹{amt} from {merchant}", txn="CREDIT",
+  merchant_kind="merchant", difficulty="medium")
+P("upi_in_21", "upi_in", "upi",
+  "{app}: Received ₹{amt} from {merchant}", txn="CREDIT",
+  merchant_kind="merchant", difficulty="medium")
+P("upi_in_22", "upi_in", "upi",
   "Refund of ₹{amt} from {merchant} processed", style="title", txn="CREDIT",
   fixed="Refund", difficulty="medium")
+P("upi_in_23", "upi_in", "upi",
+  "You've received ₹{amt} from {person}", txn="CREDIT",
+  merchant_kind="person", difficulty="medium")
+P("upi_in_24", "upi_in", "upi",
+  "{app}: ₹{amt} received from {person}", txn="CREDIT",
+  merchant_kind="person", difficulty="medium")
+P("upi_in_25", "upi_in", "upi",
+  "Payment of ₹{amt} from {person} received", txn="CREDIT",
+  merchant_kind="person", difficulty="medium")
+P("upi_in_26", "upi_in", "upi",
+  "{app}: You've been rewarded! ₹{amt} deposited to your account. Ref {utr}", txn="CREDIT",
+  merchant_kind="none", difficulty="medium")
+P("upi_in_27", "upi_in", "upi",
+  "{app} just deposited ₹{amt} in your bank account on {date}. Ref {utr}", txn="CREDIT",
+  merchant_kind="none", difficulty="medium")
 
 # --- Merchant app payment receipts ---------------------------------------------
 # Checkout receipts pushed by the merchant's own app. Also reference-free; the merchant is

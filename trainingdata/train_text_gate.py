@@ -98,12 +98,15 @@ def family_weights(rows: list[dict]) -> np.ndarray:
 
 SYNONYM_GROUPS: tuple[tuple[str, tuple[str, ...]], ...] = (
     (r"\bsuccessful\b", ("successful", "success", "completed", "confirmed", "approved")),
-    (r"\bpaid\b", ("paid", "debited", "spent", "charged")),
-    (r"\bdebited\b", ("debited", "paid", "spent", "charged")),
+    (r"\bpaid\b", ("paid", "debited", "spent", "charged", "deducted")),
+    (r"\bdebited\b", ("debited", "paid", "spent", "charged", "deducted")),
+    (r"\bdeducted\b", ("deducted", "debited", "paid")),
     (r"\breceived\b", ("received", "credited", "deposited")),
     (r"\bcredited\b", ("credited", "received", "deposited")),
+    (r"\bjust deposited\b", ("just deposited", "deposited", "credited")),
     (r"\bsent\b", ("sent", "transferred")),
     (r"\btransferred\b", ("transferred", "sent")),
+    (r"\bsent you\b", ("sent you", "paid you", "transferred to you")),
     (r"\bfailed\b", ("failed", "declined", "rejected", "unsuccessful", "not successful")),
     (r"\bis processing\b", ("is processing", "is pending", "is on hold",
                             "is awaiting confirmation")),
@@ -143,7 +146,8 @@ def augment_rows(rows: list[dict], copies: int, seed: int = 7) -> list[dict]:
     return out
 
 
-def bucket_matrix(rows: list[dict], buckets: int) -> sparse.csr_matrix:    mask = buckets - 1
+def bucket_matrix(rows: list[dict], buckets: int) -> sparse.csr_matrix:
+    mask = buckets - 1
     indptr = [0]
     indices: list[int] = []
     for row in rows:
@@ -345,14 +349,15 @@ def main() -> None:
               f"| neg>=0.30 {m['negatives_at_0.30']:.4f} "
               f"| pos>=0.90 {m['recall_at_0.90']:.4f}")
 
+    base_name = f"_{args.name}" if args.name and args.name not in ("", "default") else ""
     ngram_info = {
         "enabled": True,
         "buckets": args.buckets,
         "hash": "fnv1a32",
         "scale": NGRAM_SCALE,
-        "file": f"gate_ngrams_{args.name}.bin",
+        "file": f"gate_ngrams{base_name}.bin",
     }
-    ngram_path = args.out / f"gate_ngrams_{args.name}.bin"
+    ngram_path = args.out / f"gate_ngrams{base_name}.bin"
     ngram_info.update(write_ngrams(ngram_path, coef))
 
     # Neutral signal weights: ln(1.0) == 0, so the runtime's regex work cannot change the
@@ -377,7 +382,7 @@ def main() -> None:
         "features": neutral,
         "ngrams": ngram_info,
     }
-    weights_path = args.out / f"gate_weights_{args.name}.json"
+    weights_path = args.out / f"gate_weights{base_name}.json"
     weights_path.write_text(
         json.dumps(weights_json, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
 
@@ -403,11 +408,11 @@ def main() -> None:
         "ngrams": ngram_info,
         "top_tokens": top_tokens(coef, token_to_bucket),
     }
-    report_path = args.out / f"eval_report_{args.name}.json"
+    report_path = args.out / f"eval_report{base_name}.json"
     report_path.write_text(
         json.dumps(report, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
 
-    fixture_path = args.data / "fixtures" / f"gate_smoke_{args.name}.jsonl"
+    fixture_path = args.data / "fixtures" / f"gate_smoke{base_name}.jsonl"
     fixture_path.parent.mkdir(parents=True, exist_ok=True)
     with fixture_path.open("w", encoding="utf-8", newline="\n") as handle:
         for row in test_rows[:args.fixture_rows]:

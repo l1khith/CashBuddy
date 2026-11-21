@@ -2,7 +2,7 @@
   "dataset": "cashbuddy_gate_synthetic",
   "dataset_version": "1.0.0",
   "schema_version": "1.0.0",
-  "generated_at_utc": "2026-11-19T13:13:38.140575+00:00",
+  "generated_at_utc": "2026-11-21T05:48:17.948970+00:00",
   "seed": 42,
   "generator": "trainingdata/generate_dataset.py",
   "template_versions": {
@@ -10,32 +10,32 @@
     "negative": "neg-v1"
   },
   "counts": {
-    "total": 40000,
+    "total": 39985,
     "positives": 20000,
-    "negatives": 20000,
+    "negatives": 19985,
     "by_split": {
       "train": {
         "total": 28000,
         "positives": 14000,
         "negatives": 14000,
-        "templates": 134,
-        "merchants": 129,
+        "templates": 170,
+        "merchants": 161,
         "unique_texts": 28000
       },
       "val": {
-        "total": 6000,
+        "total": 5985,
         "positives": 3000,
-        "negatives": 3000,
-        "templates": 42,
-        "merchants": 35,
-        "unique_texts": 6000
+        "negatives": 2985,
+        "templates": 47,
+        "merchants": 43,
+        "unique_texts": 5985
       },
       "test": {
         "total": 6000,
         "positives": 3000,
         "negatives": 3000,
-        "templates": 42,
-        "merchants": 52,
+        "templates": 47,
+        "merchants": 62,
         "unique_texts": 6000
       }
     },
@@ -65,7 +65,7 @@
       "FAILED_TXN": 1400,
       "GENERIC": 1100,
       "MANDATE": 400,
-      "NEWS_JOB": 1200,
+      "NEWS_JOB": 1185,
       "ORDER_STATUS": 900,
       "OTP": 2000,
       "PENDING_TXN": 700,
@@ -76,60 +76,60 @@
       "STATEMENT": 600
     },
     "by_source_type": {
-      "APP_NOTIFICATION": 6654,
-      "ATM": 241,
-      "BANK_APP": 1657,
-      "BANK_SMS": 17309,
-      "CARD_ALERT": 1137,
-      "EMAIL": 576,
+      "APP_NOTIFICATION": 6533,
+      "ATM": 205,
+      "BANK_APP": 1134,
+      "BANK_SMS": 15274,
+      "CARD_ALERT": 994,
+      "EMAIL": 500,
       "MESSAGING": 2800,
-      "MESSAGING_FORWARD": 763,
-      "SCREENSHOT": 1359,
-      "UPI_APP": 7260,
-      "WALLET": 244
+      "MESSAGING_FORWARD": 506,
+      "SCREENSHOT": 1004,
+      "UPI_APP": 10820,
+      "WALLET": 215
     },
     "by_difficulty": {
-      "easy": 13596,
-      "hard": 12204,
-      "medium": 12841,
-      "ocr": 1359
+      "easy": 11729,
+      "hard": 11919,
+      "medium": 15333,
+      "ocr": 1004
     }
   },
   "quality": {
-    "unique_texts": 40000,
-    "duplicate_groups": 1401,
-    "duplicate_companions": 1401
+    "unique_texts": 39985,
+    "duplicate_groups": 1276,
+    "duplicate_companions": 1276
   },
   "files": {
     "positive_bank_transactions.jsonl": {
       "rows": 20000,
-      "bytes": 17982167,
-      "sha256": "849c31afd860bbdb3c492a26a66c5c8e4166583a06410b66b89a05ac953c5a2c"
+      "bytes": 17706694,
+      "sha256": "cc00de065351eb09607d8a839ad0876f9dbec185b098e2e2444aeb14e7890f43"
     },
     "negative_false_flags.jsonl": {
-      "rows": 20000,
-      "bytes": 16797423,
-      "sha256": "cf82038d1908d26645f8eac5901aa795ed9e404fe0859ee563fa6ac60558181f"
+      "rows": 19985,
+      "bytes": 16779387,
+      "sha256": "0ae44adb1146f64ccf3747fe01a1ac30d3a8ea23fc69779c9bbbc8ea1264a5be"
     },
     "combined.jsonl": {
-      "rows": 40000,
-      "bytes": 34779590,
-      "sha256": "9d008a052b40bca9cd8db461046e5200e21d7e3a3a87d12a25e29534a355b70b"
+      "rows": 39985,
+      "bytes": 34486081,
+      "sha256": "1d3c9ebb5f0aa41024655a868d23286de098cf490a365206720e52b67beea944"
     },
     "splits/train.jsonl": {
       "rows": 28000,
-      "bytes": 24348768,
-      "sha256": "58abecb618436561f494dcebf6d6e4544a850089a7783847834d56f529f0edf8"
+      "bytes": 24150349,
+      "sha256": "41bf5db946363dd2975cffb680b773895e66108b07b9549ddec34f5104bb665a"
     },
     "splits/val.jsonl": {
-      "rows": 6000,
-      "bytes": 5228614,
-      "sha256": "c2ff0f2f8b7e114ace9d467a1dafc4983b2fb851ad8075e23f7b9377366ecd26"
+      "rows": 5985,
+      "bytes": 5169240,
+      "sha256": "96ea9fbc3e58b596e0aed6ed26c5b2740230ce620921b3759b489e82e6810ad2"
     },
     "splits/test.jsonl": {
       "rows": 6000,
-      "bytes": 5202208,
-      "sha256": "478f8034db0fd84e6a7e30805e9fce282d372623b28307763b8c314f43b5fa45"
+      "bytes": 5166492,
+      "sha256": "9c322d48eab05cba05640d6b3bc1923de7746ae3340b3d6e86a97bd7e52bc5f9"
     }
   }
 }

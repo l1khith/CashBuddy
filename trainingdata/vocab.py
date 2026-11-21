@@ -251,6 +251,13 @@ def build_merchants() -> list[Merchant]:
 
 
 PEOPLE = [
+    "Ramesh", "Suresh", "Mahesh", "Ganesh", "Rajesh", "Dinesh", "Rahul", "Amit",
+    "Priya", "Sneha", "Vikram", "Anjali", "Rohit", "Pooja", "Deepak", "Manoj",
+    "Kavita", "Sachin", "Neha", "Sunil", "Vijay", "Arun", "Kiran", "Ajay",
+    "Sanjay", "Naveen", "Pradeep", "Santosh", "Sandeep", "Rohan", "Aarav", "Advait",
+    "Vihaan", "Kabir", "Arjun", "Dhruv", "Meera", "Diya", "Ananya", "Ishita",
+    "Ravi", "Swati", "Bhavna", "Ramesh Kumar", "Suresh Sharma", "Rahul Verma",
+    "Priya Sharma", "Amit Patel", "Sneha Rao", "Vikram Singh",
     "Aarav K", "Diya S", "Rohan M", "Ishita R", "Kabir T", "Meera N",
     "Advait P", "Saanvi G", "Vihaan D", "Anaya B", "Reyansh V", "Myra J",
     "Arjun L", "Kiara H", "Dhruv A", "Aadhya C", "Yash W", "Sara F",
@@ -278,11 +285,13 @@ CHAT_PREVIEWS_FINANCIAL = [
 ]
 
 CHAT_PREVIEWS_PLAIN = [
-    "Sent a sticker", "Sent you a reel", "Who will she nominate?", "Happy birthday!",
-    "Check this out", "Meeting at 5pm", "Photo", "Voice message (0:12)",
-    "Typing...", "Joined the group", "Changed the group name", "See you tomorrow",
-    "Thanks!", "Good morning", "Where are you?", "Call me when free",
-    "This is hilarious", "Did you see the match?", "Lunch at 1?", "On my way",
+    "Sent a sticker", "Sent you a reel", "Sent you a video", "Sent you a photo",
+    "Sent you a picture", "Sent you a document", "Sent you a link", "Sent a voice note",
+    "Who will she nominate?", "Happy birthday!", "Check this out", "Meeting at 5pm",
+    "Photo", "Voice message (0:12)", "Typing...", "Joined the group",
+    "Changed the group name", "See you tomorrow", "Thanks!", "Good morning",
+    "Where are you?", "Call me when free", "This is hilarious", "Did you see the match?",
+    "Lunch at 1?", "On my way",
 ]
 
 CHAT_SENDERS = [
