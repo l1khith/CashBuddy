@@ -214,4 +214,95 @@ class GateModelTest {
         val score = model.score(evidence, "Rs 100 spent")
         assertEquals(0.0, score.ngramScore, "Ngram score must be 0.0 when degraded")
     }
+
+    @Test
+    fun testUpdatedWeightsScoreMobilePaymentNotificationsHighAndNoiseLow() {
+        val features = mutableMapOf<String, Double>()
+        GateSignal.entries.forEach { features[it.key] = 1.0 }
+        features["amount_in_context"] = 3.16214682
+        features["amount_debit_sent"] = 5.07865564
+        features["amount"] = 2.90264961
+        features["account"] = 4.49647516
+        features["utr"] = 7.20660988
+        features["merchant_pkg"] = 0.65921071
+        features["success"] = 3.61304232
+        features["OTP"] = 0.62983484
+        features["promo"] = 0.58535188
+        features["offer"] = 0.34531764
+        features["failure"] = 0.16128421
+        features["failure_in_context"] = 0.18100943
+        features["pending_in_context"] = 0.85142167
+
+        val prior = 0.20
+        val priorLogit = ln(prior / (1.0 - prior))
+        val biasAdjust = -0.13008257
+        val intercept = priorLogit + biasAdjust
+
+        val weights = GateWeights(
+            modelVersion = "gate-2026.11.19",
+            schemaVersion = 1,
+            prior = prior,
+            intercept = intercept,
+            biasAdjust = biasAdjust,
+            threshold = 0.75,
+            features = features,
+            ngrams = GateNgramSpec(enabled = false)
+        )
+        val model = GateModel(weights = weights, ngrams = null)
+
+        // 1. Mobile app notification without account and without UTR: "Paid ₹150 to Chai Point"
+        val mobileEvidence = Evidence(
+            hasAmount = true,
+            amountInTransactionContext = true,
+            amountAndDebitSameSentence = true,
+            fromMerchantPackage = true
+        )
+        val mobileScore = model.score(mobileEvidence, "Paid ₹150 to Chai Point")
+        assertTrue(mobileScore.pTransaction >= 0.65, "Mobile payment notification must score high in LOG_AND_FLAG range without n-grams (got ${mobileScore.pTransaction})")
+
+        // 2. Bank SMS with Account and UTR
+        val bankEvidence = Evidence(
+            hasAmount = true,
+            amountInTransactionContext = true,
+            amountAndDebitSameSentence = true,
+            hasAccount = true,
+            hasUtr = true
+        )
+        val bankScore = model.score(bankEvidence, "Rs 150 debited from A/c XX1234. Ref 123456789012")
+        assertTrue(bankScore.pTransaction >= 0.95, "Bank SMS must score very high (got ${bankScore.pTransaction})")
+
+        // 3. Noise / Non-transaction: no amount
+        val noiseEvidence = Evidence(
+            hasAmount = false,
+            amountInTransactionContext = false,
+            amountAndDebitSameSentence = false
+        )
+        val noiseScore = model.score(noiseEvidence, "Bitcoin selloff accelerating")
+        assertTrue(noiseScore.pTransaction < 0.25, "Noise must score below 0.25 (got ${noiseScore.pTransaction})")
+    }
+
+    @Test
+    fun testScoreText_FastPathEvaluatesWithoutEvidence() {
+        val features = mutableMapOf<String, Double>()
+        GateSignal.entries.forEach { features[it.key] = 1.0 }
+        val prior = 0.20
+        val priorLogit = ln(prior / (1.0 - prior))
+        val biasAdjust = 0.08571638
+        val intercept = priorLogit + biasAdjust
+        val weights = GateWeights(
+            modelVersion = "gate-text-2026.11.19",
+            schemaVersion = 1,
+            prior = prior,
+            intercept = intercept,
+            biasAdjust = biasAdjust,
+            threshold = 0.65,
+            features = features,
+            ngrams = GateNgramSpec(enabled = false)
+        )
+        val model = GateModel(weights = weights, ngrams = null)
+
+        val score = model.scoreText("Test fast path")
+        assertEquals(intercept, score.logit, 1e-4)
+        assertTrue(score.pTransaction > 0.0 && score.pTransaction < 1.0)
+    }
 }

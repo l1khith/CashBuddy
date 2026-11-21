@@ -73,10 +73,12 @@ class EvidenceExtractor(
     }
 
     fun amountInTransactionContext(text: String): Boolean {
-        return sentences(text).any { s ->
-            (Regexes.AMOUNT.containsMatchIn(s) || Regexes.AMOUNT_SUFFIX.containsMatchIn(s)) &&
-            (Regexes.DEBIT.containsMatchIn(s) || Regexes.CREDIT.containsMatchIn(s) || s.contains("payment", ignoreCase = true) || s.contains("txn", ignoreCase = true))
-        }
+        return amountAndDebitSameSentence(text) ||
+               amountAndCreditSameSentence(text) ||
+               sentences(text).any { s ->
+                   (Regexes.AMOUNT.containsMatchIn(s) || Regexes.AMOUNT_SUFFIX.containsMatchIn(s)) &&
+                   (s.contains("payment", ignoreCase = true) || s.contains("txn", ignoreCase = true))
+               }
     }
 
     fun amountHasForbiddenShape(text: String): Boolean =
@@ -102,6 +104,7 @@ class EvidenceExtractor(
         val hasBalance = Regexes.BALANCE.containsMatchIn(tLower)
         val hasSuccess = Regexes.SUCCESS.containsMatchIn(tLower)
         val hasFailure = Regexes.FAILURE.containsMatchIn(tLower)
+        val hasPending = Regexes.PENDING.containsMatchIn(tLower)
         val senderLooksBank = SenderFingerprint.isBankLike(raw.senderId ?: raw.title)
         val fromMerchantPackage = source == NotificationSource.MERCHANT_APP ||
                 (raw.packageName != null && isMerchantPackageHint(raw.packageName))
@@ -143,7 +146,8 @@ class EvidenceExtractor(
             burstDetected = calcBurst,
             tokenLogOdds = tokenLogOdds,
             tokenCount = tokenCount,
-            hasFailureWord = hasFailure
+            hasFailureWord = hasFailure,
+            hasPendingWord = hasPending
         )
     }
 
@@ -186,14 +190,14 @@ class EvidenceExtractor(
         if (creditInSent && !debitInSent) return TransactionType.CREDIT
 
         val tLower = text.lowercase()
-        val hasDebit = Regexes.DEBIT.containsMatchIn(tLower)
-        val hasCredit = Regexes.CREDIT.containsMatchIn(tLower)
+        val debitMatch = Regexes.DEBIT.find(tLower)
+        val creditMatch = Regexes.CREDIT.find(tLower)
         return when {
-            hasDebit && !hasCredit -> TransactionType.DEBIT
-            hasCredit && !hasDebit -> TransactionType.CREDIT
-            hasDebit && hasCredit -> {
-                val dIdx = Regexes.DEBIT.find(tLower)?.range?.first ?: Int.MAX_VALUE
-                val cIdx = Regexes.CREDIT.find(tLower)?.range?.first ?: Int.MAX_VALUE
+            debitMatch != null && creditMatch == null -> TransactionType.DEBIT
+            creditMatch != null && debitMatch == null -> TransactionType.CREDIT
+            debitMatch != null && creditMatch != null -> {
+                val dIdx = debitMatch.range.first
+                val cIdx = creditMatch.range.first
                 if (dIdx < cIdx) TransactionType.DEBIT else TransactionType.CREDIT
             }
             else -> null

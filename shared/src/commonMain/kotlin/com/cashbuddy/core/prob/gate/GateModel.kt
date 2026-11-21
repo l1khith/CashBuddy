@@ -115,6 +115,33 @@ class GateModel(
         )
     }
 
+    /**
+     * Fast statistical qualification scoring on raw text alone (ZERO regexes, zero Evidence extraction).
+     * Used as a fast pre-filter so everyday noise (Reddit, WhatsApp, social chats) never executes
+     * regexes or sentence splitters.
+     */
+    fun scoreText(text: String): GateScore {
+        var logit = baseLogit
+        val contributions = ArrayList<Contribution>(1)
+        val ngramScore = if (ngrams != null && bucketMask > 0 && text.isNotEmpty()) {
+            ngrams.score(GateTokenizer.buckets(text, bucketMask))
+        } else {
+            0.0
+        }
+        if (ngramScore != 0.0) {
+            logit += ngramScore
+            contributions.add(Contribution("ngrams", ngramScore, exp(ngramScore)))
+        }
+
+        val p = 1.0 / (1.0 + exp(-logit))
+        return GateScore(
+            pTransaction = p,
+            logit = logit,
+            ngramScore = ngramScore,
+            contributions = contributions
+        )
+    }
+
     companion object {
         const val SCHEMA_VERSION = 1
     }

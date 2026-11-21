@@ -55,13 +55,13 @@ data class GateNgramSpec(
 )
 
 /**
- * The 20 runtime signals, in trainer order. Each entry declares how it is derived from
+ * The 21 runtime signals, in trainer order. Each entry declares how it is derived from
  * [Evidence]; the trainer mirrors this list exactly in `FEATURES`.
  *
- * Two entries are crosses rather than raw booleans (`amount`, `failure_in_context`).
- * They exist because a linear model cannot represent "amount present BUT not in a
- * transaction sentence" or "failure word AND transaction-shaped" without an explicit
- * interaction column.
+ * Three entries are crosses rather than raw booleans (`amount`, `failure_in_context`,
+ * `pending_in_context`). They exist because a linear model cannot represent "amount
+ * present BUT not in a transaction sentence", "failure word AND transaction-shaped", or
+ * "pending word AND transaction-shaped" without an explicit interaction column.
  */
 enum class GateSignal(
     val key: String,
@@ -86,7 +86,8 @@ enum class GateSignal(
     RECENT_SAME_MERCHANT("recent_same_merchant", { it.recentSameMerchant }),
     BURST_DETECTED("burst_detected", { it.burstDetected }),
     FAILURE("failure", { it.hasFailureWord }),
-    FAILURE_IN_CONTEXT("failure_in_context", { it.hasFailureWord && it.amountInTransactionContext });
+    FAILURE_IN_CONTEXT("failure_in_context", { it.hasFailureWord && it.amountInTransactionContext }),
+    PENDING_IN_CONTEXT("pending_in_context", { it.hasPendingWord && it.amountInTransactionContext });
 
     companion object {
         val keys: Set<String> = GateSignal.entries.mapTo(LinkedHashSet()) { it.key }

@@ -1,12 +1,11 @@
 // NO-NETWORK
 package com.cashbuddy.core.prob.gate
 
+import cashbuddy.shared.generated.resources.Res
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.serialization.json.Json
-import org.jetbrains.compose.resources.InternalResourceApi
-import org.jetbrains.compose.resources.readResourceBytes
 
 /**
  * Loads and caches the trained gate artifact.
@@ -102,5 +101,4 @@ class GateModelProvider(
     }
 }
 
-@OptIn(InternalResourceApi::class)
-private suspend fun readComposeResourceBytes(path: String): ByteArray = readResourceBytes(path)
+private suspend fun readComposeResourceBytes(path: String): ByteArray = Res.readBytes(path)

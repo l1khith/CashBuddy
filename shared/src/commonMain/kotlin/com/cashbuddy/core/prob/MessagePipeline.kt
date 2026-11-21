@@ -98,13 +98,14 @@ class MessagePipeline(
 
             // 2. Source detection
             val source = sourceDetector.detect(raw.packageName ?: raw.senderId ?: "", raw.text)
-
-            // 3. Evidence extraction
-            val evidence = evidenceExtractor.extract(raw, source)
-
-            // 4. Classify
             val fullText = if (raw.title.isNotBlank()) "${raw.title} ${raw.text}" else raw.text
-            val classification = classifier.classifySuspending(evidence, fullText, source, raw.packageName)
+
+            // 3. Fast qualification-first classification:
+            // Evaluates the trained statistical text gate first on rawText (ZERO regexes, microseconds).
+            // If non-financial noise (p < 0.30), drops early without running EvidenceExtractor, regex amount,
+            // or merchant resolution.
+            val classification = classifier.classifyRaw(raw, fullText, source)
+            val evidence = classification.evidence
 
             // 4.1 Recurring Pattern Check (T6 / AC-2)
             // The recurring match participates in the policy decision directly (see the
@@ -394,12 +395,14 @@ class MessagePipeline(
                 }
             }
 
+            val textToPreserve = if (outcome !is PipelineOutcome.Ignored) raw.text else null
             debugLogger?.recordOutcome(
                 logId = logId,
                 outcome = outcome.outcomeName,
                 txId = outcome.resultingTxId,
                 mergeTarget = outcome.mergeTargetId,
-                error = if (outcome is PipelineOutcome.Ignored) outcome.reason else null
+                error = if (outcome is PipelineOutcome.Ignored) outcome.reason else null,
+                rawText = textToPreserve
             )
             return outcome
         } catch (t: Throwable) {
@@ -408,7 +411,8 @@ class MessagePipeline(
                 outcome = "ERROR",
                 txId = null,
                 mergeTarget = null,
-                error = t.message
+                error = t.message,
+                rawText = raw.text
             )
             throw t
         }

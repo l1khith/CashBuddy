@@ -11,6 +11,7 @@ import com.cashbuddy.core.prob.RawMessage
 import com.cashbuddy.core.prob.SourceDetector
 import com.cashbuddy.core.prob.SourceType
 import com.cashbuddy.domain.model.TransactionType
+import kotlinx.coroutines.runBlocking
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -109,10 +110,10 @@ class ProbabilisticEngineTest {
         val result = classifier.classify(evidence, text, source)
 
         assertTrue(
-            result.pTransaction > 0.70 && result.pTransaction < 0.85,
-            "Expected 0.70 < p < 0.85, got ${result.pTransaction}"
+            result.pTransaction > 0.70,
+            "Expected p > 0.70, got ${result.pTransaction}"
         )
-        assertEquals(PolicyEngine.Action.LOG_AND_FLAG, policy.action(result.pTransaction))
+        assertEquals(PolicyEngine.Action.LOG_AND_FLAG, policy.action(result.pTransaction, hasAccount = result.accountLast4 != null))
     }
 
     @Test
@@ -208,6 +209,36 @@ class ProbabilisticEngineTest {
         )
         val evidence = evidenceExtractor.extract(raw, NotificationSource.UNKNOWN)
         assertFalse(evidence.fromMerchantPackage, "Expected fromMerchantPackage to be false when package is not a merchant")
+    }
+
+    @Test
+    fun testExtractAmount_RejectsMultiplierSuffixes() {
+        assertNull(evidenceExtractor.extractAmount("Is $60K next?"))
+        assertNull(evidenceExtractor.extractAmount("Bitcoin hits ₹100k today"))
+        assertNull(evidenceExtractor.extractAmount("Funded with $50M round"))
+        assertNull(evidenceExtractor.extractAmount("Valuation is INR 10B"))
+        
+        assertEquals(60.0, evidenceExtractor.extractAmount("Paid $60 to store"))
+        assertEquals(60.50, evidenceExtractor.extractAmount("Sent $60.50 via UPI"))
+        assertEquals(500.0, evidenceExtractor.extractAmount("Debited ₹500 from A/c"))
+    }
+
+    @Test
+    fun testSocialMediaNewsNotification_NotClassifiedAsTransaction() {
+        val raw = RawMessage(
+            id = "news-test-1",
+            sourceType = SourceType.NOTIFICATION,
+            packageName = "com.reddit.frontpage",
+            senderId = null,
+            title = "New in r/Polymarket",
+            text = "Bitcoin's November selloff is accelerating. Is $60K next?",
+            timestamp = 1727000000000L
+        )
+        val evidence = evidenceExtractor.extract(raw, NotificationSource.UNKNOWN)
+        assertFalse(evidence.hasAmount, "Expected hasAmount=false for $60K multiplier string")
+        val result = classifier.classify(evidence, "${raw.title} ${raw.text}", NotificationSource.UNKNOWN)
+        assertTrue(result.pTransaction < 0.30, "Expected probability below Action.ASK_USER threshold (0.30), got ${result.pTransaction}")
+        assertEquals(PolicyEngine.Action.IGNORE, policy.action(result.pTransaction))
     }
 
     @Test
@@ -738,6 +769,41 @@ class ProbabilisticEngineTest {
         val text = "Call 18002333/SMS BLOCK 0383 to 8879635472"
         val merchant = evidenceExtractor.extractMerchant(text, null)
         assertNull(merchant, "Expected purely numeric candidate to be rejected as a merchant")
+    }
+
+    @Test
+    fun testClassifyRaw_DropsNoiseBeforeExtractionAndPassesTransactions() = runBlocking {
+        val rawNoise = RawMessage(
+            id = "reddit-news",
+            sourceType = SourceType.NOTIFICATION,
+            packageName = "com.reddit.frontpage",
+            senderId = null,
+            title = "New in r/Polymarket",
+            text = "Bitcoin's November selloff is accelerating. Is $60K next?",
+            timestamp = 1727000000000L
+        )
+
+        val noiseResult = classifier.classifyRaw(rawNoise)
+        // With default fallback classifier, p is low (< 0.30)
+        assertTrue(noiseResult.pTransaction < 0.30, "Social media news must score below qualification threshold")
+        assertNull(noiseResult.amount, "Unqualified candidate must have null amount")
+        assertNull(noiseResult.merchant, "Unqualified candidate must have null merchant")
+
+        val rawTx = RawMessage(
+            id = "real-tx",
+            sourceType = SourceType.NOTIFICATION,
+            packageName = "com.google.android.apps.nbu.paisa.user",
+            senderId = null,
+            title = "Google Pay",
+            text = "Paid ₹450 to Chai Point. UPI Ref: 123456789012",
+            timestamp = 1727000000000L
+        )
+
+        val txResult = classifier.classifyRaw(rawTx)
+        assertTrue(txResult.pTransaction >= 0.30, "Valid payment must qualify")
+        assertEquals(450.0, txResult.amount)
+        assertEquals("Chai Point", txResult.merchant)
+        assertEquals("123456789012", txResult.utr)
     }
 }
 

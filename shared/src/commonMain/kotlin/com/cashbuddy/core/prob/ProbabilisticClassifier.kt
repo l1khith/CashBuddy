@@ -69,6 +69,85 @@ class ProbabilisticClassifier(
         classifySuspending(evidence, rawText, source, packageName)
     }
 
+    /**
+     * Qualification-first pipeline entry point:
+     * 1. Evaluates the trained statistical text gate directly on [fullText] (ZERO regexes, microseconds).
+     * 2. If non-financial noise (p < 0.30), returns immediately with [Evidence.EMPTY] and null fields.
+     *    Bypasses sentence splitting, regex matching, and merchant resolution completely.
+     * 3. Only if qualified (p >= 0.30), extracts evidence, amount, type, account, merchant, and UTR.
+     * 4. If no trained gate is present (legacy tests), falls back to [classifySuspending].
+     */
+    suspend fun classifyRaw(
+        raw: RawMessage,
+        fullText: String = if (raw.title.isNotBlank()) "${raw.title} ${raw.text}" else raw.text,
+        source: NotificationSource = NotificationSource.UNKNOWN
+    ): ClassificationResult {
+        val gate = gateModelProvider?.model()
+        if (gate != null) {
+            val gateScore = gate.scoreText(fullText)
+            val p = gateScore.pTransaction
+            if (p < 0.30) {
+                return ClassificationResult(
+                    pTransaction = p,
+                    fieldConfidences = FieldConfidences(amount = 0.0, type = 0.0, accountLast4 = 0.0, merchant = 0.0),
+                    evidence = Evidence.EMPTY,
+                    contributions = gateScore.contributions,
+                    source = source,
+                    amount = null,
+                    type = null,
+                    accountLast4 = null,
+                    merchant = null,
+                    bankHint = null,
+                    utr = null
+                )
+            }
+
+            val evidence = evidenceExtractor.extract(raw, source)
+            val amount = evidenceExtractor.extractAmount(fullText)
+            val type = evidenceExtractor.extractType(fullText)
+            val accountLast4 = evidenceExtractor.extractAccountLast4(fullText)
+            val merchant = evidenceExtractor.extractMerchant(fullText, raw.packageName)
+            val bankHint = if (evidence.senderLooksBank) "Bank" else null
+            val utr = evidenceExtractor.extractUtr(fullText)
+
+            val fieldConfidences = fieldConfidenceEstimator.estimate(
+                rawText = fullText,
+                amount = amount,
+                type = type,
+                accountLast4 = accountLast4,
+                merchant = merchant
+            )
+
+            return ClassificationResult(
+                pTransaction = p,
+                fieldConfidences = fieldConfidences,
+                evidence = evidence,
+                contributions = gateScore.contributions,
+                source = source,
+                amount = amount,
+                type = type,
+                accountLast4 = accountLast4,
+                merchant = merchant,
+                bankHint = bankHint,
+                utr = utr
+            )
+        } else {
+            val evidence = evidenceExtractor.extract(raw, source)
+            return classifySuspending(evidence, fullText, source, raw.packageName)
+        }
+    }
+
+    /**
+     * Synchronous convenience wrapper for classifyRaw (primarily for tests).
+     */
+    fun classifyRawSync(
+        raw: RawMessage,
+        fullText: String = if (raw.title.isNotBlank()) "${raw.title} ${raw.text}" else raw.text,
+        source: NotificationSource = NotificationSource.UNKNOWN
+    ): ClassificationResult = kotlinx.coroutines.runBlocking {
+        classifyRaw(raw, fullText, source)
+    }
+
     suspend fun classifySuspending(
         evidence: Evidence,
         rawText: String = "",
@@ -123,20 +202,30 @@ class ProbabilisticClassifier(
 
         val p = 1.0 / (1.0 + exp(-logit))
 
-        val amount = evidenceExtractor.extractAmount(rawText)
-        val type = evidenceExtractor.extractType(rawText)
-        val accountLast4 = evidenceExtractor.extractAccountLast4(rawText)
-        val merchant = evidenceExtractor.extractMerchant(rawText, packageName)
-        val bankHint = if (evidence.senderLooksBank) "Bank" else null
-        val utr = evidenceExtractor.extractUtr(rawText)
+        // Qualification Gate: Only extract transaction fields if message is qualified as a candidate
+        // (p >= 0.30, matching PolicyEngine's minimum threshold).
+        // Non-financial noise (social posts, chat summaries, crypto news, OTPs) is dropped early
+        // without running regex amount or merchant extraction.
+        val isQualifiedCandidate = p >= 0.30
 
-        val fieldConfidences = fieldConfidenceEstimator.estimate(
-            rawText = rawText,
-            amount = amount,
-            type = type,
-            accountLast4 = accountLast4,
-            merchant = merchant
-        )
+        val amount = if (isQualifiedCandidate) evidenceExtractor.extractAmount(rawText) else null
+        val type = if (isQualifiedCandidate) evidenceExtractor.extractType(rawText) else null
+        val accountLast4 = if (isQualifiedCandidate) evidenceExtractor.extractAccountLast4(rawText) else null
+        val merchant = if (isQualifiedCandidate) evidenceExtractor.extractMerchant(rawText, packageName) else null
+        val bankHint = if (isQualifiedCandidate && evidence.senderLooksBank) "Bank" else null
+        val utr = if (isQualifiedCandidate) evidenceExtractor.extractUtr(rawText) else null
+
+        val fieldConfidences = if (isQualifiedCandidate) {
+            fieldConfidenceEstimator.estimate(
+                rawText = rawText,
+                amount = amount,
+                type = type,
+                accountLast4 = accountLast4,
+                merchant = merchant
+            )
+        } else {
+            FieldConfidences(amount = 0.0, type = 0.0, accountLast4 = 0.0, merchant = 0.0)
+        }
 
         return ClassificationResult(
             pTransaction = p,

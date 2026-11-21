@@ -5,8 +5,8 @@ object Regexes {
     const val CURRENCY_PREFIX = """(?:₹|Rs[.:]?|INR|[$€£¥]|USD|EUR|GBP|CAD|AUD|AED|SGD|JPY|C\$|A\$|S\$)"""
     const val CURRENCY_SUFFIX = """(?:₹|Rs[.:]?|INR|[$€£¥]|USD|EUR|GBP|CAD|AUD|AED|SGD|JPY)"""
 
-    val AMOUNT = Regex("""(?i)$CURRENCY_PREFIX\s*(\d+(?:,\d{2,3})*(?:\.\d{1,2})?|\d+(?:\.\d{1,2})?)""")
-    val AMOUNT_SUFFIX = Regex("""(?i)(\d+(?:,\d{2,3})*(?:\.\d{1,2})?|\d+(?:\.\d{1,2})?)\s*$CURRENCY_SUFFIX""")
+        val AMOUNT = Regex("""(?i)$CURRENCY_PREFIX\s*(\d+(?:,\d{2,3})*(?:\.\d{1,2})?|\d+(?:\.\d{1,2})?)(?!\w)""")
+    val AMOUNT_SUFFIX = Regex("""(?i)\b(\d+(?:,\d{2,3})*(?:\.\d{1,2})?|\d+(?:\.\d{1,2})?)\s*$CURRENCY_SUFFIX(?!\w)""")
     val ACCOUNT = Regex("""(?i)\b(?:a/c|ac|acct|account|card)\s*(?:no\.?)?\s*(?:ending\s+)?(?:with\s+)?(?:[*xX.]*)(\d{3,4})\b""")
     // Word-boundary anchored + separator required (audit fix 1.3): prevents mid-word
     // keyword matches (e.g. "myreference12345678" capturing "erence12345678") that used
@@ -15,7 +15,10 @@ object Regexes {
     val UPI_HANDLE = Regex("""(?i)\b[a-z0-9._-]+@[a-z]+\b""")
     val BALANCE = Regex("""(?i)(?:avl\s*bal|available\s*balance|bal)\s*[:₹$€£¥]?\s*\d""")
 
-    val DEBIT = Regex("""(?i)\b(debited|paid(?!\s+(?:to\s+)?you\b)|spent|sent(?!\s+you\b)|transferred(?!\s+to\s+you\b)|withdrawn|charged|purchase at)\b""")
+    // `payment` is included deliberately: app receipts read "Payment of ₹150 to Chai Point is
+    // successful", which is a debit even though it never says "paid"/"spent". Without it the
+    // extractor also failed to infer DEBIT for those banners.
+    val DEBIT = Regex("""(?i)\b(debited|paid(?!\s+(?:to\s+)?you\b)|spent|sent(?!\s+you\b)|transferred(?!\s+to\s+you\b)|withdrawn|charged|purchase at|payment)\b""")
     val CREDIT = Regex("""(?i)\b(credited|received|deposited|added|refunded|cashback|paid\s+(?:to\s+)?you|sent\s+you|transferred\s+to\s+you)\b""")
     val OTP = Regex("""(?i)\b(otp|one time password|verification code|secret code|do not share)\b""")
     val PROMO = Regex("""(?i)\b(congratulations|pre-approved|win cash|apply now|apply for|apply|earn|special offer|voucher)\b""")
@@ -34,5 +37,8 @@ object Regexes {
         """(?i)\b(failed|failure|declined|unsuccessful|not\s+successful|rejected|reversed|cancell?ed|""" +
             """could\s+not|couldn'?t|unable\s+to|not\s+processed|not\s+completed|no\s+amount|""" +
             """not\s+debited|not\s+charged|insufficient\s+(?:balance|funds))\b"""
+    )
+    val PENDING = Regex(
+        """(?i)\b(pending|processing|on\s+hold|awaiting\s+confirmation|under\s+process|in\s+progress)\b"""
     )
 }

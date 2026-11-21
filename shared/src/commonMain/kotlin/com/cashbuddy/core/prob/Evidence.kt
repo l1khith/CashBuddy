@@ -37,11 +37,16 @@ data class Evidence(
     // Failure / negation marker on an otherwise transaction-shaped alert. Declined and
     // reversed messages reuse the amount + account + reference layout of a real debit, so
     // the trained gate needs this signal to separate them from successful transactions.
-    val hasFailureWord: Boolean = false
+    val hasFailureWord: Boolean = false,
+
+    // In-flight marker (pending / processing / on hold). Also reuses the transaction layout:
+    // "Payment of ₹X to Y is processing" must not become a logged transaction yet.
+    val hasPendingWord: Boolean = false
 ) {
     fun toJson(): String = jsonInstance.encodeToString(this)
 
     companion object {
+        val EMPTY = Evidence()
         private val jsonInstance = Json { ignoreUnknownKeys = true; prettyPrint = false }
         fun fromJson(json: String): Evidence = jsonInstance.decodeFromString(json)
     }
