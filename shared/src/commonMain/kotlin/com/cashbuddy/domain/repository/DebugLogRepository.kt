@@ -21,7 +21,8 @@ interface DebugLogRepository {
         pipelineOutcome: String?,
         resultingTxId: String?,
         mergeTargetId: String? = null,
-        errorMessage: String?
+        errorMessage: String?,
+        rawText: String? = null
     )
 
     /**

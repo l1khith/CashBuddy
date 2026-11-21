@@ -48,11 +48,15 @@ class DebugConfig(
         settingsRepository?.setDebugLogEnabled(enabled)
     }
 
+    companion object {
+        const val DEFAULT_RECORDING_DURATION_MS = 24 * 60 * 60 * 1000L // 24 hours for developer testing
+    }
+
     fun isRecordingActive(now: Long = currentTimeMillis()): Boolean {
         return recordingActiveUntil > now
     }
 
-    fun startRecording(durationMs: Long = 15 * 60 * 1000L, now: Long = currentTimeMillis()) {
+    fun startRecording(durationMs: Long = DEFAULT_RECORDING_DURATION_MS, now: Long = currentTimeMillis()) {
         recordingActiveUntil = now + durationMs
     }
 

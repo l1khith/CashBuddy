@@ -48,12 +48,13 @@ WHERE id = ?;
 
 updateOutcome:
 UPDATE debug_log
-SET policy_action = COALESCE(?, policy_action),
-    pipeline_outcome = ?,
-    resulting_tx_id = ?,
-    merge_target_id = ?,
-    error_message = ?
-WHERE id = ?;
+SET policy_action = COALESCE(:policyAction, policy_action),
+    pipeline_outcome = :pipelineOutcome,
+    resulting_tx_id = :resultingTxId,
+    merge_target_id = :mergeTargetId,
+    error_message = :errorMessage,
+    raw_text = COALESCE(:rawText, raw_text)
+WHERE id = :id;
 
 getByResultingTxId:
 SELECT * FROM debug_log

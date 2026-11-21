@@ -90,7 +90,8 @@ class DebugLoggerTest {
             pipelineOutcome: String?,
             resultingTxId: String?,
             mergeTargetId: String?,
-            errorMessage: String?
+            errorMessage: String?,
+            rawText: String?
         ) {
             val idx = entries.indexOfFirst { it.id == id }
             if (idx != -1) {
@@ -100,7 +101,8 @@ class DebugLoggerTest {
                     pipelineOutcome = pipelineOutcome,
                     resultingTxId = resultingTxId,
                     mergeTargetId = mergeTargetId,
-                    errorMessage = errorMessage
+                    errorMessage = errorMessage,
+                    rawText = rawText ?: old.rawText
                 )
             }
         }
@@ -488,6 +490,45 @@ class DebugLoggerTest {
             logger.captureRaw(personalMsg2)
             val entry2 = repo.entries.last()
             assertEquals("Where are you?", entry2.rawText)
+        }
+    }
+
+    @Test
+    fun testTransactionOutcomePreservesRawTextEvenIfInitiallyRedacted() {
+        runBlocking {
+            val repo = TestDebugLogRepository()
+            val config = DebugConfig(isDebugBuild = true)
+            val logger = DebugLogger(repo, config)
+
+            // Recording is OFF, notification has non-keyword phrasing initially
+            config.stopRecording()
+            val customMsg = RawMessage(
+                id = "custom-tx-1",
+                sourceType = SourceType.NOTIFICATION,
+                packageName = "com.merchant.food",
+                senderId = null,
+                title = "Order update",
+                text = "Order delivered. Total paid 249 via UPI",
+                timestamp = 1727000000000L
+            )
+
+            val logId = logger.captureRaw(customMsg)
+            assertNotNull(logId)
+
+            // When pipeline finishes and outcome is a transaction (e.g. LOGGED or PENDING_REVIEW),
+            // raw text is preserved so it is never permanently lost
+            logger.recordOutcome(
+                logId = logId,
+                outcome = "PENDING_REVIEW",
+                txId = "tx-99",
+                mergeTarget = null,
+                error = null,
+                rawText = customMsg.text
+            )
+
+            val entry = repo.entries.first { it.id == logId }
+            assertEquals("Order delivered. Total paid 249 via UPI", entry.rawText)
+            assertEquals("PENDING_REVIEW", entry.pipelineOutcome)
         }
     }
 }
