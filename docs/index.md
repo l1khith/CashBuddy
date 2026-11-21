@@ -161,7 +161,8 @@ title: CashBuddy — Your Finances, 100% On-Device
   <a href="#%EF%B8%8F-technical-specifications">Architecture</a> &nbsp;•&nbsp;
   <a href="#2-privacy-policy">Privacy Policy</a> &nbsp;•&nbsp;
   <a href="#3-terms-of-service">Terms of Service</a> &nbsp;•&nbsp;
-  <a href="#4-contact-information">Contact</a>
+  <a href="#4-regulatory--trader-status-disclosure">Trader Status</a> &nbsp;•&nbsp;
+  <a href="#5-contact-information">Contact</a>
 </p>
 
 ---
@@ -365,7 +366,16 @@ This document constitutes the entire agreement between you and the developer reg
 
 ---
 
-## 4. Contact Information
+## 4. Regulatory & Trader Status Disclosure (EU / UK DSA)
+
+Under the European Union Digital Services Act (DSA) and UK consumer regulations:
+- **Trader Status Declaration:** The developer has declared trader status for this application in accordance with applicable consumer protection legislation.
+- **Consumer Notice & Disclosures:** Verified developer contact and trader details are registered with and displayed directly via the Google Play Store listing for users residing in the European Economic Area (EEA) and the United Kingdom (UK).
+- **Service Scope:** CashBuddy provides 100% offline personal finance and expense bookkeeping tools on an "as is" basis, with zero external network tracking, zero SMS permissions, and all data remaining in hardware-backed encryption on the user's local device.
+
+---
+
+## 5. Contact Information
 
 **Developer:** Likhith  
 **Email:** likid2d21@gmail.com  
@@ -376,4 +386,4 @@ For privacy questions, support, or inquiries regarding these terms, please conta
 
 ---
 
-**Last Updated:** October 10, 2026
+**Last Updated:** November 21, 2026

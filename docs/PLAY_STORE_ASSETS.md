@@ -62,3 +62,31 @@ PaisaPal is proudly ad-free, subscription-free, and dedicated to your financial 
   4. *Multi-Account Hub*: Bank accounts, credit cards, and wallets at a glance.
   5. *Budgets & Goals*: Progress bars and threshold warnings.
   6. *Security & Privacy*: Keystore encryption and biometric unlock indicator.
+
+---
+
+## 4. App-Level Trader Status & Legal Declarations
+
+### 4.1 Trader Status (EU/UK DSA Regulation)
+- **Status Selection**: `Yes, my trader status applies to this app`
+- **Justification**: Trader status declared in accordance with EU/UK Digital Services Act (DSA) requirements. Verified trader contact details are displayed on the Google Play Store listing for users in the EEA and UK.
+
+### 4.2 Legal URLs & Links
+- **Terms of Service URL**: `https://l1khith.github.io/CashBuddy/#3-terms-of-service`
+- **Privacy Policy URL**: `https://l1khith.github.io/CashBuddy/#2-privacy-policy`
+- **Official App Website**: `https://l1khith.github.io/CashBuddy`
+- **Support & Developer Contact**: `likid2d21@gmail.com`
+
+### 4.3 Production Release Details
+- **Release Name**: `1.0.6 (7) - Production Launch`
+- **Release Notes (`en-GB`)**:
+```text
+<en-GB>
+• Offline-First Smart Tracking: Seamlessly logs incoming and outgoing UPI transactions with 100% on-device privacy.
+• Zero Network & Zero SMS: Complete protection for your financial data—no internet access or SMS read permissions required.
+• Instant Notification Intake: Lightweight background detection for bank and payment alerts.
+• Biometric Security: Hardware-backed keystore encryption and biometric lock protection.
+• Performance & Speed: Single-DEX architecture and baseline profile optimisations for ultra-fast startup and smooth scrolling.
+</en-GB>
+```
+
