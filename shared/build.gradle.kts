@@ -71,7 +71,6 @@ kotlin {
             implementation(libs.kotlin.coroutines.android)
             implementation(libs.sqldelight.android)
             implementation(libs.koin.android)
-            implementation(libs.androidx.security)
             implementation(libs.androidx.biometric)
             implementation(libs.androidx.core)
             implementation(libs.androidx.activity.compose)

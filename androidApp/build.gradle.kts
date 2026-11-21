@@ -28,8 +28,8 @@ android {
         applicationId = "com.cashbuddy"
         minSdk = libs.versions.android.minSdk.get().toInt()
         targetSdk = libs.versions.android.targetSdk.get().toInt()
-        versionCode = 7
-        versionName = "1.0.6"
+        versionCode = 8
+        versionName = "1.0.7"
 
         ndk {
             abiFilters.addAll(listOf("arm64-v8a", "x86_64"))
@@ -88,10 +88,10 @@ android {
             )
         }
         create("benchmark") {
-            initWith(buildTypes.getByName("debug"))
-            matchingFallbacks += listOf("debug")
+            initWith(buildTypes.getByName("release"))
+            matchingFallbacks += listOf("release")
             signingConfig = signingConfigs.getByName("debug")
-            isDebuggable = true
+            isDebuggable = false
         }
     }
     compileOptions {
