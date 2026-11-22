@@ -32,6 +32,7 @@ html {
   -moz-osx-font-smoothing: grayscale;
   text-rendering: optimizeLegibility;
   scroll-behavior: smooth;
+  scroll-padding-top: 80px;
 }
 
 body {
@@ -697,6 +698,7 @@ img {
     <a href="#how-it-works">How It Works</a>
     <a href="#architecture">Architecture</a>
     <a href="#privacy">Privacy</a>
+    <a href="#terms">Terms</a>
     <a href="https://github.com/l1khith/CashBuddy" target="_blank" rel="noopener">GitHub ↗</a>
   </div>
   <a href="https://github.com/l1khith/CashBuddy/releases" class="btn-primary">Download</a>
@@ -889,7 +891,7 @@ img {
     Your financial data is completely under your custody. You can export your full transaction history at any time to standard RFC-4180 CSV format via Android's Storage Access Framework (SAF). Furthermore, you can permanently erase all recorded transactions and reset machine learning models directly within the application via <strong>Settings &rarr; Delete All Transactions</strong> and <strong>Settings &rarr; Reset Training Data</strong>. Uninstalling the App permanently deletes all local database records and hardware-bound encryption keys.
   </p>
 
-  <h2>3. Terms of Service</h2>
+  <h2 id="terms">3. Terms of Service</h2>
   <h3>3.1 Informational Bookkeeping Utility Only</h3>
   <p>
     CashBuddy is provided strictly as an offline bookkeeping and expense-tracking utility. CashBuddy is not a bank, licensed payment aggregator, financial institution, or registered investment advisor. Automated parsing accuracy depends on notification formatting provided by your financial institutions; users remain responsible for verifying recorded transactions against official bank and card statements.
@@ -958,15 +960,14 @@ img {
         <a href="#how-it-works">How It Works</a>
         <a href="#features">Features</a>
         <a href="#architecture">Architecture</a>
-        <a href="#privacy">Privacy &amp; Terms</a>
       </div>
 
       <div class="footer-col">
-        <h4>Contact &amp; Source</h4>
-        <a href="mailto:likid2d21@gmail.com">Email Developer</a>
-        <a href="https://github.com/l1khith/CashBuddy" target="_blank" rel="noopener">GitHub Repository ↗</a>
-        <a href="https://l1khith.github.io/CashBuddy">Documentation</a>
+        <h4>Legal</h4>
         <a href="#privacy">Privacy Policy</a>
+        <a href="#terms">Terms of Service</a>
+        <a href="mailto:likid2d21@gmail.com">Contact Developer</a>
+        <a href="https://github.com/l1khith/CashBuddy" target="_blank" rel="noopener">GitHub Repository ↗</a>
       </div>
     </div>
 
