@@ -1,0 +1,987 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CashBuddy — 100% Offline Expense Tracking for Android</title>
+  <link rel="icon" type="image/png" href="assets/favicon.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+</head>
+<body>
+<style>
+/* ── Design Tokens ── */
+:root {
+  --canvas: #08090A;
+  --section-fill: #0E1011;
+  --card-surface: #141516;
+  --card-hover: #191A1B;
+  --interactive: #1E2024;
+  --border-default: rgba(255, 255, 255, 0.06);
+  --border-hover: rgba(255, 255, 255, 0.14);
+  --text-primary: #F7F8F8;
+  --text-secondary: #8A8F98;
+  --text-tertiary: #62666D;
+  --brand-accent: #5E6AD2;
+  --brand-hover: #6E7BE2;
+}
+
+/* ── Reset & Base ── */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+  scroll-behavior: smooth;
+}
+
+body {
+  background: #08090A;
+  color: #F7F8F8;
+  font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 0.9375rem;
+  font-weight: 400;
+  line-height: 1.6;
+  min-height: 100vh;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+}
+
+/* ── Layout ── */
+.container {
+  max-width: 1080px;
+  margin: 0 auto;
+  padding: 0 24px;
+  width: 100%;
+}
+
+/* ── Navigation ── */
+.nav {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  height: 56px;
+  background: rgba(8, 9, 10, 0.8);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.nav > .container {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 100%;
+}
+
+.nav:not(:has(.container)) {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 24px;
+}
+
+.nav-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 1rem;
+  font-weight: 600;
+  color: #F7F8F8;
+  text-decoration: none;
+}
+
+.nav-brand img,
+.nav-brand svg {
+  height: 28px;
+  width: 28px;
+  border-radius: 6px;
+}
+
+.nav-links {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+}
+
+.nav-links a {
+  font-size: 0.875rem;
+  font-weight: 400;
+  color: #8A8F98;
+  text-decoration: none;
+  transition: color 150ms ease;
+}
+
+.nav-links a:hover {
+  color: #F7F8F8;
+}
+
+/* ── Buttons ── */
+.btn-primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: #F7F8F8;
+  color: #08090A;
+  font-size: 0.875rem;
+  font-weight: 500;
+  padding: 10px 20px;
+  border-radius: 9999px;
+  border: 1px solid transparent;
+  cursor: pointer;
+  text-decoration: none;
+  transition: opacity 150ms ease, background-color 150ms ease;
+  box-shadow: none;
+}
+
+.btn-primary:hover {
+  opacity: 0.88;
+}
+
+.btn-brand,
+.btn-accent {
+  background: #5E6AD2;
+  color: #FFFFFF;
+}
+
+.btn-brand:hover,
+.btn-accent:hover {
+  background: #6E7BE2;
+  opacity: 1;
+}
+
+.btn-ghost,
+.btn-secondary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  color: #8A8F98;
+  font-size: 0.875rem;
+  font-weight: 500;
+  padding: 10px 20px;
+  border-radius: 9999px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  cursor: pointer;
+  text-decoration: none;
+  transition: color 150ms ease, border-color 150ms ease;
+}
+
+.btn-ghost:hover,
+.btn-secondary:hover {
+  color: #F7F8F8;
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+.btn-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: none;
+  border: none;
+  color: #8A8F98;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  text-decoration: none;
+  transition: color 150ms ease;
+}
+
+.btn-link:hover {
+  color: #F7F8F8;
+}
+
+.btn-link .arrow {
+  display: inline-block;
+  transition: transform 150ms ease;
+}
+
+.btn-link:hover .arrow {
+  transform: translateX(2px);
+}
+
+/* ── Typography Helpers ── */
+.text-muted {
+  color: #62666D;
+}
+
+.overline {
+  display: block;
+  font-size: 0.75rem;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #62666D;
+  margin-bottom: 12px;
+}
+
+/* ── Hero ── */
+.hero {
+  position: relative;
+  padding: 80px 0 48px;
+  text-align: center;
+}
+
+.hero::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 100%;
+  background: radial-gradient(ellipse 60% 40% at 50% -10%, rgba(94, 106, 210, 0.08), transparent);
+  pointer-events: none;
+}
+
+.hero h1 {
+  font-size: clamp(2.8rem, 5vw, 3.75rem);
+  font-weight: 500;
+  letter-spacing: -0.035em;
+  line-height: 1.08;
+  color: #F7F8F8;
+  max-width: 860px;
+  margin: 0 auto;
+}
+
+.hero h1 .text-muted {
+  color: #62666D;
+  font-weight: 500;
+}
+
+.hero-sub {
+  font-size: 1.0625rem;
+  font-weight: 400;
+  color: #8A8F98;
+  max-width: 560px;
+  margin: 20px auto 0;
+  line-height: 1.6;
+}
+
+.hero-actions {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 16px;
+  margin-top: 32px;
+}
+
+/* ── Sections ── */
+.section {
+  padding-top: 84px;
+}
+
+.section-header {
+  text-align: center;
+  max-width: 640px;
+  margin: 0 auto;
+}
+
+.section-header h2 {
+  font-size: 2.125rem;
+  font-weight: 500;
+  letter-spacing: -0.025em;
+  line-height: 1.15;
+  color: #F7F8F8;
+}
+
+.section-header h2 .text-muted {
+  color: #62666D;
+  font-weight: 500;
+}
+
+.section-header p {
+  font-size: 0.9375rem;
+  color: #8A8F98;
+  margin-top: 12px;
+  line-height: 1.6;
+}
+
+/* ── Screenshot Row ── */
+.screenshot-row {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 20px;
+  margin-top: 36px;
+}
+
+.screenshot-row img {
+  max-height: 480px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  background: #141516;
+  box-shadow: none;
+}
+
+/* ── Pillars Grid ── */
+.pillars-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  margin-top: 36px;
+}
+
+.pillar-card {
+  background: #141516;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 12px;
+  padding: 32px;
+  transition: border-color 150ms ease, background-color 150ms ease;
+  box-shadow: none;
+}
+
+.pillar-card:hover {
+  background: #191A1B;
+  border-color: rgba(255, 255, 255, 0.14);
+}
+
+.pillar-num {
+  font-family: "SF Mono", ui-monospace, Consolas, monospace;
+  font-size: 0.8125rem;
+  color: #62666D;
+  margin-bottom: 16px;
+  display: block;
+}
+
+.pillar-card h3 {
+  font-size: 1.125rem;
+  font-weight: 500;
+  letter-spacing: -0.015em;
+  color: #F7F8F8;
+  margin-bottom: 8px;
+}
+
+.pillar-card p {
+  font-size: 0.9375rem;
+  color: #8A8F98;
+  line-height: 1.6;
+}
+
+/* ── Feature List ── */
+.feature-list {
+  display: flex;
+  flex-direction: column;
+  margin-top: 32px;
+}
+
+.feature-item {
+  padding: 22px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.feature-item:last-child {
+  border-bottom: none;
+}
+
+.feature-item h3 {
+  font-size: 1.125rem;
+  font-weight: 500;
+  letter-spacing: -0.015em;
+  color: #F7F8F8;
+  margin-bottom: 6px;
+}
+
+.feature-item p {
+  font-size: 0.9375rem;
+  color: #8A8F98;
+  line-height: 1.6;
+}
+
+/* ── Tech Row ── */
+.tech-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 24px;
+  justify-content: center;
+  align-items: center;
+  margin-top: 32px;
+  font-size: 0.875rem;
+  color: #8A8F98;
+}
+
+.tech-row span {
+  display: inline-flex;
+  align-items: center;
+}
+
+.tech-row span + span::before {
+  content: "·";
+  margin-right: 24px;
+  color: #62666D;
+}
+
+/* ── Legal & Policy ── */
+.legal {
+  padding-top: 84px;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.legal-content,
+.legal:not(:has(.container)) {
+  max-width: 760px;
+  margin: 0 auto;
+  padding-left: 24px;
+  padding-right: 24px;
+}
+
+.legal .container {
+  max-width: 760px;
+}
+
+.legal h2 {
+  font-size: 1.5rem;
+  font-weight: 500;
+  letter-spacing: -0.02em;
+  margin-top: 48px;
+  color: #F7F8F8;
+}
+
+.legal h2:first-child {
+  margin-top: 0;
+}
+
+.legal h2 .text-muted {
+  color: #62666D;
+  font-weight: 500;
+}
+
+.legal h3 {
+  font-size: 1.125rem;
+  font-weight: 500;
+  letter-spacing: -0.015em;
+  margin-top: 32px;
+  margin-bottom: 8px;
+  color: #F7F8F8;
+}
+
+.legal h4 {
+  font-size: 0.9375rem;
+  font-weight: 500;
+  margin-top: 24px;
+  color: #F7F8F8;
+}
+
+.legal p,
+.legal li {
+  font-size: 0.9375rem;
+  color: #8A8F98;
+  line-height: 1.6;
+  margin-top: 12px;
+}
+
+.legal ul,
+.legal ol {
+  padding-left: 20px;
+  margin-top: 12px;
+}
+
+.legal li + li {
+  margin-top: 6px;
+}
+
+.legal strong {
+  color: #F7F8F8;
+  font-weight: 500;
+}
+
+.legal a {
+  color: #F7F8F8;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  transition: color 150ms ease;
+}
+
+.legal a:hover {
+  color: #5E6AD2;
+}
+
+.legal table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 20px;
+  margin-bottom: 24px;
+}
+
+.legal th,
+.legal td {
+  padding: 10px 14px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  font-size: 0.875rem;
+  text-align: left;
+  vertical-align: top;
+}
+
+.legal th {
+  background: #141516;
+  color: #F7F8F8;
+  font-weight: 500;
+}
+
+.legal td {
+  color: #8A8F98;
+}
+
+.legal tr:hover td {
+  background: #0E1011;
+}
+
+.legal code {
+  font-family: "SF Mono", ui-monospace, Consolas, monospace;
+  font-size: 0.8125rem;
+  background: #141516;
+  padding: 2px 6px;
+  border-radius: 4px;
+  color: #F7F8F8;
+}
+
+/* ── Footer ── */
+.footer {
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  padding: 48px 0 36px;
+  margin-top: 84px;
+}
+
+.footer:not(:has(.container)) {
+  padding-left: 24px;
+  padding-right: 24px;
+}
+
+.footer-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 32px;
+}
+
+.footer-col h4 {
+  font-size: 0.8125rem;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #F7F8F8;
+  margin-bottom: 16px;
+}
+
+.footer-col p {
+  font-size: 0.875rem;
+  color: #8A8F98;
+  line-height: 1.5;
+}
+
+.footer-col a {
+  display: block;
+  font-size: 0.875rem;
+  color: #8A8F98;
+  padding: 4px 0;
+  text-decoration: none;
+  transition: color 150ms ease;
+}
+
+.footer-col a:hover {
+  color: #F7F8F8;
+}
+
+.footer-bottom {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-top: 32px;
+  margin-top: 48px;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  font-size: 0.8125rem;
+  color: #62666D;
+}
+
+/* ── Responsive Queries ── */
+@media (max-width: 768px) {
+  .nav-links {
+    display: none;
+  }
+
+  .hero {
+    padding: 80px 0 60px;
+  }
+
+  .hero h1 {
+    font-size: clamp(2rem, 8vw, 2.5rem);
+  }
+
+  .hero-sub {
+    font-size: 0.9375rem;
+  }
+
+  .hero-actions {
+    flex-direction: column;
+    width: 100%;
+  }
+
+  .hero-actions .btn-primary,
+  .hero-actions .btn-link {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .section {
+    padding-top: 80px;
+  }
+
+  .section-header h2 {
+    font-size: 1.75rem;
+  }
+
+  .pillars-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .screenshot-row {
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .screenshot-row img {
+    max-width: 100%;
+    max-height: 400px;
+  }
+
+  .tech-row {
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .tech-row span + span::before {
+    display: none;
+  }
+
+  .legal {
+    padding-top: 80px;
+  }
+
+  .legal table {
+    display: block;
+    overflow-x: auto;
+  }
+
+  .footer {
+    margin-top: 80px;
+    padding: 48px 0 32px;
+  }
+
+  .footer-grid {
+    grid-template-columns: 1fr;
+    gap: 24px;
+  }
+
+  .footer-bottom {
+    flex-direction: column;
+    gap: 12px;
+    text-align: center;
+  }
+}
+</style>
+
+<header class="nav">
+  <a href="#" class="nav-brand">
+    <img src="assets/logo.svg" width="24" height="24" alt="CashBuddy" />
+    <span>CashBuddy</span>
+  </a>
+  <div class="nav-links">
+    <a href="#features">Features</a>
+    <a href="#how-it-works">How It Works</a>
+    <a href="#architecture">Architecture</a>
+    <a href="#privacy">Privacy</a>
+    <a href="https://github.com/l1khith/CashBuddy" target="_blank" rel="noopener">GitHub ↗</a>
+  </div>
+  <a href="https://github.com/l1khith/CashBuddy/releases" class="btn-primary">Download</a>
+</header>
+
+<main>
+  <!-- Hero Section -->
+  <section class="hero">
+    <div class="container">
+      <h1>
+        Track every rupee, entirely on your device.<br>
+        <span class="text-muted">No servers, no SMS, no compromises.</span>
+      </h1>
+      <p class="hero-sub">
+        CashBuddy parses payment notifications locally, categorizes spending with on-device ML, and encrypts everything with hardware-backed AES-256.
+      </p>
+      <div class="hero-actions">
+        <a href="https://github.com/l1khith/CashBuddy/releases" class="btn-primary">Download APK</a>
+        <a href="https://github.com/l1khith/CashBuddy" class="btn-link" target="_blank" rel="noopener">
+          Source on GitHub <span class="arrow">&rarr;</span>
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <!-- Screenshot Showcase -->
+  <section class="section" id="screenshots">
+    <div class="container">
+      <div class="section-header">
+        <div class="overline">THE INTERFACE</div>
+      </div>
+      <div class="screenshot-row">
+        <img src="screenshots/1_home.jpg" alt="CashBuddy Home Ledger" loading="lazy" />
+        <img src="screenshots/2_stats.jpg" alt="CashBuddy Spending Analytics" loading="lazy" />
+        <img src="screenshots/3_add.jpg" alt="CashBuddy Manual Entry" loading="lazy" />
+      </div>
+    </div>
+  </section>
+
+  <!-- How It Works (3 Pillars) -->
+  <section class="section" id="how-it-works">
+    <div class="container">
+      <div class="section-header">
+        <div class="overline">HOW IT WORKS</div>
+        <h2>
+          Automatic, private, accurate.<br>
+          <span class="text-muted">Three principles behind every decision.</span>
+        </h2>
+      </div>
+      <div class="pillars-grid">
+        <div class="pillar-card">
+          <div class="pillar-num">01</div>
+          <h3>Passive capture</h3>
+          <p>Reads incoming banking and UPI alerts at the OS barrier using Android's notification listener without requesting SMS permissions.</p>
+        </div>
+        <div class="pillar-card">
+          <div class="pillar-num">02</div>
+          <h3>On-device intelligence</h3>
+          <p>Categorizes transactions using an on-device Bayesian engine that learns locally from your confirmations and corrections.</p>
+        </div>
+        <div class="pillar-card">
+          <div class="pillar-num">03</div>
+          <h3>Encrypted storage</h3>
+          <p>Stores every record in an AES-256 SQLCipher encrypted database with cryptographic keys protected by the Android Keystore.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Features List -->
+  <section class="section" id="features">
+    <div class="container">
+      <div class="section-header">
+        <div class="overline">FEATURES</div>
+        <h2>
+          Everything you need, nothing you don't.<br>
+          <span class="text-muted">Built for people who care where their data lives.</span>
+        </h2>
+      </div>
+      <div class="feature-list">
+        <div class="feature-item">
+          <h3>Notification listener</h3>
+          <p>Captures UPI and banking alerts via Android's notification listener with zero SMS permissions requested.</p>
+        </div>
+        <div class="feature-item">
+          <h3>Bayesian classifier</h3>
+          <p>Categorizes transactions with on-device probabilistic models that learn and adapt from your corrections.</p>
+        </div>
+        <div class="feature-item">
+          <h3>Review inbox</h3>
+          <p>Flags low-confidence or high-value transactions for manual verification before committing them to your ledger.</p>
+        </div>
+        <div class="feature-item">
+          <h3>Screenshot OCR</h3>
+          <p>Extracts transaction details locally from shared receipt screenshots and discards image data immediately.</p>
+        </div>
+        <div class="feature-item">
+          <h3>Budgets &amp; deduplication</h3>
+          <p>Maintains monthly category spending limits while automatically reconciling duplicate alerts from banks and payment apps.</p>
+        </div>
+        <div class="feature-item">
+          <h3>CSV export</h3>
+          <p>Exports your complete financial history to standard RFC-4180 CSV via Android's Storage Access Framework with zero lock-in.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Architecture -->
+  <section class="section" id="architecture">
+    <div class="container">
+      <div class="section-header">
+        <div class="overline">BUILT WITH</div>
+        <h2>
+          Pure Kotlin Multiplatform.<br>
+          <span class="text-muted">No servers, no native bridges, no network dependencies.</span>
+        </h2>
+      </div>
+      <div class="tech-row">
+        <span>Kotlin Multiplatform</span>
+        <span>Compose Multiplatform</span>
+        <span>SQLDelight + SQLCipher</span>
+        <span>Koin 4.0</span>
+        <span>Android Keystore</span>
+      </div>
+    </div>
+  </section>
+
+<section class="legal" id="privacy" style="padding-left: 24px; padding-right: 24px;">
+  <span class="overline" style="display: block;">PRIVACY &amp; LEGAL</span>
+  <h2 style="font-size: 2.125rem; line-height: 1.15; letter-spacing: -0.025em; margin-top: 0; margin-bottom: 36px;">
+    Your data never leaves your device. <span class="text-muted">Full privacy policy and terms of service.</span>
+  </h2>
+
+  <h2>1. Introduction</h2>
+  <p>
+    Welcome to CashBuddy ("we", "our", "us"). This document outlines our legally binding Privacy Policy and Terms of Service. By downloading, installing, accessing, or using CashBuddy ("the App"), you agree without modification to the terms, practices, and disclosures detailed herein. If you do not agree with any provision of these terms, you must not use or install the App.
+  </p>
+
+  <h2>2. Privacy Policy &amp; Prominent Disclosures</h2>
+  <h3>2.1 Local Processing Model</h3>
+  <p>
+    CashBuddy operates under a strict <strong>100% Offline, Zero-Server Architecture</strong>. All financial records, parsing operations, machine learning models, and configurations reside exclusively on your physical device:
+  </p>
+  <ul>
+    <li><strong>Local Encrypted Data:</strong> Transaction ledgers (amounts, merchants, timestamps, categories), custom category taxonomies, budget limits, and Naive Bayes token frequency models are stored locally inside a 256-bit AES SQLCipher encrypted database. Master encryption keys are protected using the Android Keystore.</li>
+    <li><strong>Ephemeral In-Memory Notification Ingestion:</strong> When granted notification permission (<code>BIND_NOTIFICATION_LISTENER_SERVICE</code>), CashBuddy inspects incoming banking and payment alerts solely in volatile system memory (RAM). Non-financial notifications, personal messages, one-time passwords (OTPs), and promotional alerts are discarded immediately without being written to persistent storage or disk.</li>
+    <li><strong>Instant On-Device Screenshot Processing:</strong> Shared payment screenshots are processed entirely on-device using local text recognition. The temporary image cache is deleted and unlinked immediately after text extraction.</li>
+    <li><strong>Zero Data Transmission:</strong> The application does not declare or request the <code>android.permission.INTERNET</code> or <code>android.permission.ACCESS_NETWORK_STATE</code> permissions. No data physically leaves your device; there are zero network sockets, telemetry streams, or external servers.</li>
+  </ul>
+
+  <h3>2.2 Permissions Table &amp; Prominent Disclosures</h3>
+  <p>
+    The App requests only permissions strictly required for local, on-device functionality. In accordance with Google Play Developer Policies, we provide the following prominent disclosures:
+  </p>
+  <table>
+    <thead>
+      <tr>
+        <th style="width: 36%;">Permission Key</th>
+        <th>Operational Purpose &amp; Prominent Disclosure</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><code>BIND_NOTIFICATION_LISTENER_SERVICE</code></td>
+        <td><strong>Prominent Disclosure:</strong> Used exclusively to read incoming banking and UPI payment notifications locally in device RAM to automate expense logging without manual data entry. Notification data never leaves the device and is never written to remote storage.</td>
+      </tr>
+      <tr>
+        <td><code>USE_BIOMETRIC</code></td>
+        <td>Enforces optional hardware-backed fingerprint or facial recognition (<code>BIOMETRIC_STRONG</code>) on app launch and upon returning from a 5-minute background inactivity interval.</td>
+      </tr>
+      <tr>
+        <td><code>POST_NOTIFICATIONS</code></td>
+        <td>Emits local device notifications when transactions require manual verification in the Review Inbox (confidence &lt; 0.85 or amount &ge; &#8377;10,000) or when spending approaches a configured budget threshold.</td>
+      </tr>
+      <tr>
+        <td><code>VIBRATE</code></td>
+        <td>Provides tactile haptic feedback during in-app confirmations, category selections, and transaction reviews.</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h3>2.3 Zero Advertising, Analytics &amp; Third-Party SDKs</h3>
+  <p>
+    CashBuddy contains <strong>zero advertising SDKs</strong>, <strong>zero cloud telemetry or analytics libraries</strong>, and <strong>zero remote crash logging services</strong>. Any transitive background tracking or network helpers bundled with third-party libraries are explicitly stripped during compilation via Android Manifest merger removal rules.
+  </p>
+
+  <h3>2.4 User Sovereignty: Data Retention, Export &amp; Deletion</h3>
+  <p>
+    Your financial data is completely under your custody. You can export your full transaction history at any time to standard RFC-4180 CSV format via Android's Storage Access Framework (SAF). Furthermore, you can permanently erase all recorded transactions and reset machine learning models directly within the application via <strong>Settings &rarr; Delete All Transactions</strong> and <strong>Settings &rarr; Reset Training Data</strong>. Uninstalling the App permanently deletes all local database records and hardware-bound encryption keys.
+  </p>
+
+  <h2>3. Terms of Service</h2>
+  <h3>3.1 Informational Bookkeeping Utility Only</h3>
+  <p>
+    CashBuddy is provided strictly as an offline bookkeeping and expense-tracking utility. CashBuddy is not a bank, licensed payment aggregator, financial institution, or registered investment advisor. Automated parsing accuracy depends on notification formatting provided by your financial institutions; users remain responsible for verifying recorded transactions against official bank and card statements.
+  </p>
+
+  <h3>3.2 Local Data Custody &amp; Absence of Cloud Recovery</h3>
+  <p>
+    Because CashBuddy maintains zero central servers and no cloud accounts, we hold no copies of your database. You are solely responsible for backing up your data via local CSV export. We cannot recover lost ledgers resulting from device theft, operating system resets, or app uninstallation.
+  </p>
+
+  <h3>3.3 Disclaimer of Warranties</h3>
+  <p>
+    CashBuddy is provided on an "as is" and "as available" basis without warranties of any kind, either express or implied, including but not limited to implied warranties of merchantability, fitness for a particular purpose, and non-infringement.
+  </p>
+
+  <h3>3.4 Limitation of Liability</h3>
+  <p>
+    To the maximum extent permitted by applicable law, the developer and contributors shall not be liable for any direct, indirect, incidental, special, exemplary, or consequential damages, or any loss of data or financial discrepancies arising out of or related to your use of the application.
+  </p>
+
+  <h3>3.5 Governing Law &amp; Jurisdiction</h3>
+  <p>
+    These Terms of Service and Privacy Policy shall be governed by and construed in accordance with the laws of India, without regard to conflict of laws principles.
+  </p>
+
+  <h2>4. Regulatory &amp; Trader Status Disclosures (EU / UK DSA)</h2>
+  <p>
+    In compliance with the European Union Digital Services Act (Regulation (EU) 2022/2065) and UK consumer protection laws:
+  </p>
+  <ul>
+    <li><strong>Trader Status:</strong> The developer has declared trader status in compliance with EU Digital Services Act and UK consumer protection regulations.</li>
+    <li><strong>Developer Identity &amp; Verification:</strong> Developer contact and verification particulars are officially registered and accessible via the Google Play Store listing for users located in the European Economic Area (EEA) and the United Kingdom.</li>
+  </ul>
+
+  <h2>5. Contact Information</h2>
+  <p>
+    For inquiries, regulatory questions, or feedback regarding this Privacy Policy or Terms of Service:
+  </p>
+  <p>
+    <strong>Developer:</strong> Likhith<br>
+    <strong>Email:</strong> <a href="mailto:likid2d21@gmail.com" style="color: #F7F8F8; text-decoration: underline; text-underline-offset: 2px;">likid2d21@gmail.com</a><br>
+    <strong>Source Code:</strong> <a href="https://github.com/l1khith/CashBuddy" target="_blank" rel="noopener" style="color: #F7F8F8; text-decoration: underline; text-underline-offset: 2px;">https://github.com/l1khith/CashBuddy</a><br>
+    <strong>Documentation:</strong> <a href="https://l1khith.github.io/CashBuddy" target="_blank" rel="noopener" style="color: #F7F8F8; text-decoration: underline; text-underline-offset: 2px;">https://l1khith.github.io/CashBuddy</a>
+  </p>
+  <p style="font-size: 0.8125rem; color: #62666D; margin-top: 32px; padding-top: 16px; border-top: 1px solid rgba(255, 255, 255, 0.06);">
+    Last Updated: November 21, 2026 &bull; Strict Local-Only Execution Architecture
+  </p>
+</section>
+</main>
+
+<footer class="footer"><div class="container">
+    <div class="footer-grid">
+      <div class="footer-col">
+        <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 12px;">
+          <img src="assets/logo.svg" width="20" height="20" alt="CashBuddy" style="border-radius: 4px;" />
+          <span style="font-weight: 500; color: #F7F8F8; font-size: 0.9375rem;">CashBuddy</span>
+        </div>
+        <p style="font-size: 0.875rem; color: #8A8F98; line-height: 1.5; max-width: 280px;">
+          100% offline, privacy-first expense tracking for Android. Built with Kotlin Multiplatform and SQLCipher.
+        </p>
+      </div>
+
+      <div class="footer-col">
+        <h4>Product</h4>
+        <a href="https://github.com/l1khith/CashBuddy/releases">Download APK</a>
+        <a href="#how-it-works">How It Works</a>
+        <a href="#features">Features</a>
+        <a href="#architecture">Architecture</a>
+        <a href="#privacy">Privacy &amp; Terms</a>
+      </div>
+
+      <div class="footer-col">
+        <h4>Contact &amp; Source</h4>
+        <a href="mailto:likid2d21@gmail.com">Email Developer</a>
+        <a href="https://github.com/l1khith/CashBuddy" target="_blank" rel="noopener">GitHub Repository ↗</a>
+        <a href="https://l1khith.github.io/CashBuddy">Documentation</a>
+        <a href="#privacy">Privacy Policy</a>
+      </div>
+    </div>
+
+    <div class="footer-bottom">
+      <span>&copy; 2026 Likhith. All rights reserved.</span>
+      <span>100% offline &bull; Built with Kotlin Multiplatform</span>
+    </div>
+  </div>
+</footer>
+</body>
+</html>
