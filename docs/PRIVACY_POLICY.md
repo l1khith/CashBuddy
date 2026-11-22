@@ -20,7 +20,7 @@ PaisaPal was engineered from the ground up around a fundamental principle: **You
 
 ### 2.1 Notification Access (`BIND_NOTIFICATION_LISTENER_SERVICE`)
 To automatically detect and track transactions, PaisaPal requests access to incoming device notifications.
-- **Strict Package Filtering**: PaisaPal inspects notifications originated solely from a curated allowlist of known banking, UPI, and fintech applications (such as Google Pay, PhonePe, Paytm, and approved Indian scheduled commercial banks).
+- **Content-First Probabilistic Filtering**: CashBuddy inspects notifications using a 100% on-device content-first probabilistic classifier (zero hardcoded package or sender allowlists). All classification and scoring happen locally with learned Bayesian weights.
 - **Discarding of Sensitive Communications**: Notifications containing one-time passwords (OTPs), authentication codes, personal chats, and marketing promotions are detected and discarded instantly from volatile memory.
 - **Redaction & Local Storage**: Only extracted numerical amounts, detected merchant identifiers, account references (last 4 digits only), and transaction dates are persisted locally.
 

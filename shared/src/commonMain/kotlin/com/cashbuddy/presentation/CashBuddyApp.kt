@@ -105,8 +105,8 @@ fun CashBuddyApp(
         if (!initialRoute.isNullOrBlank()) {
             val target = when (initialRoute.trim().lowercase()) {
                 "add", "add_transaction" -> ScreenRoute.AddTransaction()
-                "review", "review_inbox" -> ScreenRoute.ReviewInbox
-                "transact", "transactions", "screenshot", "processing_screenshot" -> ScreenRoute.Transactions()
+                "review", "review_inbox", "screenshot", "processing_screenshot" -> ScreenRoute.ReviewInbox
+                "transact", "transactions" -> ScreenRoute.Transactions()
                 "stat", "stats" -> ScreenRoute.Stats
                 "setting", "settings" -> ScreenRoute.Settings
                 "budget", "budgets" -> ScreenRoute.Budgets

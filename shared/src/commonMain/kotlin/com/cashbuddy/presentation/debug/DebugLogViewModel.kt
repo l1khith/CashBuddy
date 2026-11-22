@@ -229,7 +229,7 @@ class DebugLogViewModel(
                     recordingRemainingSeconds = debugConfig.getRecordingRemainingSeconds()
                 )
             }
-            viewModelScope.launch { _messageEffect.emit("Recording started (15 min auto-expiry)") }
+            viewModelScope.launch { _messageEffect.emit("Recording started (active for 24h)") }
             startRecordingTimer()
         }
     }

@@ -6,6 +6,9 @@ import kotlin.math.abs
 object DedupEngine {
     const val WINDOW_MS = 5 * 60 * 1000L
 
+    /** Jaro-Winkler similarity above which two different merchant names are treated as the same payee in dedup. */
+    const val MERCHANT_SIMILARITY_THRESHOLD = 0.70
+
     sealed interface Decision {
         object Insert : Decision
         object Skip : Decision
@@ -68,7 +71,7 @@ object DedupEngine {
                 existingM.equals(newM, ignoreCase = true) ||
                 existingM.contains(newM, ignoreCase = true) ||
                 newM.contains(existingM, ignoreCase = true) -> true
-                JaroWinkler.similarity(existingM, newM) >= 0.70 -> true
+                JaroWinkler.similarity(existingM, newM) >= MERCHANT_SIMILARITY_THRESHOLD -> true
                 else -> false
             }
         }
@@ -99,9 +102,8 @@ object DedupEngine {
     private fun pickBestMerchant(m1: String?, m2: String?): String? {
         if (m1.isNullOrBlank()) return m2
         if (m2.isNullOrBlank()) return m1
-        val generic = setOf("upi merchant", "merchant", "unknown merchant", "bank")
-        val m1Gen = generic.contains(m1.lowercase())
-        val m2Gen = generic.contains(m2.lowercase())
+        val m1Gen = com.cashbuddy.core.MerchantLabels.isGeneric(m1)
+        val m2Gen = com.cashbuddy.core.MerchantLabels.isGeneric(m2)
         if (m1Gen && !m2Gen) return m2
         if (m2Gen && !m1Gen) return m1
         // Prefer longer, more descriptive merchant names (e.g. "Bottle Lab Technologies Private Limited" over "Bottle L")

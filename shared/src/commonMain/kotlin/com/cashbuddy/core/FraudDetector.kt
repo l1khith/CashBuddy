@@ -20,6 +20,25 @@ class FraudDetector(
     private val recurringPatternRepository: RecurringPatternRepository? = null,
     private val windowDays: Int = 30
 ) {
+    companion object {
+        /** Minimum 30-day debit history at a merchant before anomaly statistics are trusted. */
+        const val MIN_SAMPLE_SIZE = 10
+
+        /** Modified z-score (M_i) threshold per Iglewicz & Hoaglin (1993). */
+        const val MODIFIED_Z_SCORE_THRESHOLD = 3.5
+
+        /** Percentile rule: amount must exceed P95 AND be at least this multiple of the median. */
+        const val P95_MEDIAN_MULTIPLE = 1.5
+
+        /** MAD-mode fallback: relative deviation from a zero-variance median that counts as anomalous. */
+        const val MAD_MODE_RELATIVE_THRESHOLD = 0.5
+
+        /** Zero-variance guard: MADs below this are treated as exactly zero. */
+        const val MAD_FLOOR = 1e-4
+
+        /** Amount within ±10% of a recurring pattern's amount is suppressed from anomaly flagging. */
+        const val RECURRING_SUPPRESSION_TOLERANCE_RATIO = 0.10
+    }
 
     /**
      * Checks if a transaction amount is anomalous compared to the merchant's 30-day debit history.
@@ -43,7 +62,8 @@ class FraudDetector(
             val matchesRecurring = patterns.any { pattern ->
                 if (pattern.amountPaise > 0L) {
                     val diffPaise = abs(amountPaise - pattern.amountPaise)
-                    (diffPaise * 10L) <= pattern.amountPaise
+                    // diff / patternAmount <= tolerance  (±10% of the recurring amount)
+                    diffPaise <= (pattern.amountPaise * RECURRING_SUPPRESSION_TOLERANCE_RATIO).toLong()
                 } else {
                     false
                 }
@@ -73,7 +93,7 @@ class FraudDetector(
         )
 
         val n = historicalAmounts.size
-        if (n < 10) {
+        if (n < MIN_SAMPLE_SIZE) {
             val median = if (n > 0) computeMedian(historicalAmounts) else 0.0
             return AnomalyResult(
                 isAnomalous = false,
@@ -99,10 +119,10 @@ class FraudDetector(
         val deviations = historicalAmounts.map { abs(it - median) }
         val mad = computeMedian(deviations)
 
-        if (mad < 1e-4) {
+        if (mad < MAD_FLOOR) {
             val isAnomalous = if (median > 0.0 && amount != median) {
                 val ratio = abs(amount - median) / median
-                ratio >= 0.5
+                ratio >= MAD_MODE_RELATIVE_THRESHOLD
             } else if (median == 0.0 && amount > 0.0) {
                 true
             } else {
@@ -129,9 +149,10 @@ class FraudDetector(
         }
 
         val score = 0.6745 * (amount - median) / mad
-        val isScoreAnomalous = score > 3.5
-        // Flagged if score > 3.5, or if amount exceeds the 95th percentile and is significantly above median
-        val isPercentileAnomalous = amount > p95 && (amount >= 1.5 * p50 || isScoreAnomalous)
+        val isScoreAnomalous = score > MODIFIED_Z_SCORE_THRESHOLD
+        // Flagged if score exceeds the modified z-score threshold, or if amount exceeds the 95th
+        // percentile and is significantly above median
+        val isPercentileAnomalous = amount > p95 && (amount >= P95_MEDIAN_MULTIPLE * p50 || isScoreAnomalous)
         val isAnomalous = isScoreAnomalous || isPercentileAnomalous
 
         val warningMessage = if (isAnomalous) {

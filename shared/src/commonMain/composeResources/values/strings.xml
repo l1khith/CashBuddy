@@ -261,6 +261,10 @@
     <string name="settings_ocr_title">Screenshot Receipt OCR</string>
     <string name="settings_ocr_desc">Screenshot OCR uses ML Kit on the Play Store build and Tesseract on the F-Droid build. Both run entirely on-device.</string>
     <string name="settings_ocr_active">Active</string>
+    <string name="settings_auto_confirm_title">Auto-Log Confirmed Transactions</string>
+    <string name="settings_auto_confirm_desc">Automatically log high-confidence payments directly as Confirmed. If turned off or above limit, payments are routed to Review Inbox as Pending.</string>
+    <string name="settings_auto_confirm_limit_label">Auto-Log Limit: ₹%1$s</string>
+    <string name="settings_auto_confirm_off_status">Manual Review Only (Zero Auto-Log)</string>
     <string name="settings_section_security">Security &amp; Biometrics</string>
     <string name="settings_biometric_lock_title">Biometric Lock</string>
     <string name="settings_biometric_lock_desc">Require fingerprint / face unlock on launch</string>
@@ -365,4 +369,29 @@
     <string name="manage_categories_name_error_duplicate">A category with this name already exists</string>
     <string name="settings_manage_categories">Manage Categories &amp; Domains</string>
     <string name="settings_manage_categories_desc">Create and customize your expense and income domains</string>
+
+    <!-- Personalization Dashboard -->
+    <string name="personalization_title">My Personalization</string>
+    <string name="personalization_accuracy_title">Categorization Accuracy</string>
+    <string name="personalization_accuracy_rules">Local Rules</string>
+    <string name="personalization_accuracy_baseline">Baseline (Uncalibrated)</string>
+    <string name="personalization_metric_learned">Learned</string>
+    <string name="personalization_unit_merchants">merchants</string>
+    <string name="personalization_metric_corrections">Corrections</string>
+    <string name="personalization_unit_feedback">feedback</string>
+    <string name="personalization_metric_raw_alerts">Raw Alerts</string>
+    <string name="personalization_unit_samples">samples</string>
+    <string name="personalization_actions_title">Personalization Actions</string>
+    <string name="personalization_action_training">Evaluating Pending Rules...</string>
+    <string name="personalization_action_train_now">Train / Re-categorize Now</string>
+    <string name="personalization_action_view_data">View Training Data (%1$d records)</string>
+    <string name="personalization_action_export">Export Training Dataset (JSONL)</string>
+    <string name="personalization_action_reset">Reset All Learned Personalization</string>
+    <string name="personalization_recent_corrections_title">Recent Learned Corrections</string>
+    <string name="personalization_empty_corrections_title">No user corrections recorded yet</string>
+    <string name="personalization_empty_corrections_desc">When you edit a category in transaction details, CashBuddy will learn it instantly.</string>
+    <string name="personalization_reset_dialog_title">Reset Learned Rules &amp; Data?</string>
+    <string name="personalization_reset_dialog_desc">This will delete all learned merchant rules, user correction history, and raw training logs. Auto-categorization will revert to default built-in heuristics.</string>
+    <string name="personalization_reset_dialog_confirm">Reset Everything</string>
+    <string name="personalization_btn_cancel">Cancel</string>
 </resources>

@@ -99,7 +99,8 @@ class DebugLogger(
         outcome: String,
         txId: String?,
         mergeTarget: String?,
-        error: String?
+        error: String?,
+        rawText: String? = null
     ) {
         if (!config.enabled || logId.isBlank()) return
         try {
@@ -109,7 +110,8 @@ class DebugLogger(
                 pipelineOutcome = outcome,
                 resultingTxId = txId,
                 mergeTargetId = mergeTarget,
-                errorMessage = error
+                errorMessage = error,
+                rawText = rawText
             )
         } catch (_: Throwable) { }
     }
@@ -120,6 +122,8 @@ class DebugLogger(
                lower.contains("inr") || lower.contains("debited") || lower.contains("credited") ||
                lower.contains("spent") || lower.contains("paid") || lower.contains("a/c") ||
                lower.contains("acct") || lower.contains("upi") || lower.contains("bank") ||
-               lower.contains("vpa") || lower.contains("sent") || lower.contains("received")
+               lower.contains("vpa") || lower.contains("sent") || lower.contains("received") ||
+               lower.contains("payment") || lower.contains("txn") || lower.contains("transferred") ||
+               lower.contains("refund") || lower.contains("cashback")
     }
 }

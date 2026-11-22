@@ -1,0 +1,135 @@
+{
+  "dataset": "cashbuddy_gate_synthetic",
+  "dataset_version": "1.0.0",
+  "schema_version": "1.0.0",
+  "generated_at_utc": "2026-11-21T05:48:17.948970+00:00",
+  "seed": 42,
+  "generator": "trainingdata/generate_dataset.py",
+  "template_versions": {
+    "positive": "pos-v1",
+    "negative": "neg-v1"
+  },
+  "counts": {
+    "total": 39985,
+    "positives": 20000,
+    "negatives": 19985,
+    "by_split": {
+      "train": {
+        "total": 28000,
+        "positives": 14000,
+        "negatives": 14000,
+        "templates": 170,
+        "merchants": 161,
+        "unique_texts": 28000
+      },
+      "val": {
+        "total": 5985,
+        "positives": 3000,
+        "negatives": 2985,
+        "templates": 47,
+        "merchants": 43,
+        "unique_texts": 5985
+      },
+      "test": {
+        "total": 6000,
+        "positives": 3000,
+        "negatives": 3000,
+        "templates": 47,
+        "merchants": 62,
+        "unique_texts": 6000
+      }
+    },
+    "positives_by_category": {
+      "Bills & Utilities": 1334,
+      "Education": 1334,
+      "Entertainment": 1334,
+      "Food & Dining": 1334,
+      "Gift": 1334,
+      "Healthcare": 1333,
+      "Housing": 1333,
+      "Insurance": 1333,
+      "Investment Returns": 1333,
+      "Investments": 1333,
+      "Refund": 1333,
+      "Salary": 1333,
+      "Shopping": 1333,
+      "Transportation": 1333,
+      "Uncategorized": 1333
+    },
+    "negatives_by_type": {
+      "BALANCE_ONLY": 1400,
+      "BANK_PROMO": 1200,
+      "CHAT_SUMMARY": 2800,
+      "COLLECT_REQUEST": 500,
+      "CREDIT_SCORE": 400,
+      "FAILED_TXN": 1400,
+      "GENERIC": 1100,
+      "MANDATE": 400,
+      "NEWS_JOB": 1185,
+      "ORDER_STATUS": 900,
+      "OTP": 2000,
+      "PENDING_TXN": 700,
+      "PROMO": 2700,
+      "REVERSED": 400,
+      "REWARD": 300,
+      "SOCIAL": 2000,
+      "STATEMENT": 600
+    },
+    "by_source_type": {
+      "APP_NOTIFICATION": 6533,
+      "ATM": 205,
+      "BANK_APP": 1134,
+      "BANK_SMS": 15274,
+      "CARD_ALERT": 994,
+      "EMAIL": 500,
+      "MESSAGING": 2800,
+      "MESSAGING_FORWARD": 506,
+      "SCREENSHOT": 1004,
+      "UPI_APP": 10820,
+      "WALLET": 215
+    },
+    "by_difficulty": {
+      "easy": 11729,
+      "hard": 11919,
+      "medium": 15333,
+      "ocr": 1004
+    }
+  },
+  "quality": {
+    "unique_texts": 39985,
+    "duplicate_groups": 1276,
+    "duplicate_companions": 1276
+  },
+  "files": {
+    "positive_bank_transactions.jsonl": {
+      "rows": 20000,
+      "bytes": 17706694,
+      "sha256": "cc00de065351eb09607d8a839ad0876f9dbec185b098e2e2444aeb14e7890f43"
+    },
+    "negative_false_flags.jsonl": {
+      "rows": 19985,
+      "bytes": 16779387,
+      "sha256": "0ae44adb1146f64ccf3747fe01a1ac30d3a8ea23fc69779c9bbbc8ea1264a5be"
+    },
+    "combined.jsonl": {
+      "rows": 39985,
+      "bytes": 34486081,
+      "sha256": "1d3c9ebb5f0aa41024655a868d23286de098cf490a365206720e52b67beea944"
+    },
+    "splits/train.jsonl": {
+      "rows": 28000,
+      "bytes": 24150349,
+      "sha256": "41bf5db946363dd2975cffb680b773895e66108b07b9549ddec34f5104bb665a"
+    },
+    "splits/val.jsonl": {
+      "rows": 5985,
+      "bytes": 5169240,
+      "sha256": "96ea9fbc3e58b596e0aed6ed26c5b2740230ce620921b3759b489e82e6810ad2"
+    },
+    "splits/test.jsonl": {
+      "rows": 6000,
+      "bytes": 5166492,
+      "sha256": "9c322d48eab05cba05640d6b3bc1923de7746ae3340b3d6e86a97bd7e52bc5f9"
+    }
+  }
+}

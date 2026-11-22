@@ -82,14 +82,16 @@ class DebugLogRepositoryImpl(
         pipelineOutcome: String?,
         resultingTxId: String?,
         mergeTargetId: String?,
-        errorMessage: String?
+        errorMessage: String?,
+        rawText: String?
     ): Unit = withContext(dispatcher) {
         queries.updateOutcome(
-            value = policyAction,
-            pipeline_outcome = pipelineOutcome,
-            resulting_tx_id = resultingTxId,
-            merge_target_id = mergeTargetId,
-            error_message = errorMessage,
+            policyAction = policyAction,
+            pipelineOutcome = pipelineOutcome,
+            resultingTxId = resultingTxId,
+            mergeTargetId = mergeTargetId,
+            errorMessage = errorMessage,
+            rawText = rawText,
             id = id
         )
     }

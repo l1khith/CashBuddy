@@ -5,6 +5,7 @@ import android.os.Build
 import android.os.Bundle
 import android.provider.Settings
 import android.view.WindowManager
+import androidx.activity.compose.ReportDrawnWhen
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
@@ -149,6 +150,7 @@ class MainActivity : FragmentActivity() {
 
         setContent {
             CashBuddyTheme {
+                ReportDrawnWhen { authState == AuthState.AUTHENTICATED }
                 when (authState) {
                     AuthState.LOADING -> {
                         Box(
@@ -351,7 +353,7 @@ class MainActivity : FragmentActivity() {
         }
 
         if (urisToProcess.isNotEmpty()) {
-            currentNavigationRoute = "processing_screenshot"
+            currentNavigationRoute = "review_inbox"
             lifecycleScope.launch(Dispatchers.IO) {
                 val cachedScreenshotFiles = mutableListOf<java.io.File>()
                 for (uri in urisToProcess) {
@@ -364,7 +366,7 @@ class MainActivity : FragmentActivity() {
                         if (createdIds.isNotEmpty()) {
                             android.widget.Toast.makeText(
                                 this@MainActivity,
-                                "${createdIds.size} transaction(s) parsed from screenshot",
+                                "${createdIds.size} transaction(s) parsed — Added to Review Inbox",
                                 android.widget.Toast.LENGTH_LONG
                             ).show()
                         } else {
@@ -394,14 +396,26 @@ class MainActivity : FragmentActivity() {
 
     override fun onResume() {
         super.onResume()
-        if (authState == AuthState.AUTHENTICATED) {
+        if (hasWindowFocus() && authState == AuthState.AUTHENTICATED) {
+            checkClipboardForUtr()
+        }
+    }
+
+    override fun onWindowFocusChanged(hasFocus: Boolean) {
+        super.onWindowFocusChanged(hasFocus)
+        if (hasFocus && authState == AuthState.AUTHENTICATED) {
             checkClipboardForUtr()
         }
     }
 
     private fun checkClipboardForUtr() {
-        com.cashbuddy.clipboard.ClipboardMonitor.checkClipboard(this)?.let { utr ->
-            pendingClipboardUtr = utr
+        if (!hasWindowFocus()) return
+        try {
+            com.cashbuddy.clipboard.ClipboardMonitor.checkClipboard(this)?.let { utr ->
+                pendingClipboardUtr = utr
+            }
+        } catch (_: Throwable) {
+            // Silently ignore if OS denies clipboard access before window manager grants focus
         }
     }
 

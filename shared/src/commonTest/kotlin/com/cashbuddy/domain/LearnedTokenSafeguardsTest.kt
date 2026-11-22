@@ -201,4 +201,29 @@ class LearnedTokenSafeguardsTest {
 
         println("=== 50,000 TOKEN BOMBARDMENT PASSED WITH ZERO FREEZE OR OOM ===")
     }
+
+    @Test
+    fun testIgnoredTokens_AreRecordedAsNonTransactionAndProduceNegativeLogOdds() = runBlocking {
+        // Record 5 observations of ignored spam/promotional tokens
+        repeat(5) {
+            repository.record(isTransaction = false, tokens = setOf("voucher", "cashback"))
+        }
+
+        val evidence = extractor.extract("win cashback voucher today")
+        assertTrue(evidence.tokenCount >= 1, "Must recognize frequent non-transaction tokens")
+        assertTrue(evidence.tokenLogOdds < 0.0, "Ignored tokens must contribute negative log-odds (suppression)")
+    }
+
+    @Test
+    fun testTokenLogOdds_IsClampedToBoundaries() = runBlocking {
+        // Record 100 observations to generate high raw log odds
+        repeat(100) {
+            repository.record(isTransaction = true, tokens = setOf("hottokenalpha", "hottokenbeta", "hottokengamma", "hottokendelta"))
+        }
+
+        val evidence = extractor.extract("hottokenalpha hottokenbeta hottokengamma hottokendelta")
+        assertTrue(evidence.tokenCount >= 4)
+        // Must be clamped to [-3.0, 3.0]
+        assertEquals(3.0, evidence.tokenLogOdds, 0.0001, "tokenLogOdds must be clamped to max 3.0 to prevent logit explosion")
+    }
 }

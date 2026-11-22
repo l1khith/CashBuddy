@@ -38,7 +38,7 @@ class DebugLogPagerTest {
         override suspend fun insert(entry: DebugLogEntry) {}
         override suspend fun updateClassification(id: String, detectedSource: String?, evidenceJson: String?, pTransaction: Double?, contributionsJson: String?, fieldConfidencesJson: String?) {}
         override suspend fun updatePolicy(id: String, policyAction: String?) {}
-        override suspend fun updateOutcome(id: String, policyAction: String?, pipelineOutcome: String?, resultingTxId: String?, mergeTargetId: String?, errorMessage: String?) {}
+        override suspend fun updateOutcome(id: String, policyAction: String?, pipelineOutcome: String?, resultingTxId: String?, mergeTargetId: String?, errorMessage: String?, rawText: String?) {}
         override suspend fun getByResultingTxId(txId: String): DebugLogEntry? = allLogs.find { it.resultingTxId == txId }
         override suspend fun clearAll() {}
         override suspend fun count(): Long = allLogs.size.toLong()

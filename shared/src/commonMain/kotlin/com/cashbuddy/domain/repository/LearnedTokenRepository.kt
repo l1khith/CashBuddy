@@ -8,9 +8,10 @@ package com.cashbuddy.domain.repository
 interface LearnedTokenRepository {
     /**
      * Records a set of tokens observed in a confirmed ([isTransaction] = true)
-     * or rejected ([isTransaction] = false) message.
+     * or rejected/ignored ([isTransaction] = false) message.
+     * When [rawId] is provided, recording is idempotent per message.
      */
-    suspend fun record(isTransaction: Boolean, tokens: Set<String>)
+    suspend fun record(isTransaction: Boolean, tokens: Set<String>, rawId: String? = null)
 
     /**
      * Returns all tokens that have at least 5 total observations,

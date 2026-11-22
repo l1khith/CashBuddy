@@ -16,10 +16,15 @@ import com.cashbuddy.domain.repository.CategoryBreakdown
 import com.cashbuddy.domain.repository.CategoryRepository
 import com.cashbuddy.domain.repository.MergeLogEntry
 import com.cashbuddy.domain.repository.TransactionRepository
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.runBlocking
 import kotlinx.datetime.TimeZone
+import kotlin.test.AfterTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -27,6 +32,22 @@ import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
 class BudgetViewModelTest {
+
+    // Scopes handed to BudgetViewModel. ViewModel-spawned coroutines that live
+    // until their scope is cancelled (e.g. the stateIn sharing loop backing
+    // unbudgetedSpent) must NOT use the runBlocking scope directly: runBlocking
+    // waits for ALL of its children after the test body ends, and the sharing
+    // loop never completes on its own — the whole class would deadlock.
+    private val vmScopes = mutableListOf<CoroutineScope>()
+
+    private fun vmScope(): CoroutineScope =
+        CoroutineScope(SupervisorJob() + Dispatchers.Unconfined).also { vmScopes += it }
+
+    @AfterTest
+    fun cancelVmScopes() {
+        vmScopes.forEach { it.cancel() }
+        vmScopes.clear()
+    }
 
     private class FakeBudgetRepo : BudgetRepository {
         val budgets = mutableListOf<Budget>()
@@ -97,7 +118,8 @@ class BudgetViewModelTest {
         override fun getById(id: Long): Flow<Transaction?> = flowOf(txs.find { it.id == id })
         override fun getPending(): Flow<List<Transaction>> = flowOf(emptyList())
         override fun getRecent(limit: Long): Flow<List<Transaction>> = flowOf(emptyList())
-        override fun getByDateRange(start: Long, end: Long): Flow<List<Transaction>> = flowOf(emptyList())
+        override fun getByDateRange(start: Long, end: Long): Flow<List<Transaction>> =
+            flowOf(txs.filter { it.timestamp in start..end })
         override fun getByDateRangeWithLimit(start: Long, end: Long, limit: Long): Flow<List<Transaction>> = flowOf(emptyList())
         override fun getSummaryByDateRange(start: Long, end: Long): Flow<com.cashbuddy.domain.model.DateRangeSummary> =
             flowOf(com.cashbuddy.domain.model.DateRangeSummary(0.0, 0.0, 0L))
@@ -135,7 +157,7 @@ class BudgetViewModelTest {
         )
         budgetRepo.create(budget)
 
-        val viewModel = BudgetViewModel(budgetRepo, catRepo, engine, coroutineScope = this)
+        val viewModel = BudgetViewModel(budgetRepo, catRepo, engine, coroutineScope = vmScope())
         viewModel.loadBudgets().join()
 
         val state = viewModel.uiState.value
@@ -153,7 +175,7 @@ class BudgetViewModelTest {
         val txRepo = FakeTxRepo()
         val engine = BudgetEngine(txRepo, TimeZone.UTC)
 
-        val viewModel = BudgetViewModel(budgetRepo, catRepo, engine, coroutineScope = this)
+        val viewModel = BudgetViewModel(budgetRepo, catRepo, engine, coroutineScope = vmScope())
         viewModel.createBudget("Food", 7000.0, BudgetPeriod.MONTHLY).join()
 
         assertEquals(1, budgetRepo.budgets.size)
@@ -182,7 +204,7 @@ class BudgetViewModelTest {
         )
         budgetRepo.create(budget)
 
-        val viewModel = BudgetViewModel(budgetRepo, catRepo, engine, coroutineScope = this)
+        val viewModel = BudgetViewModel(budgetRepo, catRepo, engine, coroutineScope = vmScope())
         viewModel.updateBudget(budget.copy(amount = 4500.0)).join()
 
         val updated = budgetRepo.getById("b1")
@@ -209,7 +231,7 @@ class BudgetViewModelTest {
         )
         budgetRepo.create(budget)
 
-        val viewModel = BudgetViewModel(budgetRepo, catRepo, engine, coroutineScope = this)
+        val viewModel = BudgetViewModel(budgetRepo, catRepo, engine, coroutineScope = vmScope())
         viewModel.deleteBudget("b1").join()
 
         assertTrue(budgetRepo.budgets.isEmpty())
@@ -221,7 +243,10 @@ class BudgetViewModelTest {
         val catRepo = FakeCategoryRepo()
         val txRepo = FakeTxRepo()
         val engine = BudgetEngine(txRepo, TimeZone.UTC)
-        val oct15_2026 = 1792065600000L
+        // Date-robust: the engine's period range is the calendar month of `now`,
+        // so anchor budget dates and transaction timestamps on the current time
+        // (a fixed date drifts out of the window as months roll over).
+        val oct15_2026 = com.cashbuddy.platform.currentTimeMillis()
 
         // 1. Global budget: ₹10,000
         budgetRepo.create(
@@ -315,7 +340,7 @@ class BudgetViewModelTest {
             )
         )
 
-        val viewModel = BudgetViewModel(budgetRepo, catRepo, engine, coroutineScope = this)
+        val viewModel = BudgetViewModel(budgetRepo, catRepo, engine, coroutineScope = vmScope())
         viewModel.loadBudgets().join()
 
         // Global spent = 1500 + 800 + 1200 = 3500
@@ -338,7 +363,10 @@ class BudgetViewModelTest {
         val catRepo = FakeCategoryRepo()
         val txRepo = FakeTxRepo()
         val engine = BudgetEngine(txRepo, TimeZone.UTC)
-        val oct15_2026 = 1792065600000L
+        // Date-robust: the engine's period range is the calendar month of `now`,
+        // so anchor budget dates and transaction timestamps on the current time
+        // (a fixed date drifts out of the window as months roll over).
+        val oct15_2026 = com.cashbuddy.platform.currentTimeMillis()
 
         // Only category budget (Food): ₹3,000
         budgetRepo.create(
@@ -370,7 +398,7 @@ class BudgetViewModelTest {
             )
         )
 
-        val viewModel = BudgetViewModel(budgetRepo, catRepo, engine, coroutineScope = this)
+        val viewModel = BudgetViewModel(budgetRepo, catRepo, engine, coroutineScope = vmScope())
         viewModel.loadBudgets().join()
 
         assertEquals(null, viewModel.globalBudget.value)

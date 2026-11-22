@@ -32,7 +32,12 @@ import cashbuddy.shared.generated.resources.settings_android_notification_settin
 import cashbuddy.shared.generated.resources.settings_ignored_apps_btn
 import cashbuddy.shared.generated.resources.settings_ocr_title
 import cashbuddy.shared.generated.resources.settings_ocr_desc
+import cashbuddy.shared.generated.resources.settings_auto_confirm_title
+import cashbuddy.shared.generated.resources.settings_auto_confirm_desc
+import cashbuddy.shared.generated.resources.settings_auto_confirm_limit_label
+import cashbuddy.shared.generated.resources.settings_auto_confirm_off_status
 import cashbuddy.shared.generated.resources.settings_ocr_active
+import androidx.compose.material3.FilterChip
 import com.cashbuddy.presentation.theme.AccentEmerald
 import com.cashbuddy.presentation.theme.CashBuddyTypography
 import com.cashbuddy.presentation.theme.RadiusLarge
@@ -45,8 +50,10 @@ fun AutomationSection(
     smartNotificationsEnabled: Boolean,
     ignoredPackagesCount: Int,
     isOcrAvailable: Boolean,
+    autoConfirmThreshold: Double,
     onNotificationEnabledChange: (Boolean) -> Unit,
     onSmartNotificationsEnabledChange: (Boolean) -> Unit,
+    onAutoConfirmThresholdChange: (Double) -> Unit,
     onOpenNotificationSettings: () -> Unit,
     onOpenIgnoreList: () -> Unit,
     modifier: Modifier = Modifier
@@ -116,6 +123,61 @@ fun AutomationSection(
                         checked = smartNotificationsEnabled,
                         onCheckedChange = onSmartNotificationsEnabledChange
                     )
+                }
+
+                // Auto-Log / Auto-Confirm Toggle
+                val isAutoLogEnabled = autoConfirmThreshold > 0.0
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = stringResource(Res.string.settings_auto_confirm_title),
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                        Text(
+                            text = if (isAutoLogEnabled) {
+                                stringResource(Res.string.settings_auto_confirm_desc)
+                            } else {
+                                stringResource(Res.string.settings_auto_confirm_off_status)
+                            },
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    Switch(
+                        checked = isAutoLogEnabled,
+                        onCheckedChange = { checked ->
+                            onAutoConfirmThresholdChange(if (checked) 10000.0 else 0.0)
+                        }
+                    )
+                }
+
+                if (isAutoLogEnabled) {
+                    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                        Text(
+                            text = stringResource(Res.string.settings_auto_confirm_limit_label, autoConfirmThreshold.toInt().toString()),
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.primary,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            listOf(1000.0, 5000.0, 10000.0, 25000.0).forEach { limit ->
+                                val isSelected = autoConfirmThreshold == limit
+                                FilterChip(
+                                    selected = isSelected,
+                                    onClick = { onAutoConfirmThresholdChange(limit) },
+                                    label = { Text("₹${limit.toInt()}") }
+                                )
+                            }
+                        }
+                    }
                 }
 
                 OutlinedButton(

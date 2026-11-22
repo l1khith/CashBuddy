@@ -26,7 +26,9 @@ import cashbuddy.shared.generated.resources.ic_edit
 import cashbuddy.shared.generated.resources.ic_file_download
 import cashbuddy.shared.generated.resources.ic_info
 import cashbuddy.shared.generated.resources.ic_refresh
+import cashbuddy.shared.generated.resources.*
 import org.jetbrains.compose.resources.painterResource
+import org.jetbrains.compose.resources.stringResource
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -92,7 +94,7 @@ fun PersonalizationDashboardScreen(
             TopAppBar(
                 title = {
                     Text(
-                        text = "My Personalization",
+                        text = stringResource(Res.string.personalization_title),
                         style = CashBuddyTypography.titleLarge,
                         fontWeight = FontWeight.Bold
                     )
@@ -149,21 +151,21 @@ fun PersonalizationDashboardScreen(
                             ) {
                                 Column {
                                     Text(
-                                        text = "Categorization Accuracy",
+                                        text = stringResource(Res.string.personalization_accuracy_title),
                                         style = CashBuddyTypography.labelMedium,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant
                                     )
                                     Text(
-                                        text = "${state.accuracyRate}%",
+                                        text = state.accuracyRate?.let { "$it%" } ?: "—",
                                         style = CashBuddyTypography.displayLarge,
                                         fontWeight = FontWeight.ExtraBold,
-                                        color = AccentEmerald
+                                        color = if (state.accuracyRate != null) AccentEmerald else MaterialTheme.colorScheme.onSurfaceVariant
                                     )
                                 }
                                 Box(
                                     modifier = Modifier
                                         .background(
-                                            AccentEmerald.copy(alpha = 0.15f),
+                                            (if (state.accuracyRate != null) AccentEmerald else PrimaryIndigo).copy(alpha = 0.15f),
                                             shape = RadiusMedium
                                         )
                                         .padding(horizontal = 10.dp, vertical = 5.dp)
@@ -172,14 +174,18 @@ fun PersonalizationDashboardScreen(
                                         Icon(
                                             imageVector = Icons.Default.Bolt,
                                             contentDescription = null,
-                                            tint = AccentEmerald,
+                                            tint = if (state.accuracyRate != null) AccentEmerald else PrimaryIndigo,
                                             modifier = Modifier.size(14.dp)
                                         )
                                         Spacer(modifier = Modifier.width(4.dp))
                                         Text(
-                                            text = "Local Rules",
+                                            text = if (state.accuracyRate != null) {
+                                                stringResource(Res.string.personalization_accuracy_rules)
+                                            } else {
+                                                stringResource(Res.string.personalization_accuracy_baseline)
+                                            },
                                             style = CashBuddyTypography.labelSmall,
-                                            color = AccentEmerald,
+                                            color = if (state.accuracyRate != null) AccentEmerald else PrimaryIndigo,
                                             fontWeight = FontWeight.Bold
                                         )
                                     }
@@ -192,23 +198,23 @@ fun PersonalizationDashboardScreen(
                                 horizontalArrangement = Arrangement.spacedBy(8.dp)
                             ) {
                                 MetricBadge(
-                                    label = "Learned",
+                                    label = stringResource(Res.string.personalization_metric_learned),
                                     value = "${state.learnedMerchantsCount}",
-                                    unit = "merchants",
+                                    unit = stringResource(Res.string.personalization_unit_merchants),
                                     color = PrimaryIndigo,
                                     modifier = Modifier.weight(1f)
                                 )
                                 MetricBadge(
-                                    label = "Corrections",
+                                    label = stringResource(Res.string.personalization_metric_corrections),
                                     value = "${state.correctionsCount}",
-                                    unit = "feedback",
+                                    unit = stringResource(Res.string.personalization_unit_feedback),
                                     color = WarningAmber,
                                     modifier = Modifier.weight(1f)
                                 )
                                 MetricBadge(
-                                    label = "Raw Alerts",
+                                    label = stringResource(Res.string.personalization_metric_raw_alerts),
                                     value = "${state.rawSamplesCount}",
-                                    unit = "samples",
+                                    unit = stringResource(Res.string.personalization_unit_samples),
                                     color = AccentEmerald,
                                     modifier = Modifier.weight(1f)
                                 )
@@ -231,7 +237,7 @@ fun PersonalizationDashboardScreen(
                             verticalArrangement = Arrangement.spacedBy(12.dp)
                         ) {
                             Text(
-                                text = "Personalization Actions",
+                                text = stringResource(Res.string.personalization_actions_title),
                                 style = CashBuddyTypography.titleMedium,
                                 fontWeight = FontWeight.Bold
                             )
@@ -251,7 +257,7 @@ fun PersonalizationDashboardScreen(
                                         strokeWidth = 2.dp
                                     )
                                     Spacer(modifier = Modifier.width(8.dp))
-                                    Text("Evaluating Pending Rules...")
+                                    Text(stringResource(Res.string.personalization_action_training))
                                 } else {
                                     Icon(
                                         painter = painterResource(Res.drawable.ic_refresh),
@@ -260,7 +266,7 @@ fun PersonalizationDashboardScreen(
                                         modifier = Modifier.size(18.dp)
                                     )
                                     Spacer(modifier = Modifier.width(8.dp))
-                                    Text("Train / Re-categorize Now")
+                                    Text(stringResource(Res.string.personalization_action_train_now))
                                 }
                             }
 
@@ -276,7 +282,12 @@ fun PersonalizationDashboardScreen(
                                     modifier = Modifier.size(18.dp)
                                 )
                                 Spacer(modifier = Modifier.width(8.dp))
-                                Text("View Training Data (${state.rawSamplesCount + state.correctionsCount} records)")
+                                Text(
+                                    stringResource(
+                                        Res.string.personalization_action_view_data,
+                                        state.rawSamplesCount + state.correctionsCount
+                                    )
+                                )
                             }
 
                             // Export Dataset Button
@@ -292,7 +303,7 @@ fun PersonalizationDashboardScreen(
                                     modifier = Modifier.size(18.dp)
                                 )
                                 Spacer(modifier = Modifier.width(8.dp))
-                                Text("Export Training Dataset (JSONL)")
+                                Text(stringResource(Res.string.personalization_action_export))
                             }
 
                             // Reset Button
@@ -308,7 +319,7 @@ fun PersonalizationDashboardScreen(
                                 )
                                 Spacer(modifier = Modifier.width(8.dp))
                                 Text(
-                                    text = "Reset All Learned Personalization",
+                                    text = stringResource(Res.string.personalization_action_reset),
                                     color = DangerRed
                                 )
                             }
@@ -319,7 +330,7 @@ fun PersonalizationDashboardScreen(
                 // Recent Corrections Header
                 item {
                     Text(
-                        text = "Recent Learned Corrections",
+                        text = stringResource(Res.string.personalization_recent_corrections_title),
                         style = CashBuddyTypography.titleLarge,
                         fontWeight = FontWeight.Bold
                     )
@@ -348,12 +359,12 @@ fun PersonalizationDashboardScreen(
                                 )
                                 Spacer(modifier = Modifier.height(8.dp))
                                 Text(
-                                    text = "No user corrections recorded yet",
+                                    text = stringResource(Res.string.personalization_empty_corrections_title),
                                     style = CashBuddyTypography.titleSmall,
                                     fontWeight = FontWeight.SemiBold
                                 )
                                 Text(
-                                    text = "When you edit a category in transaction details, CashBuddy will learn it instantly.",
+                                    text = stringResource(Res.string.personalization_empty_corrections_desc),
                                     style = CashBuddyTypography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
@@ -372,8 +383,8 @@ fun PersonalizationDashboardScreen(
     if (showResetDialog) {
         AlertDialog(
             onDismissRequest = { showResetDialog = false },
-            title = { Text("Reset Learned Rules & Data?") },
-            text = { Text("This will delete all learned merchant rules, user correction history, and raw training logs. Auto-categorization will revert to default built-in heuristics.") },
+            title = { Text(stringResource(Res.string.personalization_reset_dialog_title)) },
+            text = { Text(stringResource(Res.string.personalization_reset_dialog_desc)) },
             confirmButton = {
                 Button(
                     onClick = {
@@ -382,11 +393,13 @@ fun PersonalizationDashboardScreen(
                     },
                     colors = ButtonDefaults.buttonColors(containerColor = DangerRed)
                 ) {
-                    Text("Reset Everything")
+                    Text(stringResource(Res.string.personalization_reset_dialog_confirm))
                 }
             },
             dismissButton = {
-                TextButton(onClick = { showResetDialog = false }) { Text("Cancel") }
+                TextButton(onClick = { showResetDialog = false }) {
+                    Text(stringResource(Res.string.personalization_btn_cancel))
+                }
             }
         )
     }

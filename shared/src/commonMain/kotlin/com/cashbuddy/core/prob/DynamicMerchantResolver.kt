@@ -2,22 +2,23 @@
 package com.cashbuddy.core.prob
 
 /**
- * Stage 2: Universal Gateway Token Stripping & Pure Algorithmic Merchant Resolution
+ * Stage 2: Pure Algorithmic Merchant Resolution from Android Package Names
  *
  * ZERO HARDCODED PACKAGE LISTS. ZERO HARDCODED MERCHANT DICTIONARIES.
  * 100% CONTENT-FIRST AND ALGORITHMIC.
  *
- * Mathematical formulation:
- * S_clean = g(S_raw) = S_raw \ ( G_prefix ∪ G_suffix ∪ V_handles )
+ * NOTE: earlier revisions of this header described gateway-token stripping
+ * (G_prefix for "INF*", "UPI/", "RAZORPAY*" gateway noise, G_suffix for
+ * location codes and "Pvt Ltd" suffixes, V_handles for @ybl/@icici UPI
+ * domains). That logic does NOT exist in this object — VPA-handle cleanup
+ * happens in [EvidenceExtractor.extractMerchant] (strategy 1) and gateway
+ * noise is handled by the merchant-validity checks there. This object only:
  *
- * Where:
- * - G_prefix strips payment gateway and bank noise (INF*, UPI/, RAZORPAY*, etc.)
- * - G_suffix strips location codes, transaction IDs, corporate entity suffixes (Pvt Ltd, etc.)
- * - V_handles strips UPI domain handles (@ybl, @icici, etc.)
- *
- * For unknown apps and packages:
- * - Derives brand identity purely by parsing package segments (e.g. "com.thesmartq.smartq" -> "Smartq")
- * - Formats cleaned raw merchant strings into title-case canonical names dynamically.
+ * - Parses Android package segments algorithmically (skipping standard
+ *   internet domain segments: com, in, org, net, io, co).
+ * - Derives a brand name purely by segment selection (e.g.
+ *   "com.thesmartq.smartq" -> "Smartq", "in.swiggy.android" -> "Swiggy").
+ * - Formats cleaned merchant strings into title-case canonical names.
  */
 object DynamicMerchantResolver {
 
@@ -29,7 +30,6 @@ object DynamicMerchantResolver {
     /**
      * Algorithmically extracts a human-readable brand name from ANY Android package name.
      * Example:
-     * - "com.thesmartq.smartq" -> "Smartq"
      * - "in.swiggy.android" -> "Swiggy"
      * - "com.application.zomato" -> "Zomato"
      * - "com.mycompany.coolapp" -> "Coolapp"

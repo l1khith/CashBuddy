@@ -363,6 +363,10 @@ class SettingsViewModel(
             val store = dataResetStore
             if (store != null) {
                 store.clearAllData()
+                // The atomic wipe deleted the learned_token table directly, so the
+                // repository's in-memory L1 cache/observedRawIds are stale. clear()
+                // resets them (its redundant deleteAll on the now-empty table is a no-op).
+                learnedTokenRepository?.clear()
             } else {
                 transactionRepository.deleteAll()
                 trainingDataRepository.clearTrainingData()

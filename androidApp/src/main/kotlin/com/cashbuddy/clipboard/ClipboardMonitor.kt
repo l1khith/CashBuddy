@@ -7,6 +7,12 @@ import com.cashbuddy.core.prob.Regexes
 
 object ClipboardMonitor {
 
+    /** NPCI RRN / UTR reference numbers are 12 digits; shorter matches are not refs. */
+    private const val MIN_UTR_LENGTH = 8
+
+    /** Guard against treating pasted documents/URLs as reference numbers. */
+    private const val MAX_CLIP_LENGTH = 500
+
     private val standalone12DigitRegex = Regex("""^\d{12}$""")
     private var lastProcessedUtr: String? = null
 
@@ -15,32 +21,36 @@ object ClipboardMonitor {
      * Returns extracted UTR if present and not previously processed; otherwise null.
      */
     fun checkClipboard(context: Context): String? {
-        val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager
-            ?: return null
+        try {
+            val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager
+                ?: return null
 
-        if (!clipboard.hasPrimaryClip()) return null
+            if (!clipboard.hasPrimaryClip()) return null
 
-        val description = clipboard.primaryClipDescription
-        if (description != null &&
-            !description.hasMimeType(ClipDescription.MIMETYPE_TEXT_PLAIN) &&
-            !description.hasMimeType(ClipDescription.MIMETYPE_TEXT_HTML)
-        ) {
+            val description = clipboard.primaryClipDescription
+            if (description != null &&
+                !description.hasMimeType(ClipDescription.MIMETYPE_TEXT_PLAIN) &&
+                !description.hasMimeType(ClipDescription.MIMETYPE_TEXT_HTML)
+            ) {
+                return null
+            }
+
+            val clip = clipboard.primaryClip ?: return null
+            if (clip.itemCount == 0) return null
+
+            val text = clip.getItemAt(0)?.text?.toString() ?: return null
+            val utr = extractUtrFromText(text) ?: return null
+
+            // Prevent repeat triggers for the same clipboard content
+            if (utr.equals(lastProcessedUtr, ignoreCase = true)) {
+                return null
+            }
+
+            lastProcessedUtr = utr
+            return utr
+        } catch (_: Throwable) {
             return null
         }
-
-        val clip = clipboard.primaryClip ?: return null
-        if (clip.itemCount == 0) return null
-
-        val text = clip.getItemAt(0)?.text?.toString() ?: return null
-        val utr = extractUtrFromText(text) ?: return null
-
-        // Prevent repeat triggers for the same clipboard content
-        if (utr.equals(lastProcessedUtr, ignoreCase = true)) {
-            return null
-        }
-
-        lastProcessedUtr = utr
-        return utr
     }
 
     /**
@@ -48,7 +58,7 @@ object ClipboardMonitor {
      */
     fun extractUtrFromText(text: String): String? {
         val trimmed = text.trim()
-        if (trimmed.isBlank() || trimmed.length > 500) return null
+        if (trimmed.isBlank() || trimmed.length > MAX_CLIP_LENGTH) return null
 
         val utr = when {
             // Standalone 12-digit NPCI RRN (copied by Google Pay / PhonePe / standard bank apps)
@@ -60,7 +70,7 @@ object ClipboardMonitor {
             }
         }
 
-        if (utr.isNullOrBlank() || utr.length < 8) return null
+        if (utr.isNullOrBlank() || utr.length < MIN_UTR_LENGTH) return null
         return utr
     }
 

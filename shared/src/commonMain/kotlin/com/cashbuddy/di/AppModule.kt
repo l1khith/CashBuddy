@@ -75,6 +75,7 @@ val appModule = module {
     single { com.cashbuddy.core.prob.SourceDetector() }
     single { com.cashbuddy.core.prob.RecentStateRepository() }
     single { com.cashbuddy.core.prob.TokenEvidenceExtractor(get()) }
+    single { com.cashbuddy.core.prob.gate.GateModelProvider() }
     single { com.cashbuddy.core.prob.EvidenceExtractor(recentStateRepository = get(), tokenEvidenceExtractor = get()) }
     single { com.cashbuddy.core.prob.FieldConfidenceEstimator() }
     single { com.cashbuddy.core.prob.PolicyEngine() }
@@ -95,7 +96,7 @@ val appModule = module {
     single { DebugConfig(isDebugBuild = false, settingsRepository = get()) }
     single { DebugLogger(repository = get(), config = get()) }
     single<com.cashbuddy.core.prob.Calibrator> { com.cashbuddy.core.prob.LikelihoodCalibrator(get()) }
-    single { com.cashbuddy.core.prob.ProbabilisticClassifier(get(), get(), get()) }
+    single { com.cashbuddy.core.prob.ProbabilisticClassifier(get(), get(), get(), get()) }
     single {
         com.cashbuddy.core.prob.MessagePipeline(
             sourceDetector = get(),
@@ -115,7 +116,8 @@ val appModule = module {
             recurringPatternRepo = getOrNull(),
             anomalyNotifier = getOrNull(),
             calibrator = getOrNull(),
-            ingestStore = com.cashbuddy.data.repository.TransactionIngestStore(database = get(), dispatcher = get())
+            ingestStore = com.cashbuddy.data.repository.TransactionIngestStore(database = get(), dispatcher = get()),
+            learnedTokenRepository = getOrNull()
         )
     }
 

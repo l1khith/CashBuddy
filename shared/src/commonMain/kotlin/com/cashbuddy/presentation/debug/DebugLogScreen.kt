@@ -392,16 +392,21 @@ private fun RecordingModeBanner(
                 Spacer(modifier = Modifier.width(8.dp))
                 Column {
                     Text(
-                        text = if (isActive) "Recording Active" else "Recording Mode (15m)",
+                        text = if (isActive) "Recording Active" else "Recording Mode (24h)",
                         style = MaterialTheme.typography.bodyMedium,
                         fontWeight = FontWeight.Bold,
                         color = if (isActive) DangerRed else MaterialTheme.colorScheme.onSurface
                     )
                     Text(
                         text = if (isActive) {
-                            val mins = secondsRemaining / 60
+                            val hours = secondsRemaining / 3600
+                            val mins = (secondsRemaining % 3600) / 60
                             val secs = secondsRemaining % 60
-                            "Capturing raw bodies: ${mins}m ${secs}s remaining"
+                            if (hours > 0) {
+                                "Capturing raw bodies: ${hours}h ${mins}m remaining"
+                            } else {
+                                "Capturing raw bodies: ${mins}m ${secs}s remaining"
+                            }
                         } else {
                             "Non-financial message bodies redacted when OFF"
                         },
@@ -627,6 +632,7 @@ private fun DebugLogRowCard(
                             EvidenceChip("success", evidence.hasSuccessWord)
                             EvidenceChip("bankSender", evidence.senderLooksBank)
                             EvidenceChip("merchantPkg", evidence.fromMerchantPackage)
+                            EvidenceChip("failure", evidence.hasFailureWord)
                             EvidenceChip("recentAmt", evidence.recentSimilarAmount)
                             EvidenceChip("sameMerchant", evidence.recentSameMerchant)
                             EvidenceChip("burst", evidence.burstDetected)

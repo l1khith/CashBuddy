@@ -38,5 +38,5 @@ To achieve production-grade quality, modularity, and error-free execution across
 - **Key Skills**: [compose-multiplatform-ui](file:///c:/Users/ailik/AndroidStudioProjects/CashBuddy/.skills/compose-multiplatform-ui/SKILL.md), `navigation-3`, `edge-to-edge`, `adaptive`.
 
 ### 2.5 Quality Assurance & Testing Specialist (`qa_test_specialist`)
-- **Primary Domain**: KMP unit tests for shared core, notification parser benchmarking with real-world alert variations, probabilistic classification accuracy validation, MVI state transition testing, and Android manifest boundary auditing.
-- **Key Skills**: [testing-setup](file:///c:/Users/ailik/.agents/skills/testing-setup/SKILL.md), [offline-privacy-policy](file:///c:/Users/ailik/AndroidStudioProjects/CashBuddy/.skills/offline-privacy-policy/SKILL.md).
+- **Primary Domain**: KMP unit tests for shared core, notification parser benchmarking with real-world alert variations, probabilistic classification accuracy validation, MVI state transition testing, Android manifest boundary auditing, startup latency benchmarking (Cold/Warm/Hot TTID/TTFD), Baseline Profile generation, and memory profiling (`RSS + Swap`).
+- **Key Skills**: [testing-setup](file:///c:/Users/ailik/.agents/skills/testing-setup/SKILL.md), [macrobenchmark-baseline-profiles](file:///c:/Users/ailik/AndroidStudioProjects/CashBuddy/.skills/macrobenchmark-baseline-profiles/SKILL.md), `android-profiler`, [offline-privacy-policy](file:///c:/Users/ailik/AndroidStudioProjects/CashBuddy/.skills/offline-privacy-policy/SKILL.md).

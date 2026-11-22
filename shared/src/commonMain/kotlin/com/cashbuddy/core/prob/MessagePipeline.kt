@@ -2,6 +2,7 @@
 package com.cashbuddy.core.prob
 
 import com.cashbuddy.core.CategoryEngine
+import com.cashbuddy.core.MerchantLabels
 import com.cashbuddy.debug.DebugLogger
 import com.cashbuddy.domain.model.CategoryType
 import com.cashbuddy.domain.model.Transaction
@@ -75,9 +76,18 @@ class MessagePipeline(
     private val ingestStore: com.cashbuddy.data.repository.TransactionIngestStore? = null,
     // Phase 3 Loop: when provided, unambiguous auto-outcomes feed the likelihood
     // self-calibration loop (see observeSignals).
-    private val calibrator: Calibrator? = null
+    private val calibrator: Calibrator? = null,
+    private val learnedTokenRepository: com.cashbuddy.domain.repository.LearnedTokenRepository? = null
 ) {
+    companion object {
+        /** Recurring-pattern amount tolerance: a tx matches a pattern if within ±10% of its amount. */
+        const val RECURRENCE_AMOUNT_TOLERANCE_RATIO = 0.10
+
+        /** Run [com.cashbuddy.core.analytics.RecurrenceDetector] after every N auto-confirmed inserts. */
+        const val RECURRENCE_CHECK_EVERY_N_CONFIRMED = 10L
+    }
     private val mutex = Mutex()
+    private var confirmedInsertsSinceRecurrenceCheck = 0L
 
     suspend fun ingest(raw: RawMessage): PipelineOutcome = mutex.withLock {
         recentStateRepository?.recordRaw(raw.timestamp, raw.packageName)
@@ -88,15 +98,19 @@ class MessagePipeline(
 
             // 2. Source detection
             val source = sourceDetector.detect(raw.packageName ?: raw.senderId ?: "", raw.text)
-
-            // 3. Evidence extraction
-            val evidence = evidenceExtractor.extract(raw, source)
-
-            // 4. Classify
             val fullText = if (raw.title.isNotBlank()) "${raw.title} ${raw.text}" else raw.text
-            var classification = classifier.classifySuspending(evidence, fullText, source, raw.packageName)
+
+            // 3. Fast qualification-first classification:
+            // Evaluates the trained statistical text gate first on rawText (ZERO regexes, microseconds).
+            // If non-financial noise (p < 0.30), drops early without running EvidenceExtractor, regex amount,
+            // or merchant resolution.
+            val classification = classifier.classifyRaw(raw, fullText, source)
+            val evidence = classification.evidence
 
             // 4.1 Recurring Pattern Check (T6 / AC-2)
+            // The recurring match participates in the policy decision directly (see the
+            // AUTO_LOG branch below) — we no longer hardcode-override pTransaction to 0.95,
+            // which silently bypassed the probabilistic classifier's actual verdict.
             var isRecurringMatch = false
             if (classification.merchant != null && classification.amount != null && classification.amount > 0.0) {
                 val amountPaise = (classification.amount * 100.0).roundToLong()
@@ -105,14 +119,11 @@ class MessagePipeline(
                     if (p.amountPaise == amountPaise) true
                     else {
                         val patAmount = p.amountPaise / 100.0
-                        patAmount > 0.0 && (kotlin.math.abs(classification.amount - patAmount) / patAmount) <= 0.10
+                        patAmount > 0.0 && (kotlin.math.abs(classification.amount - patAmount) / patAmount) <= RECURRENCE_AMOUNT_TOLERANCE_RATIO
                     }
                 }
                 if (pattern != null) {
                     isRecurringMatch = true
-                    classification = classification.copy(
-                        pTransaction = maxOf(classification.pTransaction, 0.95)
-                    )
                 }
             }
 
@@ -127,7 +138,10 @@ class MessagePipeline(
 
             // 5. Policy decision
             val maxAutoConfirm = settingsRepo?.getAutoConfirmThreshold()?.firstOrNull() ?: PolicyEngine.HUMAN_IN_THE_LOOP_MAX_AMOUNT
-            val action = if (isRecurringMatch && (classification.amount ?: 0.0) < maxAutoConfirm) {
+            val action = if (raw.sourceType == SourceType.SCREENSHOT) {
+                // Rule 6: Screenshot OCR receipts must always be routed to Review Inbox (PENDING)
+                if (classification.pTransaction >= 0.30) PolicyEngine.Action.LOG_AND_FLAG else PolicyEngine.Action.IGNORE
+            } else if (isRecurringMatch && (classification.amount ?: 0.0) < maxAutoConfirm) {
                 PolicyEngine.Action.AUTO_LOG
             } else {
                 policy.action(
@@ -144,6 +158,15 @@ class MessagePipeline(
                     // Auto-label: the message was classified as a non-transaction and
                     // dropped without user review → true negatives for present signals.
                     observeSignals(classification.contributions, wasCorrect = true, wasPositive = false)
+
+                    // Learn ignored/promo tokens into non_transaction_count using fullText
+                    if (fullText.isNotBlank()) {
+                        val ignoredTokens = Tokenizer.tokenize(fullText)
+                        if (ignoredTokens.isNotEmpty()) {
+                            learnedTokenRepository?.record(isTransaction = false, tokens = ignoredTokens, rawId = raw.id)
+                        }
+                    }
+
                     PipelineOutcome.Ignored(raw.id, classification.pTransaction)
                 }
 
@@ -188,10 +211,12 @@ class MessagePipeline(
 
                         when (dedupDecision) {
                             is DedupEngine.Decision.Insert -> {
-                                // 7. Account resolution
+                                // 7. Account resolution. Unresolvable accounts go to a dedicated
+                                // "Unlinked" bucket account instead of silently attaching to
+                                // whatever account happens to be row 1.
                                 val accountId = classification.accountLast4?.let {
                                     accountRegistry.findOrCreate(it, classification.bankHint)
-                                } ?: 1L
+                                } ?: accountRegistry.findOrCreateUnlinked()
 
                                 // 8. Categorization via User DB Rules -> VPA Grammar -> Context Prior
                                 val categoryMatch = categoryEngine.getCategory(
@@ -203,13 +228,10 @@ class MessagePipeline(
                                 val matchedCategory = allCategories.find {
                                     it.name.equals(categoryMatch.category, ignoreCase = true)
                                 } ?: if (classification.type == TransactionType.CREDIT) {
-                                    allCategories.find { it.name.equals("Other Income", ignoreCase = true) }
-                                        ?: allCategories.find { it.name.equals("Uncategorized", ignoreCase = true) }
-                                        ?: allCategories.find { it.type == CategoryType.INCOME }
+                                    allCategories.find { it.type == CategoryType.INCOME }
                                         ?: allCategories.firstOrNull()
                                 } else {
-                                    allCategories.find { it.name.equals("Uncategorized", ignoreCase = true) }
-                                        ?: allCategories.firstOrNull()
+                                    allCategories.firstOrNull()
                                 }
                                 val categoryId = matchedCategory?.id ?: 1L
 
@@ -218,8 +240,11 @@ class MessagePipeline(
                                 // to bypass the Review Inbox and auto-log directly as CONFIRMED.
                                 val isCategoryKnownOrConfirmed = categoryMatch.confidence >= 0.85f && categoryMatch.category != "Unknown"
                                 val isPolicyAutoLog = action == PolicyEngine.Action.AUTO_LOG
+                                // Non-negotiable #6: an undetectable direction (no debit/credit verb)
+                                // is a human-in-the-loop case — never auto-confirm a guessed type.
+                                val isTypeUncertain = classification.type == null
 
-                                val candidateMerchant = classification.merchant ?: "Unknown Merchant"
+                                val candidateMerchant = classification.merchant ?: MerchantLabels.UNKNOWN_MERCHANT
                                 val anomaly = fraudDetector.checkAnomaly(
                                     merchant = candidateMerchant,
                                     amount = amount,
@@ -228,7 +253,7 @@ class MessagePipeline(
                                 val isAnomalous = anomaly.isAnomalous
                                 val note = if (isAnomalous) formatAnomalyNote(anomaly.score, anomaly.median, anomaly.mad) else null
 
-                                val finalStatus = if ((isPolicyAutoLog && (isCategoryKnownOrConfirmed || isRecurringMatch)) && !isAnomalous) {
+                                val finalStatus = if ((isPolicyAutoLog && (isCategoryKnownOrConfirmed || isRecurringMatch)) && !isAnomalous && !isTypeUncertain) {
                                     TransactionStatus.CONFIRMED
                                 } else {
                                     TransactionStatus.PENDING
@@ -249,7 +274,7 @@ class MessagePipeline(
                                     timestamp = raw.timestamp,
                                     createdAt = raw.timestamp,
                                     updatedAt = raw.timestamp,
-                                    paymentMethod = "UPI",
+                                    paymentMethod = paymentMethodFor(source),
                                     isLoanGiven = false
                                 )
 
@@ -292,13 +317,27 @@ class MessagePipeline(
                                     // Auto-label: pipeline + category gate auto-confirmed this
                                     // transaction → true positives for present signals.
                                     observeSignals(classification.contributions, wasCorrect = true, wasPositive = true)
+                                    if (fullText.isNotBlank()) {
+                                        val confirmedTokens = Tokenizer.tokenize(fullText)
+                                        if (confirmedTokens.isNotEmpty()) {
+                                            learnedTokenRepository?.record(isTransaction = true, tokens = confirmedTokens, rawId = raw.id)
+                                        }
+                                    }
                                     if (recurringPatternRepo != null) {
                                         try {
-                                            val totalCount = transactionRepo.getCount().firstOrNull() ?: 0L
-                                            if (totalCount > 0 && totalCount % 10L == 0L) {
-                                                val allTxs = transactionRepo.getAll().firstOrNull() ?: emptyList()
-                                                val detected = com.cashbuddy.core.analytics.RecurrenceDetector.detect(allTxs, raw.timestamp)
-                                                recurringPatternRepo.upsertAll(detected)
+                                            // Counter-based cadence (replaces the fragile
+                                            // `totalCount % 10 == 0` check, which skipped runs
+                                            // whenever deletes/skipped inserts broke the exact
+                                            // multiple): run detection every N confirmed inserts.
+                                            confirmedInsertsSinceRecurrenceCheck++
+                                            if (confirmedInsertsSinceRecurrenceCheck >= RECURRENCE_CHECK_EVERY_N_CONFIRMED) {
+                                                confirmedInsertsSinceRecurrenceCheck = 0
+                                                val totalCount = transactionRepo.getCount().firstOrNull() ?: 0L
+                                                if (totalCount > 0) {
+                                                    val allTxs = transactionRepo.getAll().firstOrNull() ?: emptyList()
+                                                    val detected = com.cashbuddy.core.analytics.RecurrenceDetector.detect(allTxs, raw.timestamp)
+                                                    recurringPatternRepo.upsertAll(detected)
+                                                }
                                             }
                                         } catch (_: Throwable) {
                                             // Non-blocking recurrence detection
@@ -321,6 +360,12 @@ class MessagePipeline(
                                     if (newStatus == TransactionStatus.CONFIRMED) {
                                         // Auto-label: dedup auto-confirmed the merge → true positives.
                                         observeSignals(classification.contributions, wasCorrect = true, wasPositive = true)
+                                        if (fullText.isNotBlank()) {
+                                            val confirmedTokens = Tokenizer.tokenize(fullText)
+                                            if (confirmedTokens.isNotEmpty()) {
+                                                learnedTokenRepository?.record(isTransaction = true, tokens = confirmedTokens, rawId = raw.id)
+                                            }
+                                        }
                                     }
                                     val upgradedAccount = classification.accountLast4?.let {
                                         accountRegistry.findOrCreate(it, classification.bankHint)
@@ -350,12 +395,14 @@ class MessagePipeline(
                 }
             }
 
+            val textToPreserve = if (outcome !is PipelineOutcome.Ignored) raw.text else null
             debugLogger?.recordOutcome(
                 logId = logId,
                 outcome = outcome.outcomeName,
                 txId = outcome.resultingTxId,
                 mergeTarget = outcome.mergeTargetId,
-                error = if (outcome is PipelineOutcome.Ignored) outcome.reason else null
+                error = if (outcome is PipelineOutcome.Ignored) outcome.reason else null,
+                rawText = textToPreserve
             )
             return outcome
         } catch (t: Throwable) {
@@ -364,10 +411,24 @@ class MessagePipeline(
                 outcome = "ERROR",
                 txId = null,
                 mergeTarget = null,
-                error = t.message
+                error = t.message,
+                rawText = raw.text
             )
             throw t
         }
+    }
+
+    /**
+     * Derives the payment-method label from the detected source instead of
+     * hardcoding "UPI" for every transaction. Bank-rail messages (NEFT/RTGS/IMPS
+     * content signals → SourceDetector.BANK) get an honest "Bank Transfer" label;
+     * UPI-centric sources keep the "UPI" default, which the UI suppresses.
+     */
+    private fun paymentMethodFor(source: NotificationSource): String = when (source) {
+        NotificationSource.BANK -> "Bank Transfer"
+        NotificationSource.UPI_APP,
+        NotificationSource.MERCHANT_APP,
+        NotificationSource.UNKNOWN -> "UPI"
     }
 
     private fun format2Decimals(v: Double): String {

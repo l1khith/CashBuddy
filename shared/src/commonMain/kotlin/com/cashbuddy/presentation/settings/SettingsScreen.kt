@@ -164,8 +164,10 @@ fun SettingsScreen(
                         smartNotificationsEnabled = state.smartNotificationsEnabled,
                         ignoredPackagesCount = state.ignoredPackages.size,
                         isOcrAvailable = state.isOcrAvailable,
+                        autoConfirmThreshold = state.autoConfirmThreshold,
                         onNotificationEnabledChange = viewModel::setNotificationEnabled,
                         onSmartNotificationsEnabledChange = viewModel::setSmartNotificationsEnabled,
+                        onAutoConfirmThresholdChange = viewModel::setAutoConfirmThreshold,
                         onOpenNotificationSettings = onOpenNotificationSettings,
                         onOpenIgnoreList = onOpenIgnoreList
                     )

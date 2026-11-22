@@ -21,6 +21,7 @@ class LearnedTokenRepositoryImpl(
 
     private val queries = database.learned_tokenQueries
     private val cache = ConcurrentHashMap<String, TokenStats>()
+    private val observedRawIds = ConcurrentHashMap<String, Boolean>()
     private var isCachePreloaded = false
 
     companion object {
@@ -74,8 +75,19 @@ class LearnedTokenRepositoryImpl(
         cache[token] = stats
     }
 
-    override suspend fun record(isTransaction: Boolean, tokens: Set<String>): Unit = withContext(dispatcher) {
+    override suspend fun record(isTransaction: Boolean, tokens: Set<String>, rawId: String?): Unit = withContext(dispatcher) {
         if (tokens.isEmpty()) return@withContext
+        if (rawId != null) {
+            if (observedRawIds.containsKey(rawId)) {
+                // Idempotent guard: this message's tokens were already recorded
+                return@withContext
+            }
+            if (observedRawIds.size > MAX_CACHE_SIZE) {
+                val oldestKey = observedRawIds.keys.firstOrNull()
+                if (oldestKey != null) observedRawIds.remove(oldestKey)
+            }
+            observedRawIds[rawId] = true
+        }
         val now = currentTimeMillis()
 
         // 1. Persist to database atomically first (single source of truth)
@@ -194,6 +206,7 @@ class LearnedTokenRepositoryImpl(
 
     override suspend fun clear(): Unit = withContext(dispatcher) {
         cache.clear()
+        observedRawIds.clear()
         isCachePreloaded = false
         queries.deleteAll()
     }

@@ -309,13 +309,11 @@ private suspend fun runDryRunAnalysis(title: String, body: String): String {
 
     // Stage 2: source detection (pipeline passes raw.packageName ?: raw.senderId ?: "")
     val source = sourceDetector.detect("", raw.text)
-
-    // Stage 3: evidence extraction (only READS from recent-state)
-    val evidence = evidenceExtractor.extract(raw, source)
-
-    // Stage 4: classification
     val fullText = if (raw.title.isNotBlank()) "${raw.title} ${raw.text}" else raw.text
-    var classification = classifier.classifySuspending(evidence, fullText, source, raw.packageName)
+
+    // Stage 3 & 4: fast qualification-first classification
+    var classification = classifier.classifyRaw(raw, fullText, source)
+    val evidence = classification.evidence
 
     // Stage 4.1: recurring-pattern check (T6 / AC-2) — read-only
     var isRecurringMatch = false

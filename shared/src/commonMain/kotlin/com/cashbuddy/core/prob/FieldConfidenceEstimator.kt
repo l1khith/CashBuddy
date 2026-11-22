@@ -28,25 +28,10 @@ class FieldConfidenceEstimator {
         amount: Double?,
         type: TransactionType?,
         accountLast4: String?,
-        merchant: String?,
-        categoryMatchConfidence: Float = 0.5f
+        merchant: String?
     ): FieldConfidences {
         val amountConf = if (amount != null && amount > 0.0) {
-            val hasCurrency = rawText.contains('₹') ||
-                    rawText.contains("Rs", ignoreCase = true) ||
-                    rawText.contains("INR", ignoreCase = true) ||
-                    rawText.contains('$') ||
-                    rawText.contains("USD", ignoreCase = true) ||
-                    rawText.contains('€') ||
-                    rawText.contains("EUR", ignoreCase = true) ||
-                    rawText.contains('£') ||
-                    rawText.contains("GBP", ignoreCase = true) ||
-                    rawText.contains('¥') ||
-                    rawText.contains("JPY", ignoreCase = true) ||
-                    rawText.contains("CAD", ignoreCase = true) ||
-                    rawText.contains("AUD", ignoreCase = true) ||
-                    rawText.contains("AED", ignoreCase = true) ||
-                    rawText.contains("SGD", ignoreCase = true)
+            val hasCurrency = Regexes.AMOUNT.containsMatchIn(rawText) || Regexes.AMOUNT_SUFFIX.containsMatchIn(rawText)
             if (hasCurrency) {
                 0.98
             } else {
@@ -57,8 +42,7 @@ class FieldConfidenceEstimator {
         }
 
         val typeConf = if (type != null) {
-            val tLower = rawText.lowercase()
-            if (tLower.contains("debited") || tLower.contains("credited")) 0.95 else 0.85
+            0.95
         } else {
             0.0
         }
@@ -70,9 +54,7 @@ class FieldConfidenceEstimator {
         }
 
         val merchantConf = if (!merchant.isNullOrBlank()) {
-            if (categoryMatchConfidence >= 0.90f) {
-                0.95
-            } else if (Regexes.UPI_HANDLE.containsMatchIn(rawText)) {
+            if (Regexes.UPI_HANDLE.containsMatchIn(rawText)) {
                 0.85
             } else {
                 0.70
