@@ -319,10 +319,13 @@ img {
   align-items: center;
   gap: 20px;
   margin-top: 36px;
+  min-height: 480px;
 }
 
 .screenshot-row img {
-  max-height: 480px;
+  height: 480px;
+  width: auto;
+  aspect-ratio: 458 / 1024;
   border-radius: 12px;
   border: 1px solid rgba(255, 255, 255, 0.06);
   background: #141516;
@@ -738,9 +741,9 @@ img {
         <div class="overline">THE INTERFACE</div>
       </div>
       <div class="screenshot-row">
-        <img src="screenshots/1_home.jpg" alt="CashBuddy Home Ledger" loading="lazy" />
-        <img src="screenshots/2_stats.jpg" alt="CashBuddy Spending Analytics" loading="lazy" />
-        <img src="screenshots/3_add.jpg" alt="CashBuddy Manual Entry" loading="lazy" />
+        <img src="screenshots/1_home.jpg" alt="CashBuddy Home Ledger" width="458" height="1024" />
+        <img src="screenshots/2_stats.jpg" alt="CashBuddy Spending Analytics" width="458" height="1024" />
+        <img src="screenshots/3_add.jpg" alt="CashBuddy Manual Entry" width="458" height="1024" />
       </div>
     </div>
   </section>
@@ -984,5 +987,26 @@ img {
     </div>
   </div>
 </footer>
+<script>
+  // Guarantee exact scroll alignment on initial direct link load with anchors
+  (function() {
+    function scrollToHash() {
+      if (!window.location.hash) return;
+      var target = document.querySelector(window.location.hash);
+      if (target) {
+        target.scrollIntoView({ behavior: 'auto' });
+      }
+    }
+    if (window.location.hash) {
+      if (document.readyState === 'complete') {
+        scrollToHash();
+      } else {
+        window.addEventListener('load', function() {
+          setTimeout(scrollToHash, 20);
+        });
+      }
+    }
+  })();
+</script>
 </body>
 </html>
