@@ -6,6 +6,7 @@
 
 > **The 100% Offline, Privacy-First Finance Tracker for India.**
 
+[![Google Play](https://img.shields.io/badge/Google_Play-Get_it_on_Play-414141?logo=googleplay&logoColor=white)](https://play.google.com/store/apps/details?id=com.cashbuddy)
 [![Kotlin Multiplatform](https://img.shields.io/badge/Kotlin_Multiplatform-2.2.1-7F52FF?logo=kotlin&logoColor=white)](https://kotlinlang.org/docs/multiplatform.html)
 [![Compose Multiplatform](https://img.shields.io/badge/Compose_Multiplatform-1.7.3-4285F4?logo=jetpackcompose&logoColor=white)](https://www.jetbrains.com/lp/compose-multiplatform/)
 [![Zero Network](https://img.shields.io/badge/Network_Permission-ZERO-success?logo=adguard&logoColor=white)](#-the-pitch-why-cashbuddy)
@@ -128,7 +129,18 @@ To guarantee absolute accounting accuracy:
 
 ## 📥 Installation & Updates
 
-### 1. Install via Obtainium (Recommended for Auto-Updates)
+### 1. Google Play Store (Recommended)
+Get CashBuddy directly from the Google Play Store for seamless automatic updates:
+
+<a href="https://play.google.com/store/apps/details?id=com.cashbuddy">
+  <img src="https://play.google.com/intl/en_us/badges/static/images/badges/en_badge_web_generic.png" alt="Get it on Google Play" height="60" />
+</a>
+
+👉 **[Download on Google Play](https://play.google.com/store/apps/details?id=com.cashbuddy)**
+
+---
+
+### 2. Install via Obtainium (FOSS Auto-Updates)
 [Obtainium](https://github.com/ImranR98/Obtainium) allows you to install and get automatic updates directly from this GitHub repository.
 
 1. Install Obtainium on your Android device.
@@ -148,14 +160,14 @@ To guarantee absolute accounting accuracy:
 
 ---
 
-### 2. Direct GitHub Release
+### 3. Direct GitHub Release
 Download the latest signed release APK from [GitHub Releases](https://github.com/l1khith/CashBuddy/releases/latest):
 - **`CashBuddy-v1.0.6-foss.apk`**: 100% FOSS edition with offline Tesseract OCR and zero proprietary blobs.
 - **`androidApp-play-release.apk`**: Standard release edition with ML Kit OCR.
 
 ---
 
-### 3. F-Droid (Pending Review)
+### 4. F-Droid (Pending Review)
 CashBuddy is submitted to the official F-Droid catalog ([Merge Request !57498](https://gitlab.com/fdroid/fdroiddata/-/merge_requests/57498)). Once approved, CashBuddy will be available directly in the F-Droid client.
 
 ---
