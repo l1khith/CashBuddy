@@ -31,6 +31,8 @@ android {
         versionCode = 8
         versionName = "1.0.7"
 
+        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+
         ndk {
             abiFilters.addAll(listOf("arm64-v8a", "x86_64"))
         }
@@ -140,4 +142,12 @@ dependencies {
 
     "playImplementation"(libs.google.mlkit.text.recognition)
     "fdroidImplementation"(libs.adaptech.tesseract4android)
+
+    androidTestImplementation(libs.androidx.test.ext.junit)
+    androidTestImplementation(libs.androidx.test.runner)
+    androidTestImplementation(libs.androidx.test.espresso.core)
+    androidTestImplementation(libs.androidx.compose.ui.test.junit4)
+    androidTestImplementation(libs.androidx.work.testing)
+    androidTestImplementation(libs.mockk.android)
+    debugImplementation(libs.androidx.compose.ui.test.manifest)
 }

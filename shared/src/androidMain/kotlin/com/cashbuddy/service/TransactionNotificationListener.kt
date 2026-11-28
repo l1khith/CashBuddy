@@ -26,7 +26,7 @@ import kotlinx.coroutines.launch
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.inject
 
-class TransactionNotificationListener : NotificationListenerService(), KoinComponent {
+open class TransactionNotificationListener : NotificationListenerService(), KoinComponent {
 
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
